@@ -1,7 +1,7 @@
 # snowboard
 Project Snowboard - an IRC bot written in Python for the Modern IRC communities.
 
-## Purpos
+## Purpose
 There are a lot of IRC bots out there but many of them are very old code, or working on an old code-base.  What this project aims to do is to provide a flexible bot that works with the modern IRC server, where services and such are common place.
 
 We are writing this in Python because it allows everyone to make their own edits without the need to recompile.
