@@ -68,11 +68,16 @@ class Nick:
         
         self.__channels = []
         self.__isadmin = False
+        self.__host = ""
     
     # Set various attributes
     def setNick(self, name):
         if type(name) == str:
             self.__nick = name
+    
+    def setHost(self, host):
+        if type(host) == str:
+            self.__host = host
     
     def setAdmin(self, admin):
         if type(admin) == bool:
@@ -81,6 +86,9 @@ class Nick:
     # Get the basic attributes
     def nick(self):
         return self.__nick
+    
+    def host(self):
+        return self.__host
     
     def admin(self):
         return self.__isadmin
