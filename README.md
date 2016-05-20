@@ -6,9 +6,6 @@ There are a lot of IRC bots out there but many of them are very old code, or wor
 
 We are writing this in Python because it allows everyone to make their own edits without the need to recompile.
 
-## Required Libraries
-* irc
-
 ## Current To Do
 All we have right now is to-do, as we're just starting, so this is going to be pretty simple and not sound like a good bot until we get the basics in place and can really start expanding into different features.
 
