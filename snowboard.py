@@ -43,8 +43,16 @@ def joinChannel(conn, chan):
     channel = Channel(chan)
     return channel
 
+# Go through the master channel list and add new channels and nicks.
+def updateMasterChannels(master, channels):
+    pass
+
+# Go through the master nick list and add new nicks and update memberships.
+def updateMasterNicks(conn, master, channels):
+    pass
+
 # Pase channel names from a server and return a list of Names
-def parseNames(conn, raw):
+def parseNames(conn, raw, masterChannels, masterNicks):
     names = []
     response = raw.split()
     channel = responce[4]
@@ -60,12 +68,11 @@ def parseNames(conn, raw):
         if name[0] == '+' or name[1] == '+':
             voiced = True
             name = name.replace('+','')
+            
+        # TODO: Use two lists, one channels list and one nicks list.
         
-        # TODO: Figure out exactly what should be returned to main.
-        
-        serverSend(conn, "WHO " + name)
-        
-    return names
+        updateMasterChannels(masterChannels, channels)
+        updateMasterNicks(conn, masterNicks, nicks)
 
 # Connect to the server.
 # TODO - Error handling needs to be done
@@ -150,9 +157,8 @@ def main(argv):
             names = parseNames(conn, message)
             for channel in channels:
                 if channel.name.lower() == response[4].lower():
-                    # Need to update both the channel names and the global
-                    # nick list.
-                    pass
+                    parseNames(conn, message, channels, nicks)
+        # Process the PING command and send a proper PONG response.
         elif response[0] == "PING":
             serverSend(conn, "PONG " + response[1])
         
