@@ -131,6 +131,12 @@ def serverConnect():
 		
 	return conn
 
+def serverAuthenticate(conn, nick, realname):
+	"""Log into IRC.
+	"""
+	serverSend(conn, "NICK " + nick)
+	serverSend(conn, "USER " + nick + " 0 * :" + realname)
+
 # Disconnect from the server properly.
 def serverDisconnect(conn):
 	quitLine = "QUIT :" + QUITMSG
