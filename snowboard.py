@@ -4,6 +4,7 @@
 # See:  https://github.com/dwhagar/snowboard for more information.
 
 import sys
+import argparse
 import time
 import telnetlib
 
@@ -105,8 +106,19 @@ def joinChannels(conn):
 	for chan in BOTCHANS:
 		joinChannel(conn, chan)
 	return channels
+
+# Program arguments
+args = None
+
+def main(argv):
+	argparser = argparse.ArgumentParser(
+		prog="snowboard",
+		description="IRC Bot Written in Python 3.",
+		fromfile_prefix_chars="@")
 	
-def main(args):
+	global args
+	args = argparser.parse_args(argv)
+	
 	result = 0	# Define a result value, so we can pass it back to the shell
 	
 	# Open the initial connection.
@@ -168,4 +180,5 @@ def main(args):
 	
 	return result
 
-main(sys.argv)
+if __name__ == "__main__":
+	sys.exit(main(sys.argv[1:]))
