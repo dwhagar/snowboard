@@ -13,5 +13,5 @@ QUITMSG = "This transmission ends, now."
 
 # Channels to Join
 BOTCHANS = {
-	"#CycTest"
+    "#CycTest"
 }
