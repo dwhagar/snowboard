@@ -13,6 +13,9 @@ from config import *
 from channels import *
 from scripts import *
 
+# Program options
+options = None
+
 # Global place to store the name of the server you're actually on.
 SERVERNAME = ""
 
@@ -150,17 +153,14 @@ def joinChannels(conn):
 		joinChannel(conn, chan)
 	return channels
 
-# Program arguments
-args = None
-
 def main(argv):
 	argparser = argparse.ArgumentParser(
 		prog="snowboard",
 		description="IRC Bot Written in Python 3.",
 		fromfile_prefix_chars="@")
 	
-	global args
-	args = argparser.parse_args(argv)
+	global options
+	options = argparser.parse_args(argv)
 	
 	result = 0	# Define a result value, so we can pass it back to the shell
 	
