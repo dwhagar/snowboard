@@ -159,6 +159,9 @@ def main(argv):
 		description="IRC Bot Written in Python 3.",
 		fromfile_prefix_chars="@")
 	
+	argparser.add_argument("--verbose", "-v", action="count", default=0,
+		help="increase output verbosity")
+	
 	global options
 	options = argparser.parse_args(argv)
 	
