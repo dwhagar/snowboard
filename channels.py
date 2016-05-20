@@ -8,12 +8,12 @@
 # A class to store all information the bot knows about a particular channel.
 class Channel:
     # Contructor
-    def __init__(self, name = None):
+    def __init__(self, name = None, names = []):
         if name == None:
             self.__name = ""
         else:
             self.__name = name
-        self.__nicks = []
+        self.__nicks = names
     
     # Set and get the channels name.
     def setName(self, name):
@@ -131,7 +131,7 @@ class Nick:
 # A class to store what channels a nick is a member of.
 class Member:
     # Constructor
-    def __init__(self, chanName = None):
+    def __init__(self, chanName = None, isop = False, isvoice = False):
         # What channel is it.
         if chanName == None:
             self.__name = ""
@@ -139,8 +139,8 @@ class Member:
             self.__name = chanName
         
         # Privleges on channel.
-        self.__isop = False
-        self.__isvoice = False
+        self.__isop = isop
+        self.__isvoice = isvoice
     
     # Set various attributes.
     def setName(self, name):
