@@ -1,38 +1,53 @@
-import telnetlib
+import time
+import socket
+
+'''
+Connection object, designed to be the only object to directly interface with
+the server.
+'''
 
 class Connection:
-    """Connection context manager.
+    def __init__(self, host, port):
+        self.__host = host
+        self.__port = port
+        self.__socket = Socket()
+        self.__connected = False
+        self.error = ""            # Later this will contain the laste error
+        self.retries = 3           # Numbers of times to retry a connection
+        self.delay = 0.5           # Delay between connection attempts
     
-    The `telnetlib.Telnet` class does not support the context manager before
-    Python 3.6. This is a bummer. To remedy that, this is a simply wrapper
-    class that turns `telnetlib.Telnet` into a context manager.
+    # Read-only, these should be set when the connection is created.
+    def host(self):
+        return self.__host
     
-    To use, simply convert:
-        conn = telnetlib.Telnet("irc.server.net")
-        # do stuff with conn
-        conn.close()
-    to:
-        with Connection("irc.server.net") as conn:
-                # do stuff with conn
-    """
-     
-    def __init__(self, server, port=6667):
-        """Prepare connection.
-        """
-        self._server = server
-        self._port   = port
+    def port(self):
+        return self.__port
+    
+    # The connection object should be the only one to change if it is in a
+    # connected state.
+    def connected(self):
+        return self.__connected
+    
+    # Connect to the perscribed host and the proper port, retries with a pause
+    # until the configured limit is reached.
+    def connect(self):
+        # Keep track of attempts.
+        attempt = 0
         
-        self._conn = None
+        # Try until the connection succeeds or no more tries are left.
+        while self.__connected == False and attempt <= self.retries:
+            try:
+                self.__socket.create_connection((self.__host, self.__port))
+                self.__connected = True
+            except:
+                pass # TODO:  Put code here to identify unrecoverable
+                     #        conneciton problems.
+            # Delay a certain amount of time between attempts.
+            time.sleep(self.delay)
+        
+        return self.__connected
     
-    def __enter__(self):
-        """Connect to a server.
-        """
-        self._conn = telnetlib.Telnet(self._server, port=self._port)
-        return self._conn
+    def disconnect(self):
+        self.__socket.close()
+        self.__connected = False
     
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Close server connection.
-        """
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
