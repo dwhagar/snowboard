@@ -3,11 +3,10 @@
 # This defines an object which is used to handle a single instance of the bot
 # so that all of an instance of the bot can be kept in one concise place.
 
-import socket
 import configparser
 
-from channels import *
-
+from .channel import Channel
+from .server import Server
 
 # Class to store and load configuration data.
 class Config:
@@ -51,12 +50,3 @@ class Config:
         for channel in channelList:
             newChannel = Channel(channel)
             self.channels.append(newChannel)
-                
-
-# Defines a server connection configuration, does not handle the actual
-# connection, but provides settings such as name, port, and ssl options.
-class Server:
-    # Constructor
-    def __init__(self, host, port = 6667):
-        self.host = host
-        self.port = port
