@@ -152,85 +152,85 @@ def joinChannels(conn):
     return channels
 
 def main(argv):
-	argparser = argparse.ArgumentParser(
-		prog="snowboard",
-		description="IRC Bot Written in Python 3.",
-		fromfile_prefix_chars="@")
-	
-	argparser.add_argument("--verbose", "-v", action="count", default=0,
-		help="increase output verbosity")
-	
-	global options
-	options = argparser.parse_args(argv)
-	
-	result = 0	# Define a result value, so we can pass it back to the shell
-	
-	with Connection(SERV, port=SERVPORT) as conn:
-		# Get server name.
-		conn.read_until(b'\r\n')
-		global SEVERNAME
-		SERVERNAME = conn.read_until(b'\r\n').split()[0][1:].decode('utf-8')
-		
-		# Authenticate.
-		serverAuthenticate(conn, BOTNICK, REALNAME)
-		
-		# Complete connection.
-		while True:
-			message = serverLine(conn)
-			### TODO:
-			### If we're not going to let serverLine throw, then we'll have
-			### to handle errors here, somehow.
-			response = message.split()
-			if response[1] == "396":
-				break
-		
-		# Join all the configured channels.
-		channels = joinChannels(conn)
-		print("SARIA channels =", channels)
-		
-		# Process IRC messages.
-		while True:
-			message = serverLine(conn)
-			if message == False:
-				break
-			
-			response = message.split()
-			
-			#print(message)
-			
-			# Process WHO responses to get hostnames.
-			if response[1] == "352":
-				for channel in channels:
-					for name in channel.names:
-						if name.nick.lower() == response[4].lower():
-							name.setHost(response[5])
-			# Process NAMES responses to get all names for channels joined.
-			elif response[1] == "353":
-				names = parseNames(conn, message)
-				for channel in channels:
-					if channel.name.lower() == response[4].lower():
-						channel.updateNames(names)
-			elif response[0] == "PING":
-				serverSend(conn, "PONG " + response[1])
-			
-			# Get the list of commands to perform from the scripts
-			commands = runScripts(message)
-			
-			# Execute commands
-			for command in commands:
-				if command == "*QUIT*":
-					### TODO:
-					### Rather than sending the QUIT command then continuing to
-					### loop with what should be a dead connection, perhaps we
-					### should set a flag and then break out of the main loop?
-					serverDisconnect(conn)
-				else:
-					serverSend(conn, commands)
-	
-	# Print the message about disconnection.
-	print("Disconnected from the server.")
-	
-	return result
+    argparser = argparse.ArgumentParser(
+        prog="snowboard",
+        description="IRC Bot Written in Python 3.",
+        fromfile_prefix_chars="@")
+    
+    argparser.add_argument("--verbose", "-v", action="count", default=0,
+        help="increase output verbosity")
+    
+    global options
+    options = argparser.parse_args(argv)
+    
+    result = 0    # Define a result value, so we can pass it back to the shell
+    
+    with Connection(SERV, port=SERVPORT) as conn:
+        # Get server name.
+        conn.read_until(b'\r\n')
+        global SEVERNAME
+        SERVERNAME = conn.read_until(b'\r\n').split()[0][1:].decode('utf-8')
+        
+        # Authenticate.
+        serverAuthenticate(conn, BOTNICK, REALNAME)
+        
+        # Complete connection.
+        while True:
+            message = serverLine(conn)
+            ### TODO:
+            ### If we're not going to let serverLine throw, then we'll have
+            ### to handle errors here, somehow.
+            response = message.split()
+            if response[1] == "396":
+                break
+        
+        # Join all the configured channels.
+        channels = joinChannels(conn)
+        print("SARIA channels =", channels)
+        
+        # Process IRC messages.
+        while True:
+            message = serverLine(conn)
+            if message == False:
+                break
+            
+            response = message.split()
+            
+            #print(message)
+            
+            # Process WHO responses to get hostnames.
+            if response[1] == "352":
+                for channel in channels:
+                    for name in channel.names:
+                        if name.nick.lower() == response[4].lower():
+                            name.setHost(response[5])
+            # Process NAMES responses to get all names for channels joined.
+            elif response[1] == "353":
+                names = parseNames(conn, message)
+                for channel in channels:
+                    if channel.name.lower() == response[4].lower():
+                        channel.updateNames(names)
+            elif response[0] == "PING":
+                serverSend(conn, "PONG " + response[1])
+            
+            # Get the list of commands to perform from the scripts
+            commands = runScripts(message)
+            
+            # Execute commands
+            for command in commands:
+                if command == "*QUIT*":
+                    ### TODO:
+                    ### Rather than sending the QUIT command then continuing to
+                    ### loop with what should be a dead connection, perhaps we
+                    ### should set a flag and then break out of the main loop?
+                    serverDisconnect(conn)
+                else:
+                    serverSend(conn, commands)
+    
+    # Print the message about disconnection.
+    print("Disconnected from the server.")
+    
+    return result
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
