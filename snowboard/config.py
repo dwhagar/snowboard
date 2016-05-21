@@ -15,3 +15,5 @@ QUITMSG = "This transmission ends, now."
 BOTCHANS = {
     "#CycTest"
 }
+
+options = None
