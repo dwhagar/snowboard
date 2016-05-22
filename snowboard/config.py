@@ -20,6 +20,9 @@ import configparser
 from .channel import Channel
 from .server import Server
 
+# Global verbosity.
+verbosity = 0
+
 # Class to store and load configuration data.
 class Config:
     # Constructor
@@ -30,8 +33,8 @@ class Config:
         self.servers = []
         self.channels = []
         self.quitmsg = "Project Snowboard https://github.com/dwhagar/snowboard"
-        self.verbosity = 0
         self.options = None
+        self.sslVerify = True
         
         # Read configuration.
         self.file = configFile
@@ -46,7 +49,7 @@ class Config:
         self.botnick = config['Identity']['botnick']
         self.readlname = config['Identity']['realname']
         self.quitmsg = config['Messages']['quit']
-        self.verbosity = config['Debug']['verbosity']
+        self.sslVerify = config['Network']['sslverify']
         
         # Parse Servers into a List
         servers = config['Network']['servers']
@@ -54,7 +57,11 @@ class Config:
         combined = servers.split(',')
         for entry in combined:
             line = entry.split(':')
-            newServer = Server(line[0], line[1])
+            if line[1][0] == '+':
+                ssl = True
+            else:
+                ssl = False
+            newServer = Server(line[0], line[1], ssl)
             self.servers.append(newServer)
         
         # Parse Channels into a List

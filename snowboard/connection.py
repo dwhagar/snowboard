@@ -19,6 +19,7 @@ import ssl
 import sys
 
 from . import debug
+from . import server
 
 '''
 Connection object, designed to be the only object to directly interface with
@@ -26,9 +27,9 @@ the server.
 '''
 
 class Connection:
-    def __init__(self, host, port):
-        self.__host = host
-        self.__port = port
+    def __init__(self, srv):
+        self.host = srv.host
+        self.port = srv.port
         self.__socket = None
         self.__ssl = None
         self.__connected = False
@@ -36,14 +37,7 @@ class Connection:
         self.sslVerify = True
         self.retries = 3           # Numbers of times to retry a connection
         self.delay = 0.5           # Delay between connection attempts
-    
-    # Read-only, these should be set when the connection is created.
-    def host(self):
-        return self.__host
-    
-    def port(self):
-        return self.__port
-    
+        
     # The connection object should be the only one to change if it is in a
     # connected state.
     def connected(self):
@@ -59,7 +53,7 @@ class Connection:
         while (not self.__connected) and (attempt < self.retries):
             # Attempt to establish a connection.
             try:
-                self.__socket = socket.create_connection((self.__host, self.__port))
+                self.__socket = socket.create_connection((self.host, self.port))
                 
                 # Handle SSL
                 if self.ssl:
@@ -81,13 +75,13 @@ class Connection:
             
             # Assume connection errors are no big deal but do display an error.
             except ConnectionAbortedError:
-                debug.error("Connection to "  + self.__host + " aborted by server.")
+                debug.error("Connection to "  + self.host + " aborted by server.")
             except ConnectionRefusedError:
-                debug.error("Connection to " + self.__host + " refused by server.")
+                debug.error("Connection to " + self.host + " refused by server.")
             except TimeoutError:
-                debug.error("Connection to " + self.__host + " timed out.")
+                debug.error("Connection to " + self.host + " timed out.")
             except socket.gaierror:
-                debug.error("Failed to resolve " + self.__host + ".")
+                debug.error("Failed to resolve " + self.host + ".")
                 
             attempt += 1
             

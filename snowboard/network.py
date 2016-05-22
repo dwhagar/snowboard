@@ -13,11 +13,22 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
-# Defines a server connection configuration, does not handle the actual
-# connection, but provides settings such as name, port, and ssl options.
-class Server:
-    # Constructor
-    def __init__(self, host, port, ssl):
-        self.host = host
-        self.port = port
-        self.ssl = ssl
+from . import connection
+from . import config
+from . import channel
+from . import nick
+
+class Network:
+    def __init__(self, name, cfg):
+        self.name = name
+        self.config = cfg
+        self.__connection = None
+        self.channels = []
+        self.nicks = []
+        
+    def connect(self):
+        for server in self.config.servers:
+            self.__connection.ssl = server.ssl
+            self.__connection.sslVerify = self.config.sslVerify
+            self.__connection(server)
+            self.__connection.connect()
