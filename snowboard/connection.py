@@ -40,29 +40,39 @@ class Connection:
         
         # Try until the connection succeeds or no more tries are left.
         while (not self.__connected) and (attempt <= self.retries):
-            #try:
-            self.__socket = socket.create_connection((self.__host, self.__port))
+            # Attempt to establish a connection.
+            try:
+                self.__socket = socket.create_connection((self.__host, self.__port))
+                
+                # Handle SSL
+                if self.ssl:
+                    self.__context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+                    self.__context.options |= ssl.OP_NO_SSLv2
+                    self.__context.options |= ssl.OP_NO_SSLv3
+                    if not self.sslVerify:
+                        self.__context.verify_mode = ssl.CERT_NONE
+                    self.__ssl = self.__context.wrap_socket(self.__socket)
+                    self.__ssl.setblocking(False)
+                # Handle not SSL
+                else:
+                    pass
+                    self.__socket.setblocking(False)
+                
+                self.__connected = True
+                self.error = ""
             
-            # Handle SSL
-            if self.ssl:
-                self.__context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-                #self.__context.options |= ssl.OP_NO_SSLv2
-                #self.__context.options |= ssl.OP_NO_SSLv3
-                if not self.sslVerify:
-                    self.__context.verify_mode = ssl.CERT_NONE
-                self.__ssl = self.__context.wrap_socket(self.__socket)
-                self.__ssl.setblocking(False)
-            # Handle not SSL
-            else:
-                pass
-                self.__socket.setblocking(False)
+            # What to do if there is a problem.
+            except ssl.SSLError as err:
+                self.error = "Error in " + err.library + " library: " + err.reason + "."
             
-            self.__connected = True
-            self.error = ""
+            # Certificate problem.
+            except ssl.CertificateError as err:
+                self.error = err
             
-            #    break
-            #except:
-            #    self.error = "Unable to connect."
+            # Handle errors dealing with the socket itself.
+            except OSError as err:
+                self.error = err
+                
             attempt += 1
             
             time.sleep(self.delay)
