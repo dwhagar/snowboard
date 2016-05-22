@@ -51,6 +51,8 @@ class Connection:
                     self.__context.options |= ssl.OP_NO_SSLv3
                     if not self.sslVerify:
                         self.__context.verify_mode = ssl.CERT_NONE
+                    else:
+                        self.__context.verify_mode = ssl.CERT_REQUIRED
                     self.__ssl = self.__context.wrap_socket(self.__socket)
                     self.__ssl.setblocking(False)
                 # Handle not SSL
@@ -71,7 +73,7 @@ class Connection:
             
             # Handle errors dealing with the socket itself.
             except OSError as err:
-                self.error = err
+                self.error = err.ars
                 
             attempt += 1
             
