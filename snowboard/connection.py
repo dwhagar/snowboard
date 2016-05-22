@@ -46,6 +46,8 @@ class Connection:
             # Handle SSL
             if self.ssl:
                 self.__context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+                #self.__context.options |= ssl.OP_NO_SSLv2
+                #self.__context.options |= ssl.OP_NO_SSLv3
                 if not self.sslVerify:
                     self.__context.verify_mode = ssl.CERT_NONE
                 self.__ssl = self.__context.wrap_socket(self.__socket)
@@ -84,9 +86,9 @@ class Connection:
             while not done:
                 try:
                     if self.ssl:
-                        data = self.__ssl.recv(1).decode()
+                        data = self.__ssl.recv(1).decode('utf-8')
                     else:
-                        data = self.__socket.recv(1).decode()
+                        data = self.__socket.recv(1).decode('utf-8')
                 except (ssl.SSLWantReadError, BlockingIOError):
                     received = False
                     break
@@ -95,7 +97,7 @@ class Connection:
                 # socket.recv is supposed to return a False if the connection
                 # been broken.
                 if not data:
-                    self.error = "Disconnected."
+                    self.error = "Disconnected"
                     self.disconnect()
                     done = True
                     received = False
@@ -112,3 +114,38 @@ class Connection:
             received = received.strip('\r')
         
         return received
+    
+    # Send data to the server.
+    def write(self, data):
+        # Encode the data for the server.
+        data += '\n'
+        data = data.encode('utf-8')
+        
+        # Prepare to keep track of what is being sent.
+        dataSent = 0
+        bufferSize = len(data)
+        
+        if self.__connected:
+            # Loop to send the data.
+            while dataSent < bufferSize:
+                if self.ssl:
+                    sentNow = self.__ssl.send(data[dataSent:])
+                else:
+                    sentNow = self.__socket.send(data[dataSent:])
+                
+                # If nothing gets sent, we are disconnected from the server.
+                if sentNow == 0:
+                    self.error = "Disconnected"
+                    self.disconnect()
+                    sent = False
+                
+                # Keep track of the data.
+                dataSent += sentNow
+        else:
+            sent = False
+        
+        # If sending completed, set the flag to true.
+        if dataSent == bufferSize:
+            sent = True
+        
+        return sent
