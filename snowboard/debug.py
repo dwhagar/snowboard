@@ -17,14 +17,14 @@ import sys
 
 from . import config
 
-def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, level=1, minlevel=1):
+def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, level=1):
     """Writes a message if the level is high enough.
     
     Works just like the standard print function, if and only if `level`
-    is at least `minlevel`. Otherwise it does nothing.
+    is at least `config.verbosity`. Otherwise it does nothing.
     
     Its primary purpose is as the underlying implementation for all the
-    output functions in the debug module.
+    normal output functions in the debug module.
     
     Parameters
     ----------
@@ -39,12 +39,38 @@ def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, lev
     flush : bool
         If `True`, flush `file` after output.
     level : int
-        Level of output.
-    minlevel : int
-        `level` must be at least `minlevel` for any output.
+        `config.verbosity` must be at least `level` for any output.
     """
-    if level >= minlevel:
+    if level <= config.verbosity:
         print(*objects, sep=sep, end=end, file=file, flush=flush)
+
+def debug_message(*objects, sep=" ", end="\n", type="DEBUG", level=3):
+    """Writes an error message if the level is high enough.
+    
+    If `level` is at least `config.verbosity`, basically equivalent to:
+        print("[" + type + "]: ", *objects, sep=sep, end=end, 
+            file=sys.stderr, flush=True)
+    Otherwise it does nothing.
+    
+    Its primary purpose is as the underlying implementation for all the
+    error output functions in the debug module.
+    
+    Parameters
+    ----------
+    objects : positional parameter pack of objects
+        Each object in `*objects` is converted to `str` and printed in turn.
+    sep : str
+        Value output between each item in `objects`.
+    end : str
+        Value output at the end.
+    type : str
+        What to tag output as.
+    level : int
+        `config.verbosity` must be at least `level` for any output.
+    """
+    if level <= config.verbosity:
+        print("[", type, "]: ", sep="", end="", file=sys.stderr, flush=False)
+        print(*objects, sep=sep, end=end, file=sys.stderr, flush=True)
 
 def message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     """Writes a message if `config.verbosity` is at least 1.
@@ -62,7 +88,7 @@ def message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     flush : bool
         If `True`, flush `file` after output.
     """
-    print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=config.verbosity, minlevel=1)
+    print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=1)
 
 def info(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     """Writes a message if `config.verbosity` is at least 2.
@@ -80,7 +106,7 @@ def info(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     flush : bool
         If `True`, flush `file` after output.
     """
-    print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=config.verbosity, minlevel=2)
+    print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=2)
 
 def trace(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     """Writes a message if `config.verbosity` is at least 3.
@@ -98,4 +124,56 @@ def trace(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     flush : bool
         If `True`, flush `file` after output.
     """
-    print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=config.verbosity, minlevel=3)
+    print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=3)
+
+def error(*objects, sep=" ", end="\n"):
+    """Writes an error message.
+    
+    The message is written to `sys.stderr`.
+    
+    Parameters
+    ----------
+    objects : positional parameter pack of objects
+        Each object in `*objects` is converted to `str` and printed in turn.
+    sep : str
+        Value output between each item in `objects`.
+    end : str
+        Value output at the end.
+    """
+    debug_message(*objects, sep=sep, end=end, type="ERROR", level=0)
+
+def warn(*objects, sep=" ", end="\n"):
+    """Writes a warning message.
+    
+    The message is written to `sys.stderr`.
+    
+    `config.verbosity` must be at least 1 to show any output.
+    
+    Parameters
+    ----------
+    objects : positional parameter pack of objects
+        Each object in `*objects` is converted to `str` and printed in turn.
+    sep : str
+        Value output between each item in `objects`.
+    end : str
+        Value output at the end.
+    """
+    debug_message(*objects, sep=sep, end=end, type="WARNING", level=1)
+
+def debug(*objects, sep=" ", end="\n"):
+    """Writes a debug message.
+    
+    The message is written to `sys.stderr`.
+    
+    `config.verbosity` must be at least 3 to show any output.
+    
+    Parameters
+    ----------
+    objects : positional parameter pack of objects
+        Each object in `*objects` is converted to `str` and printed in turn.
+    sep : str
+        Value output between each item in `objects`.
+    end : str
+        Value output at the end.
+    """
+    debug_message(*objects, sep=sep, end=end, type="DEBUG", level=3)
