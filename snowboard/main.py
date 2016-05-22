@@ -15,11 +15,11 @@
 
 import argparse
 
-from . import channel
 from . import config
 from . import connection
+from . import channel
 
-def __parse_args(argv):
+def __parse_args(argv, cfg):
     """Parse command-line arguments.
     """
     argparser = argparse.ArgumentParser(
@@ -27,12 +27,20 @@ def __parse_args(argv):
         description="IRC Bot Written in Python 3.",
         fromfile_prefix_chars="@")
     
-    argparser.add_argument("--verbose", "-v", action="count", default=0,
-        help="increase output verbosity")
+    # Use the -1 default so that the system knows if verbosity is being
+    # overriden by the command line.
+    argparser.add_argument("--verbose", "-v",
+                           default=-1, action="count",
+                           help="increase output verbosity")
     
-    config.options = argparser.parse_args(argv)
+    # Default to snowboard.ini.
+    argparser.add_argument("--config", "-c",
+                           default="snowboard.ini",
+                           help="specify the configuration file to use.")
     
-    config.verbosity = config.options.verbose
+    cfg.options = argparser.parse_args(argv)
+    config.verbosity = cfg.options.verbose
+    cfg.file = cfg.options.config
 
 def __get_message(conn):
     """Get a message from the server.
@@ -165,9 +173,16 @@ def __execute_commands(conn, commands):
             __send_message(conn, commands)
 
 def main(argv):
-    __parse_args(argv)
+    # Get the configuration from the file specified by the command line options.
+    cfg = config.Config()
+    __parse_args(argv, cfg)    
+    cfg.read()
     
     result = 0    # Define a result value, so we can pass it back to the shell
+    
+    # Try to establish a connection.
+    for server in cfg.servers:
+        conn = connection.Connection(server)
     
     with connection.Connection(config.SERV, port=config.SERVPORT) as conn:
         __get_server_name(conn)

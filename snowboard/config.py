@@ -15,23 +15,59 @@
 
 # Configuration File for Snowboard
 
-# Bot information
-BOTNICK = "TestBot"
-REALNAME = "Snowboard"
+import configparser
 
-# Connection configuration
-SERV = "irc.sorcery.net"
-SERVPORT = 6667
+from .channel import Channel
+from .server import Server
 
-# Misc settings
-QUITMSG = "This transmission ends, now."
-
-# Channels to Join
-BOTCHANS = {
-    "#CycTest"
-}
-
-options = None
-
-# Debug output verbosity (default 0)
+# Global verbosity.
 verbosity = 0
+
+# Class to store and load configuration data.
+class Config:
+    # Constructor
+    def __init__(self, configFile = "snowboard.ini"):
+        # Set Defaults.
+        self.botnick = "Snowboard"
+        self.realname = "Project Snowboard"
+        self.servers = []
+        self.channels = []
+        self.quitmsg = "Project Snowboard https://github.com/dwhagar/snowboard"
+        self.options = None
+        self.sslVerify = True
+        
+        # Read configuration.
+        self.file = configFile
+    
+    # Read the config file into memory.
+    def read(self):
+        # Get everything out of the configuration file.
+        config = configparser.ConfigParser()
+        config.read(self.file)
+        
+        # Load Settings
+        self.botnick = config['Identity']['botnick']
+        self.readlname = config['Identity']['realname']
+        self.quitmsg = config['Messages']['quit']
+        self.sslVerify = config['Network']['sslverify']
+        
+        # Parse Servers into a List
+        servers = config['Network']['servers']
+        servers = servers.replace(' ','')
+        combined = servers.split(',')
+        for entry in combined:
+            line = entry.split(':')
+            if line[1][0] == '+':
+                ssl = True
+            else:
+                ssl = False
+            newServer = Server(line[0], line[1], ssl)
+            self.servers.append(newServer)
+        
+        # Parse Channels into a List
+        channels = config['Network']['channels']
+        channels = channels.replace(' ','')
+        channelList = channels.split(',')
+        for channel in channelList:
+            newChannel = Channel(channel)
+            self.channels.append(newChannel)
