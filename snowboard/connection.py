@@ -136,12 +136,14 @@ class Connection:
         # Remove the trailing carriage return character (cr/lf pair)
         if not type(received) == bool:
             received = received.strip('\r')
+            debug.trace(received)
         
         return received
     
     # Send data to the server.
     def write(self, data):
         # Encode the data for the server.
+        debug.trace(data)
         data += '\n'
         data = data.encode('utf-8')
         

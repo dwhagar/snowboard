@@ -15,6 +15,7 @@
 
 import time
 
+from . import debug
 from . import connection
 from . import config
 from . import channel
@@ -25,17 +26,19 @@ class Network:
         self.config = cfg
         self.name = self.config.network
         self.__connection = None
+        self.__authenticated = False
         self.channels = []
         self.nicks = []
     
     # Let the outside see if the bot is online.
     def online(self):
-        # TODO: Add exception handling for if the object has not yet been
-        #       defined so that it will just return false.
+        if self.__connection == None:
+            return False
+        elif self.__authenticated == False:
+            return False
+        else:
+            return self.__connection.connected
         
-        return self.__connection.connected
-
-    
     # Connect to the network.    
     def connect(self):
         attempts = 0
@@ -43,7 +46,7 @@ class Network:
         # Retry connecting until either the system is connected or none left
         while (not self.__connection.connected) and (attempts < len(self.config.servers)):
             attempt += 1
-            
+            debug.info("Attempting to connect to the server.")
             for server in self.config.servers:
                 # Create the connection object, load settings from config
                 self.__connection = connection.Connection(server)
@@ -56,6 +59,7 @@ class Network:
                 
                 # Try to connect, decide what to do next.
                 if self.__connection.connect():
+                    debug.message("Connected to " + server.host + ".")
                     continue
                 else:
                     time.sleep(self.config.delay)
@@ -65,6 +69,45 @@ class Network:
     # Disconnect from the network.       
     def disconnect(self):
         if self.__connection.connected:
+            debug.info("Connecting to server.")
             self.__connection.disconnect()
-                
+        else:
+            debug.info("Not connected to server.")
+
         return self.__connection.connected
+    
+    # Authenticate with the network.
+    def auth(self):
+        debug.message("Attempting to authenticate.")
+        
+        # Some servers can be douchebags
+        self.__authwait()
+        # Begin authentication process.
+        self.__connection.write("NICK " + self.config.botnick)
+        # Some servers can be douchebags
+        self.__authwait()        
+        # Send user information.
+        self.__connection.write("USER " + self.config.botnick + " 0 * :" + self.config.realname)
+        
+        # Wait for the server to signal that authentication is complete.
+        while not self.__authenticated:
+            data = self.__connection.read()
+            line = data.split()
+            if line[1] == "396":
+                self.__authenticated = True
+    
+    # Check for a ping to respond to.
+    def __pingpong(self, message):
+        ling = message.split()
+        if line[0] == "PING":
+            pong = line[1].strip(':')
+            self.connection.write("PONG :" + pong)
+    
+    # Some servers require that the client receive data before it can
+    # authenticate, some even require a ping be responded to before
+    # authenticating.  
+    def __authwait(self):
+        data = self.__connection.read()
+        while data:
+            self.__pingpong(data)
+            data = self.__connection.read()
