@@ -16,6 +16,8 @@ def __parse_args(argv):
         help="increase output verbosity")
     
     config.options = argparser.parse_args(argv)
+    
+    config.verbosity = config.options.verbose
 
 def __get_message(conn):
     """Get a message from the server.

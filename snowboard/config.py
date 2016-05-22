@@ -17,3 +17,6 @@ BOTCHANS = {
 }
 
 options = None
+
+# Debug output verbosity (default 0)
+verbosity = 0
