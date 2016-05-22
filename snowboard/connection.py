@@ -3,6 +3,8 @@ import socket
 import ssl
 import sys
 
+from . import debug
+
 '''
 Connection object, designed to be the only object to directly interface with
 the server.
@@ -13,10 +15,10 @@ class Connection:
         self.__host = host
         self.__port = port
         self.__socket = None
+        self.__ssl = None
         self.__connected = False
         self.ssl = False
         self.sslVerify = True
-        self.error = ""            # Later this will contain the laste error
         self.retries = 3           # Numbers of times to retry a connection
         self.delay = 0.5           # Delay between connection attempts
     
@@ -39,7 +41,7 @@ class Connection:
         attempt = 0
         
         # Try until the connection succeeds or no more tries are left.
-        while (not self.__connected) and (attempt <= self.retries):
+        while (not self.__connected) and (attempt < self.retries):
             # Attempt to establish a connection.
             try:
                 self.__socket = socket.create_connection((self.__host, self.__port))
@@ -49,31 +51,28 @@ class Connection:
                     self.__context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
                     self.__context.options |= ssl.OP_NO_SSLv2
                     self.__context.options |= ssl.OP_NO_SSLv3
-                    if not self.sslVerify:
-                        self.__context.verify_mode = ssl.CERT_NONE
-                    else:
+                    if self.sslVerify:
                         self.__context.verify_mode = ssl.CERT_REQUIRED
+                    else:
+                        self.__context.verify_mode = ssl.CERT_NONE
                     self.__ssl = self.__context.wrap_socket(self.__socket)
                     self.__ssl.setblocking(False)
                 # Handle not SSL
                 else:
-                    pass
                     self.__socket.setblocking(False)
                 
                 self.__connected = True
                 self.error = ""
             
-            # What to do if there is a problem.
-            except ssl.SSLError as err:
-                self.error = "Error in " + err.library + " library: " + err.reason + "."
-            
-            # Certificate problem.
-            except ssl.CertificateError as err:
-                self.error = err
-            
-            # Handle errors dealing with the socket itself.
-            except OSError as err:
-                self.error = err.ars
+            # Assume connection errors are no big deal but do display an error.
+            except ConnectionAbortedError:
+                debug.error("Connection to "  + self.__host + " aborted by server.")
+            except ConnectionRefusedError:
+                debug.error("Connection to " + self.__host + " refused by server.")
+            except TimeoutError:
+                debug.error("Connection to " + self.__host + " timed out.")
+            except socket.gaierror:
+                debug.error("Failed to resolve " + self.__host + ".")
                 
             attempt += 1
             
@@ -83,7 +82,11 @@ class Connection:
     
     # Disconnect the socket.
     def disconnect(self):
-        self.__socket.close()
+        if ssl:
+            self.__ssl.close()
+            self.__ssl = None
+        else:
+            self.__socket.close()
         self.__socket = None
         self.__connected = False
     
