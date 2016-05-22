@@ -18,6 +18,7 @@ import argparse
 from . import config
 from . import connection
 from . import channel
+from . import network
 
 def __parse_args(argv, cfg):
     """Parse command-line arguments.
@@ -42,45 +43,6 @@ def __parse_args(argv, cfg):
     config.verbosity = cfg.options.verbose
     cfg.file = cfg.options.config
 
-def __get_message(conn):
-    """Get a message from the server.
-    """
-    try:
-        line = conn.read_until("\r\n".encode("utf-8"))
-    except:
-        return False
-    
-    line = line.decode("utf-8")
-    line = line.strip(":")
-    line = line.replace("\r","")
-    line = line.replace("\n","")
-    return line
-
-def __send_message(conn, message):
-    """Send message to server.
-    """
-    print(message)
-    message = message + "\n"
-    conn.write(message.encode("utf-8"))
-
-def __get_server_name(conn):
-    """Get the server name.
-    """
-    conn.read_until(b'\r\n')
-    config.SERVERNAME = conn.read_until(b'\r\n').split()[0][1:].decode('utf-8')
-
-def __authenticate(conn, nick, realname):
-    """Log into IRC.
-    """
-    __send_message(conn, "NICK " + nick)
-    __send_message(conn, "USER " + nick + " 0 * :" + realname)
-
-def __join_channel(conn, chan):
-    """Join a channel.
-    """
-    __send_message(conn, "JOIN " + chan)
-    return channel.Channel(chan)
-
 # Join the configured channels.
 def __join_channels(conn, channel_names):
     """Join each channel in a list.
@@ -89,14 +51,6 @@ def __join_channels(conn, channel_names):
     for chan in channel_names:
         __join_channel(conn, chan)
     return channels
-
-# Go through the master channel list and add new channels and nicks.
-def __update_master_channels(master, channels):
-    pass
-
-# Go through the master nick list and add new nicks and update memberships.
-def __update_master_nicks(conn, master, channels):
-    pass
 
 # Pase channel names from a server and return a list of Names
 def __parse_names(conn, raw, masterChannels, masterNicks):
@@ -180,36 +134,10 @@ def main(argv):
     
     result = 0    # Define a result value, so we can pass it back to the shell
     
-    # Try to establish a connection.
-    for server in cfg.servers:
-        conn = connection.Connection(server)
+    # Establish a connection and authenticate.
+    net = network.Network(cfg)
+    net.connect()
+    net.auth()
     
-    with connection.Connection(config.SERV, port=config.SERVPORT) as conn:
-        __get_server_name(conn)
-        __authenticate(conn, config.BOTNICK, config.REALNAME)
-        
-        # Complete connection.
-        while True:
-            message = __get_message(conn)
-            ### TODO:
-            ### If we're not going to let serverLine throw, then we'll have
-            ### to handle errors here, somehow.
-            response = message.split()
-            if response[1] == "396":
-                break
-        
-        channels = __join_channels(conn, config.BOTCHANS)
-        
-        while True:
-            message = __get_message(conn)
-            if message == False:
-                break
-            
-            __process_responses(conn, message, channels)
-            
-            __execute_commands(conn, __get_commands(message))
-    
-    # Print the message about disconnection.
-    print("Disconnected from the server.")
     
     return result

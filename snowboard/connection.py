@@ -52,6 +52,7 @@ class Connection:
         # Try until the connection succeeds or no more tries are left.
         while (not self.__connected) and (attempt < self.retries):
             # Attempt to establish a connection.
+            debug.trace("Attempting connection to: " + self.host + ":" + str(self.port) + ".")
             try:
                 self.__socket = socket.create_connection((self.host, self.port))
                 

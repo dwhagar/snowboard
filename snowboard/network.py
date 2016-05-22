@@ -41,13 +41,18 @@ class Network:
         
     # Connect to the network.    
     def connect(self):
-        attempts = 0
+        attempt = 0
+        
+        if self.__connection == None:
+            connected = False
+        else:
+            connected = self.__connection.connected
         
         # Retry connecting until either the system is connected or none left
-        while (not self.__connection.connected) and (attempts < len(self.config.servers)):
+        while (not connected) and (attempt < len(self.config.servers)):
             attempt += 1
-            debug.info("Attempting to connect to the server.")
             for server in self.config.servers:
+                debug.info("Attempting to connect to " + server.host + ":" + str(server.port) + ".")
                 # Create the connection object, load settings from config
                 self.__connection = connection.Connection(server)
                 self.__connection.retries = self.config.retries
@@ -92,13 +97,15 @@ class Network:
         # Wait for the server to signal that authentication is complete.
         while not self.__authenticated:
             data = self.__connection.read()
-            line = data.split()
-            if line[1] == "396":
-                self.__authenticated = True
+            if not type(data) == bool:
+                line = data.split()
+                if line[1] == "396":
+                    debug.message("Authentication successful.")
+                    self.__authenticated = True
     
     # Check for a ping to respond to.
     def __pingpong(self, message):
-        ling = message.split()
+        line = message.split()
         if line[0] == "PING":
             pong = line[1].strip(':')
             self.connection.write("PONG :" + pong)
@@ -108,6 +115,6 @@ class Network:
     # authenticating.  
     def __authwait(self):
         data = self.__connection.read()
-        while data:
+        while not type(data) == bool:
             self.__pingpong(data)
             data = self.__connection.read()
