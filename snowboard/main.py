@@ -15,11 +15,11 @@
 
 import argparse
 
-from . import channel
 from . import config
 from . import connection
+from . import channel
 
-def __parse_args(argv):
+def __parse_args(argv, cfg):
     """Parse command-line arguments.
     """
     argparser = argparse.ArgumentParser(
@@ -29,10 +29,12 @@ def __parse_args(argv):
     
     argparser.add_argument("--verbose", "-v", action="count", default=0,
         help="increase output verbosity")
+    argparser.add_argument("--config", "-c", help="specify the configuration file to use.")
     
-    config.options = argparser.parse_args(argv)
+    cfg.options = argparser.parse_args(argv)
     
-    config.verbosity = config.options.verbose
+    cfg.verbosity = cfg.options.verbose
+    cfg.file = cfg.options.config
 
 def __get_message(conn):
     """Get a message from the server.
@@ -165,8 +167,10 @@ def __execute_commands(conn, commands):
             __send_message(conn, commands)
 
 def main(argv):
-    __parse_args(argv)
-    
+    cfg = config.Config()
+    __parse_args(argv, cfg)
+    cfg.read()
+
     result = 0    # Define a result value, so we can pass it back to the shell
     
     with connection.Connection(config.SERV, port=config.SERVPORT) as conn:
