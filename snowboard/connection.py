@@ -36,7 +36,7 @@ class Connection:
         self.ssl = False
         self.sslVerify = True
         self.retries = 3           # Numbers of times to retry a connection
-        self.delay = 0.5           # Delay between connection attempts
+        self.delay = 1             # Delay between connection attempts
         
     # The connection object should be the only one to change if it is in a
     # connected state.

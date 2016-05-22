@@ -30,11 +30,14 @@ class Config:
         # Set Defaults.
         self.botnick = "Snowboard"
         self.realname = "Project Snowboard"
+        self.network = "Network"
         self.servers = []
         self.channels = []
         self.quitmsg = "Project Snowboard https://github.com/dwhagar/snowboard"
         self.options = None
         self.sslVerify = True
+        self.retries = 3
+        self.delay = 1
         
         # Read configuration.
         self.file = configFile
@@ -45,12 +48,8 @@ class Config:
         config = configparser.ConfigParser()
         config.read(self.file)
         
-        # Load Settings
-        self.botnick = config['Identity']['botnick']
-        self.readlname = config['Identity']['realname']
-        self.quitmsg = config['Messages']['quit']
-        self.sslVerify = config['Network']['sslverify']
-        
+        # Load all sections to parse
+        # Network, server, and channel information is required
         # Parse Servers into a List
         servers = config['Network']['servers']
         servers = servers.replace(' ','')
@@ -70,4 +69,30 @@ class Config:
         channelList = channels.split(',')
         for channel in channelList:
             newChannel = Channel(channel)
-            self.channels.append(newChannel)
+            self.channels.append(newChannel)        
+        
+        # These sections all have reasonable defaults, so it checks to see if
+        # the keys are there, if they are not defaults are used.
+        for section in config.sections():
+            keys = config[section]
+            if section == "Identity":
+                if "botnick" in keys:
+                    self.botnick = config[section]["botnick"]
+                if "realname" in keys:
+                    self.realname = config[section]["realname"]
+            elif section == "Messages":
+                if "quitmsg" in keys:
+                    self.quitmsg = config[section]["quit"]
+            elif section == "Network":
+                if "sslverify" in keys:
+                    verify = config[section]["sslverify"]
+                    if verify == 0:
+                        self.sslVerify = False
+                    else:
+                        self.sslVerify = True
+                if "retries" in keys:
+                    self.retries = config[section]["retries"]
+                if "delay" in keys:
+                    self.delay = config[section]["delay"]
+                if "name" in keys:
+                    self.network = config[section]["name"]
