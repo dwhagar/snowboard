@@ -31,7 +31,7 @@ class Channel:
             return ["PART " + self.name]
     
     # Find a nick in the list, if one exists.
-    def __findNick(self, nick):
+    def findNick(self, nick):
         result = None
         
         # Find the proper entry in members.
@@ -43,13 +43,19 @@ class Channel:
     
     # Add a nick to the list.        
     def addNick(self, nick, priv):
-        existing = self.__findNick(nick)
+        existing = self.findNick(nick)
         if existing == None:
             member = [nick, priv]
             self.members.append(member)
         else:
             member[0] = nick
             member[1] = priv
+            
+    # Remove a nick from the list.
+    def removeNick(self, nick):
+        existing = self.findNick(nick)
+        if not existing == None:
+            members.remove(existing)
 
 # Stores information about privileges on a channel. 
 class ChannelPriv:

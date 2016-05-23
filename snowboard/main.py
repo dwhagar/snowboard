@@ -57,9 +57,16 @@ def __process_responses(net, raw):
     # Process the server closing the link (per RFC 2812)
     elif response[1:2] == ":Closing Link:":
         net.disconnect()
-    # Process JOIN responses to confirm a channel has been joined.
+    # Process a QUIT message.
+    elif response[1] == "QUIT":
+        net.processQuit(response)
+    # Process JOIN and PART messages.
     elif response[1] == "JOIN" or response[1] == "PART":
         net.processJoinPart(response)
+    # Process a NICK message.
+    elif response[1] == "NICK":
+        net.processNick(response)
+    # Process a PRIVMSG message.
     elif response[1] == "PRIVMSG":
         cmds = __get_commands(raw)
     

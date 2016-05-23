@@ -174,11 +174,15 @@ class Network:
             if existing.joined:
                 self.sendCommands(existing.part())
     
+    # Split the hostmask into host and nick.
+    def __splitHostmask(self, hostmask):
+        # Handle the leading ':' on messages, then split at the '!'
+        hostmask = hostmask[1:].split('!')
+        return (hostmask[0], hostmask[1])
+    
     # Process a join message, show channel as joined
     def processJoinPart(self, response):
-        # Get the hostmask, then from that get the nick for the join
-        hostmask = response[0].split('!')
-        nck = hostmask[0] # the name nick will conflict with the object
+        nck, host = self.__splitHostmask(response[0])
         
         # If the message is from the bot itself, then it means we need to
         # mark a channel as joined.
@@ -194,17 +198,65 @@ class Network:
                 # Remove the channel if this is a part message.
                 debug.message("Successfully parted from " + chan.name + ".")
                 self.channels.remove(chan)
+        # If the message is not about the bot, process it for a nick
         else:
+            cJoined = response[2]
+            
+            # Find the channel, retrieve the object, could put error check
+            # but shouldn't be required, since the bot won't receive a
+            # a message from a channel it isn't on (and thus is in its list)
+            chanObject = self.__findChannel(cJoined)
+            
+            # Process a join.
             if response[1] == "JOIN":
                 nickObject = self.__addNick(nck)
                 cPriv = channel.ChannelPriv(False, False)
-                cJoined = response[2]
-                chanObject = self.__findChannel(cJoined)
                 chanObject.addNick(nickObject, cPriv)
+                
+            # Process a quit.
             elif response[1] == "PART":
                 nickObject = self.__findNick(nick)
                 if not nickObject == None:
-                    pass # Bookmark
+                    chanObject.removeNick(nickObject)
+                    self.cleanNicks()
+    
+    # Clean up the master nicks list, removing nicks no longer in channels.
+    def cleanNicks(self):
+        # A flag to see if a nick was found.
+        found = False
+        
+        # Search each nick in turn.
+        for nickObject in self.nicks:
+            # Search for each nick in each channel.
+            for chanObject in self.channels:
+                chanNick = chanObject(nickObject)
+                
+                # If we find it, set the flag, and break
+                if not chanNick == None:
+                    found = True
+                    break
+            
+            # If the channels are all checked, and nothing found, remove it.
+            if not found:
+                self.nicks.remove(nickObject)
+    
+    # If a user quits, remove them from the master list and all other lists.
+    def processQuit(self, response):
+        # Unpack the nick from the host, the host part isn't required
+        nickName, host = self.__splitHostmask(response[0])
+        
+        # Find the nick in the master list.
+        nickObject = self.__findNick(nickName)
+        
+        # If that nick exists, remove it.
+        if not nickObject == None:
+        
+            # Remove the nick from all channel lists first.
+            for chan in self.channels:
+                chan.removeNick(nickObject)
+                
+            # Remove the nick from the master list last.
+            self.nicks.remove(nickObject)            
     
     # Find a nick in the list.
     def __findNick(self, nick):
@@ -248,6 +300,9 @@ class Network:
         channelName = response[4]
         names = response[5:]
         names[0] = names[0][1:]
+        
+        # Go through each name, progressively building its privs and adding
+        # each name to the channel list and the master list.
         for name in names:
             # Recognized channel privileges
             opped = False
@@ -269,6 +324,15 @@ class Network:
             cPriv = channel.ChannelPriv(opped, voiced)
             existing = self.__findChannel(channelName)
             existing.addNick(nick, cPriv)
+    
+    # Process a nick change, even if the bot itself changes nicks.
+    def processNick(self, response):
+        # Since the bot processes NAMES and JOINS messages, there should
+        # never be a time when a NICK message comes in that it is not already
+        # in the list.
+        nickName, userHost = self.__splitHostmask(response[0])
+        nickObject = self.__findNick(nickName)
+        nickObject.name = response[2]
     
     # Join all channels.
     def joinAll(self):
