@@ -91,11 +91,14 @@ class Connection:
     
     # Disconnect the socket.
     def disconnect(self):
+        debug.message("Disconnected from " + self.host + ":" + self.port + ".")
         if ssl:
-            self.__ssl.close()
-            self.__ssl = None
+            if not self.__ssl == None:
+                self.__ssl.close()
+                self.__ssl = None
         else:
-            self.__socket.close()
+            if not self.__socket == None:
+                self.__socket.close()
         self.__socket = None
         self.__connected = False
     
@@ -114,7 +117,7 @@ class Connection:
                     else:
                         data = self.__socket.recv(1).decode('utf-8')
                 except (ssl.SSLWantReadError, BlockingIOError):
-                    received = False
+                    received = None
                     break
                 
                 # Process the data.
@@ -123,17 +126,16 @@ class Connection:
                 if not data:
                     self.disconnect()
                     done = True
-                    received = False
+                    received = None
                 elif data == '\n':
                     done = True
                 else:
                     received += data
         else:
-            # Return false if the system is not connected.
-            received = False
+            received = None
         
         # Remove the trailing carriage return character (cr/lf pair)
-        if not type(received) == bool:
+        if not received == None:
             received = received.strip('\r')
             debug.trace(received)
         

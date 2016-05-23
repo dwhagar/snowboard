@@ -74,10 +74,14 @@ class Network:
         
         return result
     
+    # Properly quit from the server.
+    def quit(self):
+        self.sendCommands(["QUIT " + self.config.quitmsg])
+    
     # Disconnect from the network.       
     def disconnect(self):
         if self.__connection.connected:
-            debug.info("Connecting to server.")
+            debug.info("Disconnecting from server.")
             self.__connection.disconnect()
         else:
             debug.info("Not connected to server.")
@@ -100,7 +104,7 @@ class Network:
         # Wait for the server to signal that authentication is complete.
         while not self.__authenticated:
             data = self.__connection.read()
-            if not type(data) == bool:
+            if not data == None:
                 self.__pingpong(data)
                 line = data.split()
                 if line[1] == "396":
@@ -117,24 +121,27 @@ class Network:
     # authenticate, some even require a ping be responded to before
     # authenticating.  
     def __authwait(self):
+        time.sleep(0.25) # Give the sever a chance to say something.
         data = self.__connection.read()
-        while not type(data) == bool:
+        while not data == None:
             self.__pingpong(data)
             data = self.__connection.read()
     
     # Send a list of commands to the server.
     def sendCommands(self, list):
         for cmd in list:
-            self.__connection.write(cmd)
+            if cmd == "*QUIT*":
+                self.quit()
+            else:
+                self.__connection.write(cmd)
     
     # Check for new messages from server.
     def checkMessages(self):
         data = self.__connection.read()
-        if type(data) == bool:
-            return False
-        else:
+        if not (data == None):
             self.__pingpong(data)
-            return data
+            
+        return data
     
     # See if a channel already exists.
     def __checkChannels(self, channel):
@@ -225,7 +232,8 @@ class Network:
     
     # Parse out a hostname from a WHO response
     def processWho(self, response):
-        pass
+        nick = self.__findNick(response[4])
+        nick.host = response[5]
     
     # Parse out the names response.
     def processNames(self, response):
