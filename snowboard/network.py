@@ -27,7 +27,7 @@ class Network:
         self.name = self.config.network
         self.__connection = None
         self.__authenticated = False
-        self.channels = []
+        self.channels = cfg.channels
         self.nicks = []
     
     # Let the outside see if the bot is online.
@@ -125,7 +125,7 @@ class Network:
     # Send a list of commands to the server.
     def sendCommands(self, list):
         for cmd in list:
-            self.__connection.send(cmd)
+            self.__connection.write(cmd)
     
     # Check for new messages from server.
     def checkMessages(self):
@@ -151,7 +151,7 @@ class Network:
     
     # Add a channel to the network.        
     def addChannel(self, chan):
-        existing = self.__checkChannels(chan)
+        existing = self.__checkChannels(chan.name)
         if type(existing) == bool:
             newChannel = channel.Channel(chan)
             self.sendCommands(newChannel.join())
@@ -162,7 +162,7 @@ class Network:
         
     # Remove a channel from the network.
     def removeChannel(self, chan):
-        existing = self.__checkChannels(channel)
+        existing = self.__checkChannels(chan.name)
         if not (type(existing) == bool):
             if existing.joined:
                 self.sendCommands(existing.part())
@@ -175,7 +175,7 @@ class Network:
         
         # If the message is from the bot itself, then it means we need to
         # mark a channel as joined.
-        if botnick.lower() == nick.lower():
+        if self.config.botnick.lower() == nick.lower():
             # We can assume that if we're getting a join about the bot, that
             # channel is in the list, so it will be found.
             chan = self.__checkChannels(response[2])
@@ -191,7 +191,70 @@ class Network:
             # TODO: Write code to process other nicks and reference
             #       the nick and channel lists.
             pass
-
+    
+    # Find a nick in the list.
+    def __findNick(self, nick):
+        result = None
+        
+        for existing in self.nicks:
+            if nick.lower() == existing.name.lower():
+                result = existing
+                break
+        
+        return result
+        
+    def __findChannel(self, channel):
+        result = None
+        
+        for existing in self.channels:
+            if channel.lower() == existing.name.lower():
+                result = existing
+                break
+                
+        return existing
+    
+    # Add a nick to the list.
+    def __addNick(self, nickName):
+        existing = self.__findNick(nickName)
+        if existing == None:
+            newNick = nick.Nick(nickName)
+            self.nicks.append(newNick)
+            return newNick
+        else:
+            return existing
+    
+    # Parse out a hostname from a WHO response
+    def processWho(self, response):
+        pass
+    
+    # Parse out the names response.
+    def processNames(self, response):
+        # Whittle down to just a list of names, with privs still attached
+        channelName = response[4]
+        names = response[5:]
+        names[0] = names[0][1:]
+        for name in names:
+            # Recognized channel privileges
+            opped = False
+            voiced = False
+            
+            if name[0] == '@':
+                opped = True
+                name = name[1:]
+            elif name[0] == '+':
+                voiced = True
+                name = name[1:]
+            
+            # First, add the nick to the master list.
+            nick = self.__addNick(name)
+            if nick.host == "":
+                self.sendCommands(nick.getHost())
+            
+            # Second, add the nick to the channel's nick list with privileges
+            cPriv = channel.ChannelPriv(opped, voiced)
+            existing = self.__findChannel(channelName)
+            existing.addNick(nick, cPriv)
+    
     # Join all channels.
     def joinAll(self):
         for channel in self.config.channels:

@@ -44,52 +44,16 @@ def __parse_args(argv, cfg):
     config.verbosity = cfg.options.verbose
     cfg.file = cfg.options.config
 
-# Join the configured channels.
-def __join_channels(conn, channel_names):
-    """Join each channel in a list.
-    """
-    channels = []
-    for chan in channel_names:
-        __join_channel(conn, chan)
-    return channels
-
-# Pase channel names from a server and return a list of Names
-def __parse_names(conn, raw, masterChannels, masterNicks):
-    names = []
-    response = raw.split()
-    channel = response[4]
-    response = response[5:]
-    for name in response:
-        oped = False
-        voiced = False
-        
-        name = name.strip(':')
-        if name[0] == '@' or name[1] == '@':
-            oped = True
-            name = name.replace('@','')
-        if name[0] == '+' or name[1] == '+':
-            voiced = True
-            name = name.replace('+','')
-            
-        # TODO: Use two lists, one channels list and one nicks list.
-        
-        # SARIA: Had to add these to make it work
-        channels = None
-        nicks = None
-        
-        __update_master_channels(masterChannels, channels)
-        __update_master_nicks(conn, masterNicks, nicks)
-
 def __process_responses(net, message):
     response = message.split()
     cmds = []
     
     # Process WHO responses to get hostnames.
     if response[1] == "352":
-        pass
+        net.processWho(response)
     # Process NAMES responses to get all names for channels joined.
     elif response[1] == "353":
-        pass
+        net.processNames(response)
     # Process JOIN responses to confirm a channel has been joined.
     elif response[1] == "JOIN" or response[1] == "PART":
         net.processJoinPart(response)
