@@ -110,7 +110,6 @@ class Network:
     # Respond to a ping.
     def __pingpong(self, message):
         line = message.split()
-        print(line)
         if line[0] == "PING":
             self.__connection.write("PONG " + line[1])
     
