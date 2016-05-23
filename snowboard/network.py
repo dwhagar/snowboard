@@ -101,17 +101,18 @@ class Network:
         while not self.__authenticated:
             data = self.__connection.read()
             if not type(data) == bool:
+                self.__pingpong(data)
                 line = data.split()
                 if line[1] == "396":
                     debug.message("Authentication successful.")
                     self.__authenticated = True
     
-    # Check for a ping to respond to.
+    # Respond to a ping.
     def __pingpong(self, message):
         line = message.split()
+        print(line)
         if line[0] == "PING":
-            pong = line[1].strip(':')
-            self.connection.write("PONG :" + pong)
+            self.__connection.write("PONG " + line[1])
     
     # Some servers require that the client receive data before it can
     # authenticate, some even require a ping be responded to before
