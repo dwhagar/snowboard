@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # This file is part of snowboard.
 # 
 # snowboard is free software: you can redistribute it and/or modify
@@ -15,7 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import snowboard
+# Stores information about a nick.
+class Nick:
+    def __init__(self, nick, host = "", priv = None):
+        self.name = nick
+        self.host = host
+        self.priv = priv # NickPriv object
+        
+    def getHost(self):
+        return ["WHO " + self.name]
 
-sys.exit(snowboard.main(sys.argv[1:]))
+# Stpres information about privileges of a nick, across all channels.
+class NickPriv:
+    def __init__(self, level = 0, admin = False):
+        self.admin = admin
+        self.level = level
