@@ -178,11 +178,11 @@ class Network:
     def processJoinPart(self, response):
         # Get the hostmask, then from that get the nick for the join
         hostmask = response[0].split('!')
-        nick = hostmask[0]
+        nck = hostmask[0] # the name nick will conflict with the object
         
         # If the message is from the bot itself, then it means we need to
         # mark a channel as joined.
-        if self.config.botnick.lower() == nick.lower():
+        if self.config.botnick.lower() == nck.lower():
             # We can assume that if we're getting a join about the bot, that
             # channel is in the list, so it will be found.
             chan = self.__checkChannels(response[2])
@@ -195,9 +195,16 @@ class Network:
                 debug.message("Successfully parted from " + chan.name + ".")
                 self.channels.remove(chan)
         else:
-            # TODO: Write code to process other nicks and reference
-            #       the nick and channel lists.
-            pass
+            if response[1] == "JOIN":
+                nickObject = self.__addNick(nck)
+                cPriv = channel.ChannelPriv(False, False)
+                cJoined = response[2]
+                chanObject = self.__findChannel(cJoined)
+                chanObject.addNick(nickObject, cPriv)
+            elif response[1] == "PART":
+                nickObject = self.__findNick(nick)
+                if not nickObject == None:
+                    pass # Bookmark
     
     # Find a nick in the list.
     def __findNick(self, nick):
