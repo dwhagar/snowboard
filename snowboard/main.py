@@ -44,8 +44,8 @@ def __parse_args(argv, cfg):
     config.verbosity = cfg.options.verbose
     cfg.file = cfg.options.config
 
-def __process_responses(net, message):
-    response = message.split()
+def __process_responses(net, raw):
+    response = raw.split()
     cmds = []
     
     # Process WHO responses to get hostnames.
@@ -54,15 +54,20 @@ def __process_responses(net, message):
     # Process NAMES responses to get all names for channels joined.
     elif response[1] == "353":
         net.processNames(response)
+    # Process the server closing the link (per RFC 2812)
+    elif response[1:2] == ":Closing Link:":
+        net.disconnect()
     # Process JOIN responses to confirm a channel has been joined.
     elif response[1] == "JOIN" or response[1] == "PART":
         net.processJoinPart(response)
+    elif response[1] == "PRIVMSG":
+        cmds = __get_commands(raw)
     
     return cmds
 
 def __quit_command(message):
-    print(message)
     commands = []
+    print(message)
     if message == "quit now":
         commands.append("*QUIT*")
     return commands
@@ -77,17 +82,6 @@ def __get_commands(raw):
         commands = __quit_command(message)
         
     return commands
-
-def __execute_commands(conn, commands):
-    for command in commands:
-        if command == "*QUIT*":
-            ### TODO:
-            ### Rather than sending the QUIT command then continuing to
-            ### loop with what should be a dead connection, perhaps we
-            ### should set a flag and then break out of the main loop?
-            __send_message(conn, "QUIT :" + config.QUITMSG)
-        else:
-            __send_message(conn, commands)
 
 def main(argv):
     # Get the configuration from the file specified by the command line options.
@@ -110,10 +104,10 @@ def main(argv):
         return 1
     
     # Loop until we break the loop.
-    while True:
+    while net.online():
         # Is there data?
         data = net.checkMessages()
-        if type(data) == bool:
+        if data == None:
             time.sleep(0)
             continue
         else:
