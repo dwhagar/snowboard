@@ -58,9 +58,11 @@ class Config:
             line = entry.split(':')
             if line[1][0] == '+':
                 ssl = True
+                line[1] = line[1][1:]
             else:
-                ssl = False
-            newServer = Server(line[0], line[1], ssl)
+                ssl = False           
+            
+            newServer = Server(line[0], int(line[1]), ssl)
             self.servers.append(newServer)
         
         # Parse Channels into a List
@@ -85,14 +87,14 @@ class Config:
                     self.quitmsg = config[section]["quit"]
             elif section == "Network":
                 if "sslverify" in keys:
-                    verify = config[section]["sslverify"]
+                    verify = int(config[section]["sslverify"])
                     if verify == 0:
                         self.sslVerify = False
                     else:
                         self.sslVerify = True
                 if "retries" in keys:
-                    self.retries = config[section]["retries"]
+                    self.retries = int(config[section]["retries"])
                 if "delay" in keys:
-                    self.delay = config[section]["delay"]
+                    self.delay = float(config[section]["delay"])
                 if "name" in keys:
                     self.network = config[section]["name"]

@@ -27,26 +27,32 @@ class Network:
         self.name = self.config.network
         self.__connection = None
         self.__authenticated = False
-        self.channels = []
+        self.channels = cfg.channels
         self.nicks = []
     
     # Let the outside see if the bot is online.
     def online(self):
         if self.__connection == None:
             return False
-        elif self.__authenticated == False:
-            return False
         else:
-            return self.__connection.connected
+            return self.__connection.connected()
+            
+    # Let the outside world see if the connection is ready.
+    def ready(self):
+        return self.__authenticated
         
     # Connect to the network.    
     def connect(self):
-        attempts = 0
+        attempt = 0
+        
+        if self.__connection == None:
+            connected = False
+        else:
+            connected = self.__connection.connected
         
         # Retry connecting until either the system is connected or none left
-        while (not self.__connection.connected) and (attempts < len(self.config.servers)):
+        while (not connected) and (attempt < len(self.config.servers)):
             attempt += 1
-            debug.info("Attempting to connect to the server.")
             for server in self.config.servers:
                 # Create the connection object, load settings from config
                 self.__connection = connection.Connection(server)
@@ -58,18 +64,24 @@ class Network:
                 self.__connection.ssl = server.ssl
                 
                 # Try to connect, decide what to do next.
-                if self.__connection.connect():
+                result = self.__connection.connect()
+                
+                if result:
                     debug.message("Connected to " + server.host + ".")
                     continue
                 else:
                     time.sleep(self.config.delay)
         
-        return self.__connection.connected
+        return result
+    
+    # Properly quit from the server.
+    def quit(self):
+        self.sendCommands(["QUIT " + self.config.quitmsg])
     
     # Disconnect from the network.       
     def disconnect(self):
         if self.__connection.connected:
-            debug.info("Connecting to server.")
+            debug.info("Disconnecting from server.")
             self.__connection.disconnect()
         else:
             debug.info("Not connected to server.")
@@ -92,22 +104,166 @@ class Network:
         # Wait for the server to signal that authentication is complete.
         while not self.__authenticated:
             data = self.__connection.read()
-            line = data.split()
-            if line[1] == "396":
-                self.__authenticated = True
+            if not data == None:
+                self.__pingpong(data)
+                line = data.split()
+                if line[1] == "396":
+                    debug.message("Authentication successful.")
+                    self.__authenticated = True
     
-    # Check for a ping to respond to.
+    # Respond to a ping.
     def __pingpong(self, message):
-        ling = message.split()
+        line = message.split()
         if line[0] == "PING":
-            pong = line[1].strip(':')
-            self.connection.write("PONG :" + pong)
+            self.__connection.write("PONG " + line[1])
     
     # Some servers require that the client receive data before it can
     # authenticate, some even require a ping be responded to before
     # authenticating.  
     def __authwait(self):
+        time.sleep(0.25) # Give the sever a chance to say something.
         data = self.__connection.read()
-        while data:
+        while not data == None:
             self.__pingpong(data)
             data = self.__connection.read()
+    
+    # Send a list of commands to the server.
+    def sendCommands(self, list):
+        for cmd in list:
+            if cmd == "*QUIT*":
+                self.quit()
+            else:
+                self.__connection.write(cmd)
+    
+    # Check for new messages from server.
+    def checkMessages(self):
+        data = self.__connection.read()
+        if not (data == None):
+            self.__pingpong(data)
+            
+        return data
+    
+    # See if a channel already exists.
+    def __checkChannels(self, channel):
+        # Return False if no channel is found.
+        result = False
+        
+        # Find if a channel exists already in the list.
+        for chan in self.channels:
+            if chan.name.lower() == channel.lower():
+                result = chan
+                break
+        
+        return result
+    
+    # Add a channel to the network.        
+    def addChannel(self, chan):
+        existing = self.__checkChannels(chan.name)
+        if type(existing) == bool:
+            newChannel = channel.Channel(chan)
+            self.sendCommands(newChannel.join())
+            self.channels.append(newChannel)
+        else:
+            if not existing.joined:
+                self.sendCommands(existing.join())
+        
+    # Remove a channel from the network.
+    def removeChannel(self, chan):
+        existing = self.__checkChannels(chan.name)
+        if not (type(existing) == bool):
+            if existing.joined:
+                self.sendCommands(existing.part())
+    
+    # Process a join message, show channel as joined
+    def processJoinPart(self, response):
+        # Get the hostmask, then from that get the nick for the join
+        hostmask = response[0].split('!')
+        nick = hostmask[0]
+        
+        # If the message is from the bot itself, then it means we need to
+        # mark a channel as joined.
+        if self.config.botnick.lower() == nick.lower():
+            # We can assume that if we're getting a join about the bot, that
+            # channel is in the list, so it will be found.
+            chan = self.__checkChannels(response[2])
+            if response[1] == "JOIN":
+                # Mark the channel as joined.
+                debug.message("Successfully joined " + chan.name + ".")
+                chan.joined = True
+            elif response[1] == "PART":
+                # Remove the channel if this is a part message.
+                debug.message("Successfully parted from " + chan.name + ".")
+                self.channels.remove(chan)
+        else:
+            # TODO: Write code to process other nicks and reference
+            #       the nick and channel lists.
+            pass
+    
+    # Find a nick in the list.
+    def __findNick(self, nick):
+        result = None
+        
+        for existing in self.nicks:
+            if nick.lower() == existing.name.lower():
+                result = existing
+                break
+        
+        return result
+        
+    def __findChannel(self, channel):
+        result = None
+        
+        for existing in self.channels:
+            if channel.lower() == existing.name.lower():
+                result = existing
+                break
+                
+        return existing
+    
+    # Add a nick to the list.
+    def __addNick(self, nickName):
+        existing = self.__findNick(nickName)
+        if existing == None:
+            newNick = nick.Nick(nickName)
+            self.nicks.append(newNick)
+            return newNick
+        else:
+            return existing
+    
+    # Parse out a hostname from a WHO response
+    def processWho(self, response):
+        nick = self.__findNick(response[4])
+        nick.host = response[5]
+    
+    # Parse out the names response.
+    def processNames(self, response):
+        # Whittle down to just a list of names, with privs still attached
+        channelName = response[4]
+        names = response[5:]
+        names[0] = names[0][1:]
+        for name in names:
+            # Recognized channel privileges
+            opped = False
+            voiced = False
+            
+            if name[0] == '@':
+                opped = True
+                name = name[1:]
+            elif name[0] == '+':
+                voiced = True
+                name = name[1:]
+            
+            # First, add the nick to the master list.
+            nick = self.__addNick(name)
+            if nick.host == "":
+                self.sendCommands(nick.getHost())
+            
+            # Second, add the nick to the channel's nick list with privileges
+            cPriv = channel.ChannelPriv(opped, voiced)
+            existing = self.__findChannel(channelName)
+            existing.addNick(nick, cPriv)
+    
+    # Join all channels.
+    def joinAll(self):
+        for channel in self.config.channels:
+            self.addChannel(channel)

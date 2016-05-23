@@ -52,6 +52,7 @@ class Connection:
         # Try until the connection succeeds or no more tries are left.
         while (not self.__connected) and (attempt < self.retries):
             # Attempt to establish a connection.
+            debug.message("Attempting connection to " + self.host + ":" + str(self.port) + ".")
             try:
                 self.__socket = socket.create_connection((self.host, self.port))
                 
@@ -71,7 +72,6 @@ class Connection:
                     self.__socket.setblocking(False)
                 
                 self.__connected = True
-                self.error = ""
             
             # Assume connection errors are no big deal but do display an error.
             except ConnectionAbortedError:
@@ -91,11 +91,14 @@ class Connection:
     
     # Disconnect the socket.
     def disconnect(self):
+        debug.message("Disconnected from " + self.host + ":" + self.port + ".")
         if ssl:
-            self.__ssl.close()
-            self.__ssl = None
+            if not self.__ssl == None:
+                self.__ssl.close()
+                self.__ssl = None
         else:
-            self.__socket.close()
+            if not self.__socket == None:
+                self.__socket.close()
         self.__socket = None
         self.__connected = False
     
@@ -114,27 +117,25 @@ class Connection:
                     else:
                         data = self.__socket.recv(1).decode('utf-8')
                 except (ssl.SSLWantReadError, BlockingIOError):
-                    received = False
+                    received = None
                     break
                 
                 # Process the data.
                 # socket.recv is supposed to return a False if the connection
                 # been broken.
                 if not data:
-                    self.error = "Disconnected"
                     self.disconnect()
                     done = True
-                    received = False
+                    received = None
                 elif data == '\n':
                     done = True
                 else:
                     received += data
         else:
-            # Return false if the system is not connected.
-            received = False
+            received = None
         
         # Remove the trailing carriage return character (cr/lf pair)
-        if not type(received) == bool:
+        if not received == None:
             received = received.strip('\r')
             debug.trace(received)
         
@@ -161,7 +162,6 @@ class Connection:
                 
                 # If nothing gets sent, we are disconnected from the server.
                 if sentNow == 0:
-                    self.error = "Disconnected"
                     self.disconnect()
                     sent = False
                 

@@ -18,7 +18,38 @@ class Channel:
     def __init__(self, name, members = []):
         self.name = name
         self.joined = False
-        self.members = members # A list of lists, storing Nick and ChanPriv objects
+        self.members = members # A list of lists, storing Nick and ChanPriv
+    
+    # Join a channel.
+    def join(self):
+        if not self.joined:
+            return ["JOIN " + self.name] 
+     
+    # Part from a channel.       
+    def part(self):
+        if self.joined:
+            return ["PART " + self.name]
+    
+    # Find a nick in the list, if one exists.
+    def __findNick(self, nick):
+        result = None
+        
+        # Find the proper entry in members.
+        for member in self.members:
+            if member[0].name.lower() == nick.name.lower():
+                result = member
+        
+        return result
+    
+    # Add a nick to the list.        
+    def addNick(self, nick, priv):
+        existing = self.__findNick(nick)
+        if existing == None:
+            member = [nick, priv]
+            self.members.append(member)
+        else:
+            member[0] = nick
+            member[1] = priv
 
 # Stores information about privileges on a channel. 
 class ChannelPriv:
