@@ -34,10 +34,12 @@ class Network:
     def online(self):
         if self.__connection == None:
             return False
-        elif self.__authenticated == False:
-            return False
         else:
-            return self.__connection.connected
+            return self.__connection.connected()
+            
+    # Let the outside world see if the connection is ready.
+    def ready(self):
+        return self.__authenticated
         
     # Connect to the network.    
     def connect(self):
@@ -52,7 +54,6 @@ class Network:
         while (not connected) and (attempt < len(self.config.servers)):
             attempt += 1
             for server in self.config.servers:
-                debug.info("Attempting to connect to " + server.host + ":" + str(server.port) + ".")
                 # Create the connection object, load settings from config
                 self.__connection = connection.Connection(server)
                 self.__connection.retries = self.config.retries
@@ -63,13 +64,15 @@ class Network:
                 self.__connection.ssl = server.ssl
                 
                 # Try to connect, decide what to do next.
-                if self.__connection.connect():
+                result = self.__connection.connect()
+                
+                if result:
                     debug.message("Connected to " + server.host + ".")
                     continue
                 else:
                     time.sleep(self.config.delay)
         
-        return self.__connection.connected
+        return result
     
     # Disconnect from the network.       
     def disconnect(self):
@@ -118,3 +121,78 @@ class Network:
         while not type(data) == bool:
             self.__pingpong(data)
             data = self.__connection.read()
+    
+    # Send a list of commands to the server.
+    def sendCommands(self, list):
+        for cmd in list:
+            self.__connection.send(cmd)
+    
+    # Check for new messages from server.
+    def checkMessages(self):
+        data = self.__connection.read()
+        if type(data) == bool:
+            return False
+        else:
+            self.__pingpong(data)
+            return data
+    
+    # See if a channel already exists.
+    def __checkChannels(self, channel):
+        # Return False if no channel is found.
+        result = False
+        
+        # Find if a channel exists already in the list.
+        for chan in self.channels:
+            if chan.name.lower() == channel.lower():
+                result = chan
+                break
+        
+        return result
+    
+    # Add a channel to the network.        
+    def addChannel(self, chan):
+        existing = self.__checkChannels(chan)
+        if type(existing) == bool:
+            newChannel = channel.Channel(chan)
+            self.sendCommands(newChannel.join())
+            self.channels.append(newChannel)
+        else:
+            if not existing.joined:
+                self.sendCommands(existing.join())
+        
+    # Remove a channel from the network.
+    def removeChannel(self, chan):
+        existing = self.__checkChannels(channel)
+        if not (type(existing) == bool):
+            if existing.joined:
+                self.sendCommands(existing.part())
+    
+    # Process a join message, show channel as joined
+    def processJoinPart(self, response):
+        # Get the hostmask, then from that get the nick for the join
+        hostmask = response[0].split('!')
+        nick = hostmask[0]
+        
+        # If the message is from the bot itself, then it means we need to
+        # mark a channel as joined.
+        if botnick.lower() == nick.lower():
+            # We can assume that if we're getting a join about the bot, that
+            # channel is in the list, so it will be found.
+            chan = self.__checkChannels(response[2])
+            if response[1] == "JOIN":
+                # Mark the channel as joined.
+                debug.message("Successfully joined " + chan.name + ".")
+                chan.joined = True
+            elif response[1] == "PART":
+                # Remove the channel if this is a part message.
+                debug.message("Successfully parted from " + chan.name + ".")
+                self.channels.remove(chan)
+        else:
+            # TODO: Write code to process other nicks and reference
+            #       the nick and channel lists.
+            pass
+
+    # Join all channels.
+    def joinAll(self):
+        for channel in self.config.channels:
+            self.addChannel(channel)

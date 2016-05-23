@@ -52,7 +52,7 @@ class Connection:
         # Try until the connection succeeds or no more tries are left.
         while (not self.__connected) and (attempt < self.retries):
             # Attempt to establish a connection.
-            debug.trace("Attempting connection to: " + self.host + ":" + str(self.port) + ".")
+            debug.trace("Attempting connection to " + self.host + ":" + str(self.port) + ".")
             try:
                 self.__socket = socket.create_connection((self.host, self.port))
                 
@@ -72,7 +72,6 @@ class Connection:
                     self.__socket.setblocking(False)
                 
                 self.__connected = True
-                self.error = ""
             
             # Assume connection errors are no big deal but do display an error.
             except ConnectionAbortedError:
@@ -122,7 +121,6 @@ class Connection:
                 # socket.recv is supposed to return a False if the connection
                 # been broken.
                 if not data:
-                    self.error = "Disconnected"
                     self.disconnect()
                     done = True
                     received = False

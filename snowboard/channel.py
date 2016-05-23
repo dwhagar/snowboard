@@ -18,7 +18,17 @@ class Channel:
     def __init__(self, name, members = []):
         self.name = name
         self.joined = False
-        self.members = members # A list of lists, storing Nick and ChanPriv objects
+        self.members = members # A list of lists, storing Nick and ChanPriv
+    
+    # Join a channel.
+    def join(self):
+        if not self.joined:
+            return ["JOIN " + self.name]
+     
+    # Part from a channel.       
+    def part(self):
+        if self.joined:
+            return ["PART " + self.name]
 
 # Stores information about privileges on a channel. 
 class ChannelPriv:

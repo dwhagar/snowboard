@@ -14,6 +14,7 @@
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import time
 
 from . import config
 from . import connection
@@ -31,7 +32,7 @@ def __parse_args(argv, cfg):
     # Use the -1 default so that the system knows if verbosity is being
     # overriden by the command line.
     argparser.add_argument("--verbose", "-v",
-                           default=-1, action="count",
+                           default=0, action="count",
                            help="increase output verbosity")
     
     # Default to snowboard.ini.
@@ -79,23 +80,21 @@ def __parse_names(conn, raw, masterChannels, masterNicks):
         __update_master_channels(masterChannels, channels)
         __update_master_nicks(conn, masterNicks, nicks)
 
-def __process_responses(conn, message, channels):
+def __process_responses(net, message):
     response = message.split()
+    cmds = []
     
     # Process WHO responses to get hostnames.
     if response[1] == "352":
-        for channel in channels:
-            for name in channel.names:
-                if name.nick.lower() == response[4].lower():
-                    name.setHost(response[5])
+        pass
     # Process NAMES responses to get all names for channels joined.
     elif response[1] == "353":
-        names = __parse_names(conn, message, None, None)
-        for channel in channels:
-            if channel.name.lower() == response[4].lower():
-                channel.updateNames(names)
-    elif response[0] == "PING":
-        __send_message(conn, "PONG " + response[1])
+        pass
+    # Process JOIN responses to confirm a channel has been joined.
+    elif response[1] == "JOIN" or response[1] == "PART":
+        net.processJoinPart(response)
+    
+    return cmds
 
 def __quit_command(message):
     print(message)
@@ -134,10 +133,33 @@ def main(argv):
     
     result = 0    # Define a result value, so we can pass it back to the shell
     
-    # Establish a connection and authenticate.
     net = network.Network(cfg)
-    net.connect()
-    net.auth()
     
+    # Establish a connection.
+    if net.connect():
+        net.auth()
+        if net.ready():
+            net.joinAll()
+        else:
+            return 1
+    else:
+        return 1
+    
+    # Loop until we break the loop.
+    while True:
+        # Is there data?
+        data = net.checkMessages()
+        if type(data) == bool:
+            time.sleep(0)
+            continue
+        else:
+            # If anything needs to be sent to the server, we'll get a list
+            # of commands from the response processor.
+            cmds = __process_responses(net, data)
+            if len(cmds) > 0:
+                net.sendCommands(cmds)
+        
+        # Make sure we don't amp up the CPU to max.
+        time.sleep(0)
     
     return result
