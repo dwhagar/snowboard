@@ -47,15 +47,12 @@ class Channel:
         if existing == None:
             member = [nick, priv]
             self.members.append(member)
-        else:
-            member[0] = nick
-            member[1] = priv
             
     # Remove a nick from the list.
     def removeNick(self, nick):
         existing = self.findNick(nick)
         if not existing == None:
-            members.remove(existing)
+            self.members.remove(existing)
 
 # Stores information about privileges on a channel. 
 class ChannelPriv:

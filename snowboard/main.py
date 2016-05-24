@@ -22,7 +22,8 @@ from . import channel
 from . import network
 
 def __parse_args(argv, cfg):
-    """Parse command-line arguments.
+    """
+    Parse command-line arguments.
     """
     argparser = argparse.ArgumentParser(
         prog="snowboard",
@@ -74,7 +75,6 @@ def __process_responses(net, raw):
 
 def __quit_command(message):
     commands = []
-    print(message)
     if message == "quit now":
         commands.append("*QUIT*")
     return commands
@@ -106,8 +106,10 @@ def main(argv):
         if net.ready():
             net.joinAll()
         else:
+            debug.error("Failed to authenticate.")
             return 1
     else:
+        debug.error("Failed to connect.")
         return 1
     
     # Loop until we break the loop.

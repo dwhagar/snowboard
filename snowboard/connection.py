@@ -91,7 +91,7 @@ class Connection:
     
     # Disconnect the socket.
     def disconnect(self):
-        debug.message("Disconnected from " + self.host + ":" + self.port + ".")
+        debug.message("Disconnected from " + self.host + ":" + str(self.port) + ".")
         if ssl:
             if not self.__ssl == None:
                 self.__ssl.close()
@@ -137,6 +137,9 @@ class Connection:
         # Remove the trailing carriage return character (cr/lf pair)
         if not received == None:
             received = received.strip('\r')
+            if len(received) > 0:
+                if received[0] == ':':
+                    received = received[1:]
             debug.trace(received)
         
         return received

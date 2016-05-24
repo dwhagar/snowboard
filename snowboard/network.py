@@ -102,7 +102,7 @@ class Network:
         self.__connection.write("USER " + self.config.botnick + " 0 * :" + self.config.realname)
         
         # Wait for the server to signal that authentication is complete.
-        while not self.__authenticated:
+        while (not self.__authenticated) and (self.__connection.connected()):
             data = self.__connection.read()
             if not data == None:
                 self.__pingpong(data)
@@ -145,8 +145,7 @@ class Network:
     
     # See if a channel already exists.
     def __checkChannels(self, channel):
-        # Return False if no channel is found.
-        result = False
+        result = None
         
         # Find if a channel exists already in the list.
         for chan in self.channels:
@@ -177,19 +176,23 @@ class Network:
     # Split the hostmask into host and nick.
     def __splitHostmask(self, hostmask):
         # Handle the leading ':' on messages, then split at the '!'
-        hostmask = hostmask[1:].split('!')
+        hostmask = hostmask.split('!')
         return (hostmask[0], hostmask[1])
     
     # Process a join message, show channel as joined
     def processJoinPart(self, response):
         nck, host = self.__splitHostmask(response[0])
+        if response[2][1] == ':':
+            cJoined = response[2][1:]
+        else:
+            cJoined = response[2]
         
         # If the message is from the bot itself, then it means we need to
         # mark a channel as joined.
         if self.config.botnick.lower() == nck.lower():
             # We can assume that if we're getting a join about the bot, that
             # channel is in the list, so it will be found.
-            chan = self.__checkChannels(response[2])
+            chan = self.__checkChannels(cJoined)
             if response[1] == "JOIN":
                 # Mark the channel as joined.
                 debug.message("Successfully joined " + chan.name + ".")
@@ -200,8 +203,6 @@ class Network:
                 self.channels.remove(chan)
         # If the message is not about the bot, process it for a nick
         else:
-            cJoined = response[2]
-            
             # Find the channel, retrieve the object, could put error check
             # but shouldn't be required, since the bot won't receive a
             # a message from a channel it isn't on (and thus is in its list)
@@ -212,13 +213,15 @@ class Network:
                 nickObject = self.__addNick(nck)
                 cPriv = channel.ChannelPriv(False, False)
                 chanObject.addNick(nickObject, cPriv)
+                debug.message("Processed a join message on " + cJoined + " from " + nck + ".")
                 
             # Process a quit.
             elif response[1] == "PART":
-                nickObject = self.__findNick(nick)
+                nickObject = self.__findNick(nck)
                 if not nickObject == None:
                     chanObject.removeNick(nickObject)
                     self.cleanNicks()
+                debug.message("Processed a part message on " + cJoined + " from " + nck + ".")
     
     # Clean up the master nicks list, removing nicks no longer in channels.
     def cleanNicks(self):
@@ -229,7 +232,7 @@ class Network:
         for nickObject in self.nicks:
             # Search for each nick in each channel.
             for chanObject in self.channels:
-                chanNick = chanObject(nickObject)
+                chanNick = chanObject.findNick(nickObject)
                 
                 # If we find it, set the flag, and break
                 if not chanNick == None:
@@ -256,14 +259,16 @@ class Network:
                 chan.removeNick(nickObject)
                 
             # Remove the nick from the master list last.
-            self.nicks.remove(nickObject)            
+            self.nicks.remove(nickObject) 
+            
+        debug.message("Processed a quit message from " + nickName + ".")           
     
     # Find a nick in the list.
-    def __findNick(self, nick):
+    def __findNick(self, nickName):
         result = None
         
         for existing in self.nicks:
-            if nick.lower() == existing.name.lower():
+            if nickName.lower() == existing.name.lower():
                 result = existing
                 break
         
@@ -293,6 +298,7 @@ class Network:
     def processWho(self, response):
         nick = self.__findNick(response[4])
         nick.host = response[5]
+        debug.message("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
     
     # Parse out the names response.
     def processNames(self, response):
@@ -324,6 +330,8 @@ class Network:
             cPriv = channel.ChannelPriv(opped, voiced)
             existing = self.__findChannel(channelName)
             existing.addNick(nick, cPriv)
+            
+        debug.message("Processed a list of names on " + channelName + ".")
     
     # Process a nick change, even if the bot itself changes nicks.
     def processNick(self, response):
@@ -333,8 +341,11 @@ class Network:
         nickName, userHost = self.__splitHostmask(response[0])
         nickObject = self.__findNick(nickName)
         nickObject.name = response[2]
+        
+        debug.message("Processed a nick change from " + nickName + " to " + response[2] + ".")
     
     # Join all channels.
     def joinAll(self):
+        debug.message("Attempting to join all configured channels.")
         for channel in self.config.channels:
             self.addChannel(channel)
