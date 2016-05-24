@@ -22,7 +22,8 @@ from . import channel
 from . import network
 
 def __parse_args(argv, cfg):
-    """Parse command-line arguments.
+    """
+    Parse command-line arguments.
     """
     argparser = argparse.ArgumentParser(
         prog="snowboard",
@@ -57,9 +58,16 @@ def __process_responses(net, raw):
     # Process the server closing the link (per RFC 2812)
     elif response[1:2] == ":Closing Link:":
         net.disconnect()
-    # Process JOIN responses to confirm a channel has been joined.
+    # Process a QUIT message.
+    elif response[1] == "QUIT":
+        net.processQuit(response)
+    # Process JOIN and PART messages.
     elif response[1] == "JOIN" or response[1] == "PART":
         net.processJoinPart(response)
+    # Process a NICK message.
+    elif response[1] == "NICK":
+        net.processNick(response)
+    # Process a PRIVMSG message.
     elif response[1] == "PRIVMSG":
         cmds = __get_commands(raw)
     
@@ -67,7 +75,6 @@ def __process_responses(net, raw):
 
 def __quit_command(message):
     commands = []
-    print(message)
     if message == "quit now":
         commands.append("*QUIT*")
     return commands
@@ -99,8 +106,10 @@ def main(argv):
         if net.ready():
             net.joinAll()
         else:
+            debug.error("Failed to authenticate.")
             return 1
     else:
+        debug.error("Failed to connect.")
         return 1
     
     # Loop until we break the loop.
