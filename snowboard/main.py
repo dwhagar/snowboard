@@ -13,6 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+This acts at the core of the script where the network and configuration
+objects are directly created and manipulated.  Commands to be sent back to
+the network object for sending to the IRC server should be formatted as lists
+of strings, each item being a single command.
+'''
+
 import argparse
 import time
 
@@ -22,9 +29,7 @@ from . import channel
 from . import network
 
 def __parse_args(argv, cfg):
-    """
-    Parse command-line arguments.
-    """
+    """Parse command-line arguments."""
     argparser = argparse.ArgumentParser(
         prog="snowboard",
         description="IRC Bot Written in Python 3.",
@@ -41,11 +46,16 @@ def __parse_args(argv, cfg):
                            default="snowboard.ini",
                            help="specify the configuration file to use.")
     
+    # Load all the options from the configuration.
     cfg.options = argparser.parse_args(argv)
     config.verbosity = cfg.options.verbose
     cfg.file = cfg.options.config
 
 def __process_responses(net, raw):
+    '''
+    Process responses from the server and pass instructions to the network
+    object.
+    '''
     response = raw.split()
     cmds = []
     
@@ -74,12 +84,14 @@ def __process_responses(net, raw):
     return cmds
 
 def __quit_command(message):
+    '''Processes a directive to quit as a command.'''
     commands = []
     if message == "quit now":
         commands.append("*QUIT*")
     return commands
 
 def __get_commands(raw):
+    '''Gets commands from scripts to be then set back to the IRC Server'''
     commands = []
     response = raw.split()
     message = " ".join(response[3:])
