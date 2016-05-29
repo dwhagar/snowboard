@@ -25,7 +25,17 @@ seperated list of hostmasks, user level, comma seperated list of accepted
 flags, comma seperated list of deny flags.
 
 uid:
-shall be unique and act as the primary key across all tables.
+shall be unique and act as the primary key across all tables and will use
+an sha1 hash of the network name and username to produce a UID.  This will
+use base64 to represent the binary data in the database.
+
+user:
+shall be a username, usually set to the users default Nick but this is not
+required.  Usernames must be unique in the system, as they are used to
+generate the UID.
+
+password:
+shall be the sha512 hashed and base64 converted password.
 
 hostmasks:
 shall be stored with simple wildcards only, * or ? wich will
@@ -47,18 +57,38 @@ for which operations are denied for that user.
 '''
 
 import sqlite3
+import os.path
+import hashlib
+import base64
 
 class Users:
     def __init__(self, network, table = "global"):
+        self.network = network
         self.database = network + "-users.db"
         self.table = table
-    
+        
+        initDB() # Make sure there is a database and it has the table.
+
     def initDB(self):
         '''Intended to initialize a database that doesn't yet exist.'''
         conn = sqlite3.connect(self.database)
         c = conn.cusor()
         
-        c.execute('CREATE TABLE {tn} )
+        initCmd = "CREATE TABLE IF NOT EXISTS" + self.table + " (uid TEXT PRIMARY KEY, user TEXT, password BLOB, hostmasks TEXT, level INTEGER, approved TEXT, denied TEXT")
+        
+        c.execute(initCmd)
         
         conn.commit()
         conn.close()
+        
+    def uidHash(self, name)
+        # Create the has.
+        sha = hashlib.sha1()
+        sha.update(name)
+        sha.update(self.network)
+        data = sha.digest()
+        
+        # Encode it for storage as a string.
+        result = base64.b64encode(data)
+        
+        return result
