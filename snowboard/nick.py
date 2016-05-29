@@ -13,7 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
-# Stores information about a nick.
+'''
+Stores information about a nick on the IRC network including hostname and
+privleges associated with the nick in a global sense.  The object also
+contains the fungtion to request a hostname for a particular nick.
+'''
 class Nick:
     def __init__(self, nick, host = "", priv = None):
         self.name = nick
@@ -25,6 +29,7 @@ class Nick:
 
 # Stpres information about privileges of a nick, across all channels.
 class NickPriv:
-    def __init__(self, level = 0, admin = False):
+    def __init__(self, level = 0, uid = None, admin = False):
+        self.uid = uid          # UID of a particular user, unique ID in DB
         self.admin = admin
         self.level = level
