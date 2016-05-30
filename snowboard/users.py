@@ -277,3 +277,29 @@ class Users:
         self.__closeDB()
         
         return result
+        
+    def userInformation(self, uid):
+        '''Retreives user information from the database given a uid.'''
+        # Open the DB
+        self.__openDB()
+        
+        # Retrieve everything about a user from the DB.
+        query = "SELECT user, level, approved, denied FROM " + self.table + " WHERE uid IS '" + uid + "'"
+        
+        # Actually do the search.
+        self.db.execute(query)
+        data = self.db.fetchone()
+        
+        # Process the data.
+        if data == None:
+            result = None
+        else:
+            # Split up the data as needed.
+            user, level, approved, denied = data
+            approvedList = approved.split(',')
+            deniedList = denied.split(',')
+            result = (user, level, approvedList, deniedList)
+        
+        self.__closeDB()
+        
+        return result

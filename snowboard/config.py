@@ -50,7 +50,8 @@ class Config:
         
         # Load all sections to parse
         # Network, server, and channel information is required
-        # Parse Servers into a List
+        # Parse Servers into a List, grab the network name.
+        self.network = config['Network']['name']
         servers = config['Network']['servers']
         servers = servers.replace(' ','')
         combined = servers.split(',')
@@ -70,9 +71,9 @@ class Config:
         channels = channels.replace(' ','')
         channelList = channels.split(',')
         for channel in channelList:
-            newChannel = Channel(channel)
-            self.channels.append(newChannel)        
-        
+            newChannel = Channel(channel, self.network)
+            self.channels.append(newChannel)
+            
         # These sections all have reasonable defaults, so it checks to see if
         # the keys are there, if they are not defaults are used.
         for section in config.sections():
@@ -95,6 +96,4 @@ class Config:
                 if "retries" in keys:
                     self.retries = int(config[section]["retries"])
                 if "delay" in keys:
-                    self.delay = float(config[section]["delay"])
-                if "name" in keys:
-                    self.network = config[section]["name"]
+                    self.delay = float(config[section]["delay"]) 

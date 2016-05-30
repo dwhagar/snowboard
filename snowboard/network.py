@@ -20,6 +20,160 @@ from . import connection
 from . import config
 from . import channel
 from . import nick
+from . import users
+
+'''
+Stores all information and functions related to a connection to a particular
+network.
+
+///Data///
+.config
+A Config objet to store all configuration options to do with this network.
+
+.name
+The name of the network.
+
+.channels
+A list of Channel objects that the bot is configured with.
+
+.nicks
+A list of Nick objects, all nicks for which the bot is aware, this is a
+global list and encompases all nicks on all channels.
+
+.users
+A User object to provide an interface to the user database.  This particular
+object interfaces with the global database table and is also used by the
+Nick objects within the nicks list.
+
+///Constructor///
+Network(cfg)
+Acceepts one input, that of a Config object.  The object is required, it
+contains all of the configuration options that the bot needs to know what
+to do on the network configured within.
+
+///Methods///
+.online()
+Returns a boolean value for if the bot is currently connected to an IRC
+server.
+
+.ready()
+Returns a boolean value to see if the connection to the IRC server is ready
+to accept commands, constitutes if the bot is authenticated with the IRC
+network or not.
+
+.connect()
+Instructs the bot to connect to the IRC network.
+
+.quit()
+Instructs the bot to send a QUIT command back to the IRC network, the system
+should then stay online until the IRC network responds that it is closing the
+link.
+
+.disconnect()
+Disconnects from the IRC network.  This is a hard disconnect and simply
+closes the socket connection without sending a QUIT command, thus the
+connection is closed immidiately.  This may result in a "Ping Timeout" or a
+"Connection Reset by Peer" error for the bot on the IRC network.
+
+.auth()
+Authenticates with the IRC network.  Most networks can only accept
+authentication commands once they have sent some data, usually a NOTICE
+that the system is looking up either hostname or ident information (or both).
+
+Some servers also send a PING command back to the system to verify that the
+connection is live and that a proper IRC client exists on the other end.
+Should the server not receive a proper PONG response prior to authentication
+commands are sent, the connection will be terminated.
+
+.sendCommands(list)
+Sends commands to the IRC server.
+Accepts one input
+list
+A list of commands to be sent to the server.
+
+Some commands are directives intended for the bot and not for the IRC server
+itself are surrounded by *'s, the bot will redirect these and call the
+appropriate function to translate these directives into a list of commands
+for the server.
+
+Current list of directives:
+*QUIT*
+Instructs the bot to QUIT from the server properly.
+
+.checkMessages()
+Instructs the bot to check to see what messages are in the buffer waiting to
+be processed.  This method also deals with the PING/PONG call and response
+from the server, to keep the connection alive.  Even though the bot responds
+to PING's here, it will still send a PING back to the calling function so any
+additional tasks can be completed.
+
+.addChannel(chan)
+Instructs the bot to add a channel to its list of channels.  Once added if
+the channel is not joined, it will get the join command from the object and
+sent it to the server.
+
+If the channel is already in the database, the existing Channel object is
+instead used.
+
+Accepts one input.
+chan
+A Channel object.
+
+.removeChannel(chan)
+Instructs the bot to remove a channel from its list.  If the bot has joined
+the channel, then the commands are sent to the server to part from that
+channel.
+
+Accepts one input.
+chan
+A channel object.
+
+.processJoinPart(reponse)
+Processes a JOIN or PART message from the server.  This function is
+responsible for telling the network that a channel is joined or a part
+command has been successful by the bot as well as processing new people join
+or leave the channel.
+
+Takes one input.
+response
+A list of strings which represents the JOIN response from the server, already
+split.
+
+.cleanNicks()
+Cleans out nicks from the master list which no longer reside on any channels.
+
+.processQuit(response)
+Processes a QUIT message sent from the server.  The function removes the
+nick from all channels and from the master list as well.
+
+Takes one input.
+response
+A list of strings which represents the QUIT response from the server, already
+split.
+
+.processWho(response)
+Process a WHO response from the server to get the host information for a
+particualr Nick object.
+
+Takes one input.
+response
+A list of strings which represents the WHO response from the server, already
+split.
+
+.processNames(response)
+Process a NAMES response from the server to fill in the names and basic privs
+of everyone in a channel.  This will check to see if a Nick is already in the
+master list as well as a channel's members list and add to both when missing
+if it finds the Nick object, it will use the existing object.
+
+Takes one input.
+response
+A list of strings which represents the NAMES response from the server,
+already split.
+
+.joinAll()
+Instructs the bot to join all channels which it is confiugred for.
+'''
 
 class Network:
     def __init__(self, cfg):
@@ -29,6 +183,7 @@ class Network:
         self.__authenticated = False
         self.channels = cfg.channels
         self.nicks = []
+        self.users = users.Users(cfg.network)
     
     # Let the outside see if the bot is online.
     def online(self):
@@ -158,10 +313,10 @@ class Network:
     # Add a channel to the network.        
     def addChannel(self, chan):
         existing = self.__checkChannels(chan.name)
-        if type(existing) == bool:
-            newChannel = channel.Channel(chan)
-            self.sendCommands(newChannel.join())
+        if existing == None:
+            newChannel = channel.Channel(chan, self.name)
             self.channels.append(newChannel)
+            self.sendCommands(newChannel.join())
         else:
             if not existing.joined:
                 self.sendCommands(existing.join())
@@ -169,7 +324,7 @@ class Network:
     # Remove a channel from the network.
     def removeChannel(self, chan):
         existing = self.__checkChannels(chan.name)
-        if not (type(existing) == bool):
+        if not existing == None:
             if existing.joined:
                 self.sendCommands(existing.part())
     
@@ -208,14 +363,23 @@ class Network:
             # a message from a channel it isn't on (and thus is in its list)
             chanObject = self.__findChannel(cJoined)
             
+            # TODO:  Get the bot to pull the hostname out of the join message
+            #        and apply it to the Nick object.
+            
             # Process a join.
             if response[1] == "JOIN":
                 nickObject = self.__addNick(nck)
                 cPriv = channel.ChannelPriv(False, False)
                 chanObject.addNick(nickObject, cPriv)
                 debug.message("Processed a join message on " + cJoined + " from " + nck + ".")
-                
-            # Process a quit.
+            
+            # TODO:  Adjust this so that a nick remains authenticated a
+            #        certain amount of time after they have left all
+            #        channels.  This will require modifying the loop in main
+            #        as well to clear out Nick objects from the master
+            #        list on a timer.
+            
+            # Process a part.
             elif response[1] == "PART":
                 nickObject = self.__findNick(nck)
                 if not nickObject == None:
@@ -288,7 +452,7 @@ class Network:
     def __addNick(self, nickName):
         existing = self.__findNick(nickName)
         if existing == None:
-            newNick = nick.Nick(nickName)
+            newNick = nick.Nick(nickName, self.users)
             self.nicks.append(newNick)
             return newNick
         else:
