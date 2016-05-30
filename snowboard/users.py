@@ -67,19 +67,21 @@ class Users:
         self.network = network
         self.database = network.lower() + "-users.db"
         self.table = table
-        self.conn = sqlite3.connect(self.database)
+        self.conn = None
         self.db = None
         
         self.__initDB() # Make sure there is a database and it has the table.
         
     def __openDB(self):
         '''Opens the user database up for use.'''
+        self.conn = sqlite3.connect(self.database)
         self.db = self.conn.cursor()
         
     def __closeDB(self):
         '''Closes the user database.'''
-        self.db = self.conn.commit()
-        self.db = self.conn.close()
+        self.conn.commit()
+        self.conn.close()
+        self.conn = None
 
     def __initDB(self):
         '''Intended to initialize a database that doesn't yet exist.'''
@@ -88,6 +90,8 @@ class Users:
         initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, user TEXT, password TEXT, hostmasks TEXT, level INTEGER, approved TEXT, denied TEXT)"
         
         self.db.execute(initCmd)
+        
+        self.__closeDB()
         
     def __uidHash(self, name):
         '''Creates a base64 encoded hash for the uid of a given user name.'''
@@ -110,7 +114,7 @@ class Users:
         result = base64.b64encode(data).decode('utf-8')
         return result
         
-    def passwordCheck(self, password, hash):
+    def __passwordCheck(self, password, hash):
         '''Give a true/false result if a password is valid given a hash.'''
         result = False
         
@@ -121,24 +125,26 @@ class Users:
     
     def __convertWild(self, search):
         '''Converts a simple wildcard search into a regular expression.'''
-        new = search.replace('?',".?")
+        new = search.replace('.', "\.")
+        new = new.replace('?',".?")
         new = new.replace('*',".*")
         return new
     
-    def findHost(self, hostmask):
+    def matchHost(self, hostmask):
         '''Finds a user based on a given hostmask.  Returns UID or None.'''
         result = None
         
         self.__openDB()
         
-        query = "SELECT uid, hostmask FROM ?"
+        query = "SELECT uid, hostmasks FROM " + self.table
         
         # Iterate through all entries in that list.
-        for row in self.db.execute(query, self.table):
-            for mask in row[1]:
-                search = re.compile(self.__convertWild(mask))
-                if not (search.match(hostmask) == None):
-                    result = row[0]
+        for row in self.db.execute(query):
+            uid, masks = row
+            maskList = masks.split(',')
+            for mask in maskList:
+                if re.search(self.__convertWild(mask), hostmask):
+                    result = uid
                     break
             if not (result == None):
                 break
@@ -146,15 +152,54 @@ class Users:
         self.__closeDB()
         return result
         
-    def addUser(self, user, password, hostmasks = [], level = 0,
-                accepted = "", denied = ""):
-        '''Adds a user record to the database'''
+    def matchUser(self, userName):
+        '''Finds a user based on a given user name.  Returns UID or None.'''
+        result = None
+        
         self.__openDB()
         
-        masks = ','.join(hostmasks)
+        query = "SELECT uid FROM " + self.table + " WHERE user IS \"" + userName + "\" COLLATE NOCASE"
+        self.db.execute(query)
+        data = self.db.fetchone()
         
+        if not data == None:
+            result = data[0]
+        
+        self.__closeDB()
+        return result
+    
+    def uidExists(self, uid):
+        '''Checks to see if a UID exists in the database already.'''
+        self.__openDB()
+        
+        query = "SELECT uid FROM " + self.table + " WHERE uid IS \"" + uid + "\" COLLATE NOCASE"
+        
+        if data == None:
+            result = False
+        else:
+            result = True
+        
+        return result
+        
+    def addUser(self, user, password, hostmasks = [], level = 0,
+                acceptedList = [], deniedList = []):
+        '''Adds a user record to the database'''
+        uid = self.__uidHash(self.network + user)
+        
+        exists = self.matchUser(user)
+        if not exists == None:
+            return exists
+        
+        self.__openDB()
+        
+        # Convert the lists into CSV format.
+        masks = ','.join(hostmasks)
+        accepted = ','.join(acceptedList)
+        denied = ','.join(deniedList)
+        
+        # Create a list to pass onto the function and store in the DB.
         data = [
-            self.__uidHash(user),
+            uid,
             user,
             self.__passwordHash(password),
             masks,
@@ -163,7 +208,45 @@ class Users:
             denied
         ]
         
+        # Create the SQL query line, using ?'s where the function will
+        # fill in the data from the list.
         query = "INSERT INTO " + self.table + " VALUES (?, ?, ?, ?, ?, ?, ?)"
         self.db.execute(query, data)
         
         self.__closeDB()
+        
+        return uid
+    
+    def removeUser(self, uid):
+        '''Remove a user by UID from the database.'''
+        self.__openDB()
+        
+        # Build the query, then execute.
+        query = "DELETE FROM " + self.table + " WHERE uid IS \"" + uid + "\""
+        print(query)
+        self.db.execute(query)
+        
+        self.__closeDB()
+    
+    def verifyUser(self, uid, password):
+        '''Verifies a user password against that which is in the database.'''
+        result = False
+        
+        # Open the DB
+        self.__openDB()
+        
+        query = "SELECT password FROM " + self.table + " WHERE uid IS \"" + uid + "\""
+        
+        # Look up the UID in the database, retrieve the password.
+        self.db.execute(query)
+        data = self.db.fetchone()
+        
+        # If there is data, check it.
+        if not data == None:
+            data = data[0]
+            result = self.__passwordCheck(password, data)
+        
+        # Close the DB    
+        self.__closeDB()
+        
+        return result
