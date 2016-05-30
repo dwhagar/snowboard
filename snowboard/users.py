@@ -35,7 +35,7 @@ required.  Usernames must be unique in the system, as they are used to
 generate the UID.
 
 password:
-shall be the sha512 hashed and base64 converted password.
+shall be the sha512 hashed and base64 converted string.
 
 hostmasks:
 shall be stored with simple wildcards only, * or ? wich will
@@ -60,35 +60,110 @@ import sqlite3
 import os.path
 import hashlib
 import base64
+import re
 
 class Users:
     def __init__(self, network, table = "global"):
         self.network = network
-        self.database = network + "-users.db"
+        self.database = network.lower() + "-users.db"
         self.table = table
+        self.conn = sqlite3.connect(self.database)
+        self.db = None
         
-        initDB() # Make sure there is a database and it has the table.
+        self.__initDB() # Make sure there is a database and it has the table.
+        
+    def __openDB(self):
+        '''Opens the user database up for use.'''
+        self.db = self.conn.cursor()
+        
+    def __closeDB(self):
+        '''Closes the user database.'''
+        self.db = self.conn.commit()
+        self.db = self.conn.close()
 
-    def initDB(self):
+    def __initDB(self):
         '''Intended to initialize a database that doesn't yet exist.'''
-        conn = sqlite3.connect(self.database)
-        c = conn.cusor()
+        self.__openDB()
         
-        initCmd = "CREATE TABLE IF NOT EXISTS" + self.table + " (uid TEXT PRIMARY KEY, user TEXT, password BLOB, hostmasks TEXT, level INTEGER, approved TEXT, denied TEXT")
+        initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, user TEXT, password TEXT, hostmasks TEXT, level INTEGER, approved TEXT, denied TEXT)"
         
-        c.execute(initCmd)
+        self.db.execute(initCmd)
         
-        conn.commit()
-        conn.close()
-        
-    def uidHash(self, name)
+    def __uidHash(self, name):
+        '''Creates a base64 encoded hash for the uid of a given user name.'''
         # Create the has.
         sha = hashlib.sha1()
-        sha.update(name)
-        sha.update(self.network)
+        sha.update(name.lower().encode('utf-8'))
+        sha.update(self.network.lower().encode('utf-8'))
         data = sha.digest()
         
         # Encode it for storage as a string.
-        result = base64.b64encode(data)
+        result = base64.b64encode(data).decode('utf-8')
         
         return result
+        
+    def __passwordHash(self, password):
+        '''Creates a base64 encoded hash from a password.'''
+        sha512 = hashlib.sha256()
+        sha512.update(password.encode('utf-8'))
+        data = sha512.digest()
+        result = base64.b64encode(data).decode('utf-8')
+        return result
+        
+    def passwordCheck(self, password, hash):
+        '''Give a true/false result if a password is valid given a hash.'''
+        result = False
+        
+        if self.__passwordHash(password) == hash:
+            result = True
+            
+        return result
+    
+    def __convertWild(self, search):
+        '''Converts a simple wildcard search into a regular expression.'''
+        new = search.replace('?',".?")
+        new = new.replace('*',".*")
+        return new
+    
+    def findHost(self, hostmask):
+        '''Finds a user based on a given hostmask.  Returns UID or None.'''
+        result = None
+        
+        self.__openDB()
+        
+        query = "SELECT uid, hostmask FROM ?"
+        
+        # Iterate through all entries in that list.
+        for row in self.db.execute(query, self.table):
+            for mask in row[1]:
+                search = re.compile(self.__convertWild(mask))
+                if not (search.match(hostmask) == None):
+                    result = row[0]
+                    break
+            if not (result == None):
+                break
+        
+        self.__closeDB()
+        return result
+        
+    def addUser(self, user, password, hostmasks = [], level = 0,
+                accepted = "", denied = ""):
+        '''Adds a user record to the database'''
+        self.__openDB()
+        
+        masks = ','.join(hostmasks)
+        
+        data = [
+            self.__uidHash(user),
+            user,
+            self.__passwordHash(password),
+            masks,
+            level,
+            accepted,
+            denied
+        ]
+        
+        query = "INSERT INTO " + self.table + " VALUES (?, ?, ?, ?, ?, ?, ?)"
+        self.db.execute(query, data)
+        
+        self.__closeDB()
