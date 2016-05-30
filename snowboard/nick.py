@@ -103,11 +103,8 @@ class Nick:
             uid = self.priv.uid
         
         # If there is still no UID, the user does not exist.
-        if uid == None:
-            return uid
-        # If we know the UID, get all the information.
-        else:
-            data = userInformation(uid)
+        if not uid == None:
+            data = self.users.userInformation(uid)
             self.priv.user = data[0]
             self.priv.level = data[1]
             self.priv.approved = data[2]

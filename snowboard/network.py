@@ -363,14 +363,14 @@ class Network:
             # a message from a channel it isn't on (and thus is in its list)
             chanObject = self.__findChannel(cJoined)
             
-            # TODO:  Get the bot to pull the hostname out of the join message
-            #        and apply it to the Nick object.
-            
             # Process a join.
             if response[1] == "JOIN":
                 nickObject = self.__addNick(nck)
+                nickObject.host = host
+                nickObject.getPrivs()
                 cPriv = channel.ChannelPriv(False, False)
                 chanObject.addNick(nickObject, cPriv)
+                
                 debug.message("Processed a join message on " + cJoined + " from " + nck + ".")
             
             # TODO:  Adjust this so that a nick remains authenticated a

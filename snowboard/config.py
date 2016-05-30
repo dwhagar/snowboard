@@ -22,6 +22,7 @@ from .server import Server
 
 # Global verbosity.
 verbosity = 0
+init = 0
 
 # Class to store and load configuration data.
 class Config:

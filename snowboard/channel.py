@@ -71,6 +71,10 @@ Takes two inputs, a Nick object and a ChanPriv objects.
 Removes a nick from the member list if that nick exists.
 
 Takes one input, a Nick object.
+
+.getAllPrivs()
+Accesses the database and get the channel privleges for all members of
+that channel.
 '''
 
 from . import users
@@ -101,22 +105,46 @@ class Channel:
         # Find the proper entry in members.
         for member in self.members:
             if member[0].name.lower() == nick.name.lower():
+                self.__getPrivs(member[0], member[1])
                 result = member
         
         return result
-          
+
     def addNick(self, nick, priv):
         '''Add a nick to the list.'''
         existing = self.findNick(nick)
         if existing == None:
+            self.__getPrivs(nick, priv)
             member = [nick, priv]
             self.members.append(member)
-            
+
     def removeNick(self, nick):
         '''Remove a nick from the list.'''
         existing = self.findNick(nick)
         if not existing == None:
             self.members.remove(existing)
+    
+    def __getPrivs(self, nick, priv):
+        '''Add access rights to a particular Nick and ChanPriv pair'''
+        uid = nick.priv.uid
+        result = uid
+        
+        if not uid == None:
+            data = self.users.userInformation(uid)
+            if not data == None:
+                priv.user = data[0]
+                priv.level = data[1]
+                priv.approved = data[2]
+                priv.denied = data[3]
+            else:
+                result = None
+        
+        return result
+        
+    def getAllPrivs(self):
+        '''Load all privleges for all members.'''
+        for member in members:
+            self.__getPrivs(member[0], member[1])
 
 '''
 An object to store user privleges for a particular channel.

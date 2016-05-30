@@ -45,10 +45,15 @@ def __parse_args(argv, cfg):
     argparser.add_argument("--config", "-c",
                            default="snowboard.ini",
                            help="specify the configuration file to use.")
+                           
+    argparser.add_argument("--init", "-i",
+                           default=0,
+                           help="tell the bot to accept the init command.")
     
     # Load all the options from the configuration.
     cfg.options = argparser.parse_args(argv)
     config.verbosity = cfg.options.verbose
+    config.init = cfg.options.init
     cfg.file = cfg.options.config
 
 def __process_responses(net, raw):
