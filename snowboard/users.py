@@ -21,7 +21,7 @@ The user database will store a table for each channel where specific
 privileges are stored, as well as a global table for global privileges.
 
 Each table shall consist of a unique ID (uid), a user name, comma
-seperated list of hostmasks, user level, comma seperated list of accepted
+seperated list of hostmasks, user level, comma seperated list of approved
 flags, comma seperated list of deny flags.
 
 uid:
@@ -47,7 +47,7 @@ level:
 shall be an integer storing a simple number from 0 to 255 which
 signifies the user level, 255 being the highest access and 0 being no access.
 
-accepted:
+approved:
 shall be a comma seperated list, each item will be taken as a single flag
 for which operations are approved for that user.
 
@@ -158,7 +158,7 @@ class Users:
         
         self.__openDB()
         
-        query = "SELECT uid FROM " + self.table + " WHERE user IS \"" + userName + "\" COLLATE NOCASE"
+        query = "SELECT uid FROM " + self.table + " WHERE user IS '" + userName + "' COLLATE NOCASE"
         self.db.execute(query)
         data = self.db.fetchone()
         
@@ -172,7 +172,7 @@ class Users:
         '''Checks to see if a UID exists in the database already.'''
         self.__openDB()
         
-        query = "SELECT uid FROM " + self.table + " WHERE uid IS \"" + uid + "\" COLLATE NOCASE"
+        query = "SELECT uid FROM " + self.table + " WHERE uid IS '" + uid + "' COLLATE NOCASE"
         
         if data == None:
             result = False
@@ -182,19 +182,21 @@ class Users:
         return result
         
     def addUser(self, user, password, hostmasks = [], level = 0,
-                acceptedList = [], deniedList = []):
+                approvedList = [], deniedList = []):
         '''Adds a user record to the database'''
         uid = self.__uidHash(self.network + user)
         
+        # Make suer the user doesn't exist yet.
         exists = self.matchUser(user)
         if not exists == None:
+            self.updateUser(uid, user, password, hostmasks, level, approvedList, deniedList)
             return exists
         
         self.__openDB()
         
         # Convert the lists into CSV format.
         masks = ','.join(hostmasks)
-        accepted = ','.join(acceptedList)
+        approved = ','.join(approvedList)
         denied = ','.join(deniedList)
         
         # Create a list to pass onto the function and store in the DB.
@@ -204,7 +206,7 @@ class Users:
             self.__passwordHash(password),
             masks,
             level,
-            accepted,
+            approved,
             denied
         ]
         
@@ -216,13 +218,38 @@ class Users:
         self.__closeDB()
         
         return uid
+        
+    def updateUser(self, uid, user, password, hostmasks = [], level = 0,
+                approvedList = [], deniedList = []):
+        self.__openDB()
+        
+        # Convert the lists into CSV format.
+        masks = ','.join(hostmasks)
+        approved = ','.join(approvedList)
+        denied = ','.join(deniedList)
+        
+        data = [
+            user,
+            self.__passwordHash(password),
+            masks,
+            level,
+            approved,
+            denied
+        ]
+        
+        # Set the query.        
+        query = "UPDATE " + self.table + " SET user = ?, password = ?, hostmasks = ?, level = ?, approved = ?, denied = ? WHERE uid IS '" + uid + "'"
+        
+        self.db.execute(query, data)
+        
+        self.__closeDB()
     
     def removeUser(self, uid):
         '''Remove a user by UID from the database.'''
         self.__openDB()
         
         # Build the query, then execute.
-        query = "DELETE FROM " + self.table + " WHERE uid IS \"" + uid + "\""
+        query = "DELETE FROM " + self.table + " WHERE uid IS '" + uid + "'"
         print(query)
         self.db.execute(query)
         
@@ -235,7 +262,7 @@ class Users:
         # Open the DB
         self.__openDB()
         
-        query = "SELECT password FROM " + self.table + " WHERE uid IS \"" + uid + "\""
+        query = "SELECT password FROM " + self.table + " WHERE uid IS '" + uid + "'"
         
         # Look up the UID in the database, retrieve the password.
         self.db.execute(query)
