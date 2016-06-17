@@ -186,6 +186,11 @@ class Users:
         '''Adds a user record to the database'''
         uid = self.__uidHash(self.network + user)
         
+        if level > 255:
+            level = 255
+        elif level < 0:
+            level = 0
+        
         # Make suer the user doesn't exist yet.
         exists = self.matchUser(user)
         if not exists == None:
@@ -206,8 +211,8 @@ class Users:
             self.__passwordHash(password),
             masks,
             level,
-            approved,
-            denied
+            approved.lower(),
+            denied.lower()
         ]
         
         # Create the SQL query line, using ?'s where the function will
@@ -223,6 +228,11 @@ class Users:
                 approvedList = [], deniedList = []):
         self.__openDB()
         
+        if level > 255:
+            level = 255
+        elif level < 0:
+            level = 0
+        
         # Convert the lists into CSV format.
         masks = ','.join(hostmasks)
         approved = ','.join(approvedList)
@@ -233,8 +243,8 @@ class Users:
             self.__passwordHash(password),
             masks,
             level,
-            approved,
-            denied
+            approved.lower(),
+            denied.lower()
         ]
         
         # Set the query.        

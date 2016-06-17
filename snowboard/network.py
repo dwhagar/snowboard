@@ -91,15 +91,6 @@ Accepts one input
 list
 A list of commands to be sent to the server.
 
-Some commands are directives intended for the bot and not for the IRC server
-itself are surrounded by *'s, the bot will redirect these and call the
-appropriate function to translate these directives into a list of commands
-for the server.
-
-Current list of directives:
-*QUIT*
-Instructs the bot to QUIT from the server properly.
-
 .checkMessages()
 Instructs the bot to check to see what messages are in the buffer waiting to
 be processed.  This method also deals with the PING/PONG call and response
@@ -173,6 +164,35 @@ already split.
 
 .joinAll()
 Instructs the bot to join all channels which it is confiugred for.
+
+.addUser(name, password, host, [level], [approved], [denied])
+Adds a user to this networks user database.
+
+Accepts several inputs.
+name
+The name of the user, usually corrosponding to the most common nick of the
+user being added, can be arbitrary.
+
+host
+A hostmask that can be used as a pattern to match against in the format of:
+nick!user@host
+
+Wildcards can be used, so if a person connects from several hosts but they
+all end in "charter.net" then one could use:
+nick!user@*.charter.net
+
+Thus all the users hostnames would then match in one line.  The two wildcards
+are '*' and '?' where the first matches any length of characters in its place
+and the second matches a single character.
+
+level
+Optional, defaults to 1.  Used as a numeric user level from 0 to 255.
+
+approved
+Optional, defaults to an empty list.  A list of flags for approved fucntions.
+
+denied
+Optional, defaults to an empty list.  A list of flags for defnied functions.
 '''
 
 class Network:
@@ -185,19 +205,19 @@ class Network:
         self.nicks = []
         self.users = users.Users(cfg.network)
     
-    # Let the outside see if the bot is online.
     def online(self):
+        '''Let the outside see if the bot is online.'''
         if self.__connection == None:
             return False
         else:
             return self.__connection.connected()
-            
-    # Let the outside world see if the connection is ready.
+
     def ready(self):
+        '''Let the outside world see if the connection is ready.'''
         return self.__authenticated
-        
-    # Connect to the network.    
+
     def connect(self):
+        '''Connect to the network.'''
         attempt = 0
         
         if self.__connection == None:
@@ -228,13 +248,13 @@ class Network:
                     time.sleep(self.config.delay)
         
         return result
-    
-    # Properly quit from the server.
+
     def quit(self):
+        '''Properly quit from the server.'''
         self.sendCommands(["QUIT " + self.config.quitmsg])
-    
-    # Disconnect from the network.       
+
     def disconnect(self):
+        '''Disconnect from the server.'''
         if self.__connection.connected:
             debug.info("Disconnecting from server.")
             self.__connection.disconnect()
@@ -243,8 +263,8 @@ class Network:
 
         return self.__connection.connected
     
-    # Authenticate with the network.
     def auth(self):
+        '''Authenticate with the network.'''
         debug.message("Attempting to authenticate.")
         
         # Some servers can be douchebags
@@ -266,40 +286,43 @@ class Network:
                     debug.message("Authentication successful.")
                     self.__authenticated = True
     
-    # Respond to a ping.
     def __pingpong(self, message):
+        '''Respond to a ping request.'''
         line = message.split()
         if line[0] == "PING":
             self.__connection.write("PONG " + line[1])
-    
-    # Some servers require that the client receive data before it can
-    # authenticate, some even require a ping be responded to before
-    # authenticating.  
+     
     def __authwait(self):
+        '''
+        Some servers require that clients receive data before it can auth
+        with the server.  Some even require a ping be responded to before
+        authenticating.  This takes care of that by waiting for the server
+        to send something back, and responding to any pings that get sent.
+        '''
         time.sleep(0.25) # Give the sever a chance to say something.
         data = self.__connection.read()
         while not data == None:
             self.__pingpong(data)
             data = self.__connection.read()
     
-    # Send a list of commands to the server.
     def sendCommands(self, list):
+        '''Sends a list of commands to the server.'''
         for cmd in list:
             if cmd == "*QUIT*":
                 self.quit()
             else:
                 self.__connection.write(cmd)
     
-    # Check for new messages from server.
     def checkMessages(self):
+        '''Check for new messages from the server.'''
         data = self.__connection.read()
         if not (data == None):
             self.__pingpong(data)
             
         return data
     
-    # See if a channel already exists.
     def __checkChannels(self, channel):
+        '''See if a channel already exists.'''
         result = None
         
         # Find if a channel exists already in the list.
@@ -310,8 +333,8 @@ class Network:
         
         return result
     
-    # Add a channel to the network.        
     def addChannel(self, chan):
+        '''Add a channel to the network.'''
         existing = self.__checkChannels(chan.name)
         if existing == None:
             newChannel = channel.Channel(chan, self.name)
@@ -320,22 +343,22 @@ class Network:
         else:
             if not existing.joined:
                 self.sendCommands(existing.join())
-        
-    # Remove a channel from the network.
+
     def removeChannel(self, chan):
+        '''Remove a channel from the network.'''
         existing = self.__checkChannels(chan.name)
         if not existing == None:
             if existing.joined:
                 self.sendCommands(existing.part())
-    
-    # Split the hostmask into host and nick.
+
     def __splitHostmask(self, hostmask):
+        '''Split the hostname into host and nick.'''
         # Handle the leading ':' on messages, then split at the '!'
         hostmask = hostmask.split('!')
         return (hostmask[0], hostmask[1])
     
-    # Process a join message, show channel as joined
     def processJoinPart(self, response):
+        '''Process a join or part message from the server.'''
         nck, host = self.__splitHostmask(response[0])
         if response[2][1] == ':':
             cJoined = response[2][1:]
@@ -387,8 +410,11 @@ class Network:
                     self.cleanNicks()
                 debug.message("Processed a part message on " + cJoined + " from " + nck + ".")
     
-    # Clean up the master nicks list, removing nicks no longer in channels.
     def cleanNicks(self):
+        '''
+        Clean up the mast nick list, removing nicks that are no longer in
+        a channel where the bot resides.
+        '''
         # A flag to see if a nick was found.
         found = False
         
@@ -407,8 +433,11 @@ class Network:
             if not found:
                 self.nicks.remove(nickObject)
     
-    # If a user quits, remove them from the master list and all other lists.
     def processQuit(self, response):
+        '''
+        Processes a quit message from the server to remove said user from
+        the master nick list and all other lists.
+        '''
         # Unpack the nick from the host, the host part isn't required
         nickName, host = self.__splitHostmask(response[0])
         
@@ -427,8 +456,8 @@ class Network:
             
         debug.message("Processed a quit message from " + nickName + ".")           
     
-    # Find a nick in the list.
     def __findNick(self, nickName):
+        '''Find a nick in the master list.'''
         result = None
         
         for existing in self.nicks:
@@ -439,6 +468,7 @@ class Network:
         return result
         
     def __findChannel(self, channel):
+        '''Find a channel in the networks channel list.'''
         result = None
         
         for existing in self.channels:
@@ -448,8 +478,8 @@ class Network:
                 
         return existing
     
-    # Add a nick to the list.
     def __addNick(self, nickName):
+        '''Add a nick to the master list.'''
         existing = self.__findNick(nickName)
         if existing == None:
             newNick = nick.Nick(nickName, self.users)
@@ -458,14 +488,17 @@ class Network:
         else:
             return existing
     
-    # Parse out a hostname from a WHO response
     def processWho(self, response):
+        '''Process the server response from the WHO command.'''
         nick = self.__findNick(response[4])
         nick.host = response[5]
         debug.message("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
     
-    # Parse out the names response.
     def processNames(self, response):
+        '''
+        Process a server response to a NAMES command, parse out the names
+        for a given channel.
+        '''
         # Whittle down to just a list of names, with privs still attached
         channelName = response[4]
         names = response[5:]
@@ -497,8 +530,8 @@ class Network:
             
         debug.message("Processed a list of names on " + channelName + ".")
     
-    # Process a nick change, even if the bot itself changes nicks.
     def processNick(self, response):
+        '''Process a nick change.'''
         # Since the bot processes NAMES and JOINS messages, there should
         # never be a time when a NICK message comes in that it is not already
         # in the list.
@@ -508,8 +541,13 @@ class Network:
         
         debug.message("Processed a nick change from " + nickName + " to " + response[2] + ".")
     
-    # Join all channels.
     def joinAll(self):
+        '''Join all channels the bot is configured it.'''
         debug.message("Attempting to join all configured channels.")
         for channel in self.config.channels:
             self.addChannel(channel)
+            
+    def addUser(self, name, password, host,
+                level = 1, approved = [], denied = []):
+        '''Adds a user to the network.'''
+        users.addUser(name, password, host, level, approved, denied)

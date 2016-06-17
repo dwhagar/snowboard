@@ -1,0 +1,11 @@
+Snowboard Command Reference
+---------------------------
+
+init hostmask password
+
+Initializes the bot with an admin user with the hostmask and password
+specified.  This command is only enabled if the bot is run with the -i or
+--init command line options.
+
+For security, this command should only been enabled once, when the bot is
+configured for the first time.
