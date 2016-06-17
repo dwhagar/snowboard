@@ -86,7 +86,7 @@ class Channel:
         self.network = network
         self.joined = False
         self.members = members # A list of lists, storing Nick and ChanPriv
-        self.users = user.Users(self.network, self.name[1:])
+        self.users = users.Users(self.network, self.name[1:])
     
     def join(self):
         '''Join a channel.'''

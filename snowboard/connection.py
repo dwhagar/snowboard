@@ -142,6 +142,10 @@ class Connection:
                     received = received[1:]
             debug.trace(received)
         
+        # Bug fix for Issue #18, do not return blank lines.
+        if received == "":
+            received = None
+        
         return received
     
     # Send data to the server.

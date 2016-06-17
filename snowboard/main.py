@@ -27,6 +27,7 @@ from . import config
 from . import connection
 from . import channel
 from . import network
+from . import debug
 
 def __parse_args(argv, cfg):
     """Parse command-line arguments."""
@@ -87,21 +88,19 @@ def __process_responses(net, raw):
         net.processNick(response)
     # Process mode messages.
     elif response[1] == "MODE":
+        pass
         # TODO:  Process the MODE message from the server.
     # Process a PRIVMSG message.
     elif response[1] == "PRIVMSG":
         cmds = __get_commands(raw, net)
     
-    return cmds
-
-def __check_init():
-    '''Checks for if the init command has been used, to define admin'''
-    
+    return cmds  
 
 def __get_commands(raw, net):
     '''Gets commands from scripts to be then set back to the IRC Server'''
+    commands = []
     response = raw.split()
-    source = response[0][1:]
+    source = response[0]
     temp = source.split('!')
     srcNick = temp[0]
     srcHost = temp[1]
@@ -117,11 +116,16 @@ def __get_commands(raw, net):
         # Going to take this command out, eventually, when we don't need it
         # for testing and clean quits anymore.
         if message.lower() == "quit now":
+            commands.append("PRIVMSG " + srcNick + " Quitting IRC now.")
+            debug.message("Quitting IRC at command of " + srcNick + ".")
             net.quit()
         
         # Process the init command, if that command is enabled.
         if messageList[0] == "init" and config.init > 0:
             net.addUser(srcNick, messageList[2], messageList[1], 255, ["admin"], [])
+            config.init = 0
+            message = "Added user " + srcNick + " to the master database, as admin.  Disabling 'init' command."
+            commands.append("PRIVMSG " + srcNick + " " + message)
         
     return commands
 

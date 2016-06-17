@@ -73,8 +73,9 @@ class Nick:
     def __init__(self, nick, users, host = "", priv = None):
         self.name = nick
         self.host = host
+        if priv == None:
+            priv = NickPriv()
         self.priv = priv # NickPriv object
-        self.network = network
         self.users = users
         
     def getHost(self):

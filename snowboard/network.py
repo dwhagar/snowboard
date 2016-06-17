@@ -357,7 +357,7 @@ class Network:
     def processJoinPart(self, response):
         '''Process a join or part message from the server.'''
         nck, host = self.__splitHostmask(response[0])
-        if response[2][1] == ':':
+        if response[2][0] == ':':
             cJoined = response[2][1:]
         else:
             cJoined = response[2]
@@ -547,4 +547,10 @@ class Network:
     def addUser(self, name, password, host,
                 level = 1, approved = [], denied = []):
         '''Adds a user to the network.'''
-        users.addUser(name, password, host, level, approved, denied)
+        # TODO: Make the bot able to recognize a comma separated list of
+        #       possible hostmasks.
+        
+        hosts = [host]
+        self.users.addUser(name, password, hosts, level, approved, denied)
+        debug.message("Added user " + name + " to the master database.")
+        
