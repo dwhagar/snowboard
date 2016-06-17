@@ -308,10 +308,7 @@ class Network:
     def sendCommands(self, list):
         '''Sends a list of commands to the server.'''
         for cmd in list:
-            if cmd == "*QUIT*":
-                self.quit()
-            else:
-                self.__connection.write(cmd)
+            self.__connection.write(cmd)
     
     def checkMessages(self):
         '''Check for new messages from the server.'''
