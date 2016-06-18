@@ -22,7 +22,6 @@ from .server import Server
 
 # Global verbosity.
 verbosity = 0
-init = 0
 
 # Class to store and load configuration data.
 class Config:
@@ -39,6 +38,7 @@ class Config:
         self.sslVerify = True
         self.retries = 3
         self.delay = 1
+        self.init = 0
         
         # Read configuration.
         self.file = configFile

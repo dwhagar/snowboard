@@ -27,14 +27,26 @@ Where scriptname imports "scriptname.py".
 Once the module is imported it can then be used like any other.
 '''
 
-def channelScripts(net, message, messageList):
+from . import debug
+from . import basicCommands
+from . import userCommands
+
+def channelScripts(ircMsg):
     '''Executes scripts that should trigger from channel content.'''
     pass
     
-def messageScripts(net, message, messageList):
+def messageScripts(ircMsg):
     '''Executes scripts that should trigger from private message content.'''
+    cmds = []
+    cmds += basicCommands.triggers(ircMsg)
+    cmds += userCommands.triggers(ircMsg)
+    
+    return cmds
+    
+def privNoticeScripts(ircMsg):
+    '''Executes scripts that should be triggered by a notice message.'''
     pass
     
-def noticeScripts(net, message, messgeList):
+def chanNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a notice message.'''
     pass
