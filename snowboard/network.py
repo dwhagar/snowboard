@@ -259,12 +259,15 @@ class Network:
                 
                 # Try to connect, decide what to do next.
                 result = self.__connection.connect()
-                
                 if result:
-                    debug.message("Connected to " + server.host + ".")
-                    continue
+                    debug.message("Connection to " + server.host + ":" + str(server.port) + " succeeded.")
+                    break
                 else:
-                    time.sleep(self.config.delay)
+                    debug.message("Connection to " + server.host + ":" + str(server.port) + "failed.")
+                
+                time.sleep(self.config.delay)
+                
+            connected = result
         
         return result
 
@@ -303,6 +306,7 @@ class Network:
                 line = data.split()
                 if line[1] == "001":
                     debug.message("Authentication successful.")
+                    self.__suppressMOTD() # Not really required
                     self.__authenticated = True
                 elif line[1] == "433":
                     # The nick we wanted was in use, must choose another one.
@@ -320,7 +324,18 @@ class Network:
         line = message.split()
         if line[0] == "PING":
             self.__connection.write("PONG " + line[1])
-     
+            
+    def __suppressMOTD(self):
+        '''Waits until the MOTD is done before going further.'''
+        stillMOTD = True
+        
+        while stillMOTD:
+            data = self.__connection.read()
+            if not data == None:
+                if data.split()[1] == "376":
+                    stillMOTD = False
+            
+    
     def __authwait(self):
         '''
         Some servers require that clients receive data before it can auth
