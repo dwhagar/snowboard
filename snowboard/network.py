@@ -556,7 +556,7 @@ class Network:
         # If the bot's nick is the one that has changed, keep track.
         nickName, userHost = self.__splitHostmask(response[0])
         if nickName.lower() == self.botnick.lower():
-            self.botnick == nickName
+            self.botnick == response[2]
             for chan in self.channels:
                 chan.botnick = self.botnick
         
