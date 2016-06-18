@@ -90,8 +90,7 @@ def __process_responses(net, raw):
         net.processNick(response)
     # Process mode messages.
     elif response[1] == "MODE":
-        pass
-        # TODO:  Process the MODE message from the server.
+        net.processMode(response)
 
     cmds = __get_commands(raw, net)
     if cmds == None:

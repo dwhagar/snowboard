@@ -554,6 +554,82 @@ class Network:
         
         debug.message("Processed a nick change from " + nickName + " to " + response[2] + ".")
     
+    def processMode(self, response):
+        '''Process a mode change.'''
+        nickName, userHost = self.__splitHostmask(response[0])
+        dest = response[2]
+        modeChange = response[3]
+        
+        # This is pretty convoluted, but so are all the different ways you
+        # can issue a mode change on IRC.
+        if dest[0] == '#' and len(response) > 4:
+            # Find the channel, prepare a list of targets from the message.
+            chan = self.__findChannel(dest)
+            targets = response[4:]
+            targetIndex = 0
+            
+            # Set some flags up, so we know if we're adding or subtracting
+            # a particular mode, and if we know yet who we're doing it to.
+            add = False
+            sub = False
+            op = False
+            voice = False
+            haveTarget = False
+            
+            # Go through the mode characters one at a time.
+            for char in modeChange:
+                # Set some flags, if we encounter a + or a - we know what is
+                # going to happen to a mode, but have to wait for the mode
+                # character to know what mode is being impacted.
+                if char == '+':
+                    add = True
+                    sub = False
+                elif char == '-':
+                    add = False
+                    sub = True
+                # Since mode changes can be compounded, we need to look at
+                # each character and set what is happening.
+                elif char == 'o':
+                    target = targets[targetIndex]
+                    op = True
+                    targetIndex += 1
+                    haveTarget = True
+                elif char == 'v':
+                    target = targets[targetIndex]
+                    voice = True
+                    targetIndex += 1
+                    haveTarget = True
+                
+                # If a target has been found, look up the target and access
+                # that target channel / nick's privileges to modify.
+                if haveTarget:
+                    nck = self.findNick(target)
+                    chanNick = chan.findNick(nck)
+                    
+                    # Change the privileges flags for the nick in the channel
+                    # since mode changes can be all a single change (add or
+                    # subtract, keep the same add/sub flags until changed by
+                    # a different mode character.
+                    if add and op:
+                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was opped.")
+                        chanNick[1].op = True
+                        op = False
+                    elif add and voice:
+                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was voiced.")
+                        chanNick[1].voice = True
+                        voice = False
+                    elif sub and op:
+                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was deopped.")
+                        chanNick[1].op = False
+                        op = False
+                    elif sub and voice:
+                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was devoiced.")
+                        chanNick[1].voice = False
+                        voice = False
+                    
+                    # The target is no longer valid.
+                    haveTarget = False
+            
     def joinAll(self):
         '''Join all channels the bot is configured it.'''
         debug.message("Attempting to join all configured channels.")
