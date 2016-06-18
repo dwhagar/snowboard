@@ -503,8 +503,8 @@ class Network:
     
     def processWho(self, response):
         '''Process the server response from the WHO command.'''
-        nick = self.findNick(response[4])
-        nick.host = response[5]
+        nick = self.findNick(response[7])
+        nick.host = response[4] + "@" + response[5]
         debug.message("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
     
     def processNames(self, response):

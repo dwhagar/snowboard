@@ -134,8 +134,10 @@ def __get_commands(raw, net):
     
     # Make sure that when we get a message from someone on IRC, we create
     # a Nick object in the master list for them and fill in what we can.
-    if cmd == "NOTICE" or cmd == "PRIVMSG":
-        nick = net.addNick(irc.Msg.src)
+    # Some notices also come in from the server, don't process a message for
+    # a nick unless it has a nick!host pair.
+    if (cmd == "NOTICE" or cmd == "PRIVMSG") and (not ircMsg.srcHost == ""):
+        nick = net.addNick(ircMsg.src)
         
         # Just to make sure the hostname is both filled in and matches.
         # Additionally, if the hostname changes, then flag the nick as
@@ -143,7 +145,7 @@ def __get_commands(raw, net):
         if nick.host == "":
             nick.host == ircMsg.srcHost
             nick.authed = False
-        elif not nick.host == ircMsg.srcHost
+        elif not nick.host == ircMsg.srcHost:
             nick.host == ircMsg.srcHost
             nick.authed = False
             

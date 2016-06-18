@@ -78,6 +78,9 @@ Accepts one parameter:
 password
 The users password, unencrypted.
 '''
+
+from . import debug
+
 class Nick:
     '''
     Stores information about a nick on the IRC network including hostname and
@@ -97,11 +100,11 @@ class Nick:
         
     def getUID(self):
         '''Gets the user ID based on the host, only works if host is known'''
-        if host == "":
+        if self.host == "":
             return None
         
         # Get the UID itself, if one exists.
-        uid = self.users.matchHost(self.host)
+        uid = self.users.matchHost(self.name + "!" + self.host)
         
         self.priv.uid = uid
         
@@ -138,9 +141,9 @@ class Nick:
             authorized = False
         else:
             debug.message("Attempting to authenticate " + self.name + ".")
-            authorized = nick.users.verifyUser(self.priv.uid, password)
+            authorized = self.users.verifyUser(self.priv.uid, password)
         
-        self.auth = authorized
+        self.authed = authorized
         
         if authorized:
             debug.message("Authentication for " + self.name + " was successful.")

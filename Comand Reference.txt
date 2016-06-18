@@ -13,3 +13,14 @@ configured for the first time.
 ident user password
 
 Identifies a user to the bot by username and password.
+
+Snowboard Flag Reference
+------------------------
+Flags work in two ways, if a flag is in the approved list, the user has
+access to commands associated with that flag.  If the user has the same flag
+in the deny list, those associated commands are expressly forbidden.
+
+The deny list is processed first.
+
+admin = User is an administrator, access to all commands unless denied.
+quit = User can cause the bot to quit from IRC.
