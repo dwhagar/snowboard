@@ -87,6 +87,9 @@ class Channel:
         self.joined = False
         self.members = members # A list of lists, storing Nick and ChanPriv
         self.users = users.Users(self.network, self.name[1:])
+        self.botnick = None
+        self.opped = False
+        self.voiced = False
     
     def join(self):
         '''Join a channel.'''
@@ -98,13 +101,20 @@ class Channel:
         if self.joined:
             return ["PART " + self.name]
     
-    def findNick(self, nick):
+    def findNick(self, nck):
         '''Find a nick in the list, if one exists.'''
         result = None
         
+        # The function should be able to find the information needed by
+        # just a string or a Nick object.
+        if type(nck) == str:
+            nckStr = nck
+        else:
+            nckStr = nck.name
+        
         # Find the proper entry in members.
         for member in self.members:
-            if member[0].name.lower() == nick.name.lower():
+            if member[0].name.lower() == nckStr.lower():
                 self.__getPrivs(member[0], member[1])
                 result = member
         
@@ -145,6 +155,13 @@ class Channel:
         '''Load all privleges for all members.'''
         for member in members:
             self.__getPrivs(member[0], member[1])
+            
+    def updateSelf(self):
+        '''Update the bots knowledge of its own privleges.'''
+        me = self.findNick(self.botnick)
+        
+        self.opped = me[1].op
+        self.voiced = me[1].voice
 
 '''
 An object to store user privleges for a particular channel.

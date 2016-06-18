@@ -130,6 +130,14 @@ class Nick:
             self.priv.denied = data[3]
         
         return uid
+    
+    def clearPrivs(self):
+        '''Clears privleges from the object.'''
+        self.priv.uid = None
+        self.priv.user = None
+        self.priv.level = 0
+        self.priv.approved = []
+        self.priv.denied = []
         
     def auth(self, password):
         '''Authenticates a user against the user database.'''

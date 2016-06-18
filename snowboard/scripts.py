@@ -33,13 +33,16 @@ from . import userCommands
 
 def channelScripts(ircMsg):
     '''Executes scripts that should trigger from channel content.'''
-    pass
+    cmds = []
+    cmds += basicCommands.channelTriggers(ircMsg)
+    
+    return cmds
     
 def messageScripts(ircMsg):
     '''Executes scripts that should trigger from private message content.'''
     cmds = []
-    cmds += basicCommands.triggers(ircMsg)
-    cmds += userCommands.triggers(ircMsg)
+    cmds += basicCommands.msgTriggers(ircMsg)
+    cmds += userCommands.msgTriggers(ircMsg)
     
     return cmds
     

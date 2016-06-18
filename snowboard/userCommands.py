@@ -20,7 +20,7 @@ management and authentication.
 
 from . import debug
 
-def triggers(ircMsg):
+def msgTriggers(ircMsg):
     '''Process triggers for basic commands.'''
     commands = []
     

@@ -19,15 +19,28 @@ Processes basic IRC commands.
 
 from . import debug
 
-def triggers(ircMsg):
+def msgTriggers(ircMsg):
     '''Process triggers for basic commands.'''
     commands = []
     
     if ircMsg.dataList[0].lower() == "quit":
         commands = __quitCommand(ircMsg)
+    elif ircMsg.data.lower() == "who are you?":
+        commands = __identifySelf(ircMsg)
 
     return commands
     
+def channelTriggers(ircMsg):
+    '''Process triggers for basic commands.'''
+    commands = []
+    
+    if ircMsg.dataList[0][:len(ircMsg.net.botnick)].lower() == ircMsg.net.botnick.lower():
+        data = " ".join(ircMsg.dataList[1:])
+        if data.lower() == "who are you?":
+            commands = __identifySelf(ircMsg)
+
+    return commands
+
 def __quitCommand(ircMsg):
     '''Quits from IRC.'''
     commands = []
@@ -54,4 +67,20 @@ def __quitCommand(ircMsg):
         debug.message("User " + ircMsg.src + " tried to use the 'quit' command, but has not been authenticated.")
         commands.append("PRIVMSG " + ircMsg.src + " :You have not authenticated yet, you have to do that first with the 'ident' command.")
         
+    return commands
+    
+def __identifySelf(ircMsg):
+    '''The bot will send back identifying information.'''
+    commands = []
+    
+    if ircMsg.dest[0] == '#':
+        dest = ircMsg.dest
+        chan = ircMsg.net.findChannel(dest)
+        botnick = chan.botnick
+    else:
+        dest = ircMsg.src
+        botnick = ircMsg.net.botnick
+    
+    commands.append("PRIVMSG " + dest + " :I am " + botnick + ", a Snowboard bot.  Project Snowboard can be found at https://github.com/dwhagar/snowboard where my code is under development and documentation can be found.")
+    
     return commands

@@ -215,6 +215,7 @@ Optional, defaults to an empty list.  A list of flags for defnied functions.
 class Network:
     def __init__(self, cfg):
         self.config = cfg
+        self.botnick = self.config.botnick[:] # Copied, not just a reference
         self.name = self.config.network
         self.__connection = None
         self.__authenticated = False
@@ -381,7 +382,7 @@ class Network:
         
         # If the message is from the bot itself, then it means we need to
         # mark a channel as joined.
-        if self.config.botnick.lower() == nck.lower():
+        if self.botnick.lower() == nck.lower():
             # We can assume that if we're getting a join about the bot, that
             # channel is in the list, so it will be found.
             chan = self.__checkChannels(cJoined)
@@ -389,6 +390,7 @@ class Network:
                 # Mark the channel as joined.
                 debug.message("Successfully joined " + chan.name + ".")
                 chan.joined = True
+                chan.botnick = self.botnick
             elif response[1] == "PART":
                 # Remove the channel if this is a part message.
                 debug.message("Successfully parted from " + chan.name + ".")
@@ -398,7 +400,7 @@ class Network:
             # Find the channel, retrieve the object, could put error check
             # but shouldn't be required, since the bot won't receive a
             # a message from a channel it isn't on (and thus is in its list)
-            chanObject = self.__findChannel(cJoined)
+            chanObject = self.findChannel(cJoined)
             
             # Process a join.
             if response[1] == "JOIN":
@@ -480,7 +482,7 @@ class Network:
         
         return result
         
-    def __findChannel(self, channel):
+    def findChannel(self, channel):
         '''Find a channel in the networks channel list.'''
         result = None
         
@@ -538,9 +540,11 @@ class Network:
             
             # Second, add the nick to the channel's nick list with privileges
             cPriv = channel.ChannelPriv(opped, voiced)
-            existing = self.__findChannel(channelName)
+            existing = self.findChannel(channelName)
             existing.addNick(nick, cPriv)
-            
+        
+        existing.updateSelf()
+        
         debug.message("Processed a list of names on " + channelName + ".")
     
     def processNick(self, response):
@@ -548,7 +552,14 @@ class Network:
         # Since the bot processes NAMES and JOINS messages, there should
         # never be a time when a NICK message comes in that it is not already
         # in the list.
+        
+        # If the bot's nick is the one that has changed, keep track.
         nickName, userHost = self.__splitHostmask(response[0])
+        if nickName.lower() == self.botnick.lower():
+            self.botnick == nickName
+            for chan in self.channels:
+                chan.botnick = self.botnick
+        
         nickObject = self.findNick(nickName)
         nickObject.name = response[2]
         
@@ -564,7 +575,7 @@ class Network:
         # can issue a mode change on IRC.
         if dest[0] == '#' and len(response) > 4:
             # Find the channel, prepare a list of targets from the message.
-            chan = self.__findChannel(dest)
+            chan = self.findChannel(dest)
             targets = response[4:]
             targetIndex = 0
             
@@ -629,6 +640,10 @@ class Network:
                     
                     # The target is no longer valid.
                     haveTarget = False
+            
+            # Update the bot itself at every mode change, so it knows where
+            # it stands in the channel.
+            chan.updateSelf()
             
     def joinAll(self):
         '''Join all channels the bot is configured it.'''

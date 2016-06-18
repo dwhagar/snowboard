@@ -144,9 +144,11 @@ def __get_commands(raw, net):
         if nick.host == "":
             nick.host == ircMsg.srcHost
             nick.authed = False
+            nick.clearPrivs()
         elif not nick.host == ircMsg.srcHost:
             nick.host == ircMsg.srcHost
             nick.authed = False
+            nick.clearPrivs()
             
         nick.getPrivs()
     
