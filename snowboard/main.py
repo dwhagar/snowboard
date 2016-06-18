@@ -132,6 +132,23 @@ def __get_commands(raw, net):
     # Store all the data in an way that is easy to pass along.
     ircMsg = ircMessage.ircMessage(net, srcNick, srcHost, dest, cmd, message)
     
+    # Make sure that when we get a message from someone on IRC, we create
+    # a Nick object in the master list for them and fill in what we can.
+    if cmd == "NOTICE" or cmd == "PRIVMSG":
+        nick = net.addNick(irc.Msg.src)
+        
+        # Just to make sure the hostname is both filled in and matches.
+        # Additionally, if the hostname changes, then flag the nick as
+        # not authenticated.
+        if nick.host == "":
+            nick.host == ircMsg.srcHost
+            nick.authed = False
+        elif not nick.host == ircMsg.srcHost
+            nick.host == ircMsg.srcHost
+            nick.authed = False
+            
+        nick.getPrivs()
+    
     # Send the message to be processed by the scripts.
     if toChannel:
         if cmd == "NOTICE":

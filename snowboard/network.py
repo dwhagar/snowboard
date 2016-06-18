@@ -142,6 +142,23 @@ response
 A list of strings which represents the QUIT response from the server, already
 split.
 
+.findNick(nickName)
+Finds a nick in the master nick list, and returns that object, if one is not
+found, it returns None.
+
+Takes one input.
+nickName
+A string of the nick that one is looking for.
+
+.addNick(nickName)
+Adds a nick to the master nick list, if the nick already exists it will
+return that object.  If the nick is not already in the list, it will return
+a new Nick object.
+
+Takes one input.
+nickName
+A string containing the nick of a user to add to the master nicks list.
+
 .processWho(response)
 Process a WHO response from the server to get the host information for a
 particualr Nick object.
@@ -385,7 +402,7 @@ class Network:
             
             # Process a join.
             if response[1] == "JOIN":
-                nickObject = self.__addNick(nck)
+                nickObject = self.addNick(nck)
                 nickObject.host = host
                 nickObject.getPrivs()
                 cPriv = channel.ChannelPriv(False, False)
@@ -401,10 +418,9 @@ class Network:
             
             # Process a part.
             elif response[1] == "PART":
-                nickObject = self.__findNick(nck)
+                nickObject = self.findNick(nck)
                 if not nickObject == None:
                     chanObject.removeNick(nickObject)
-                    self.cleanNicks()
                 debug.message("Processed a part message on " + cJoined + " from " + nck + ".")
     
     def cleanNicks(self):
@@ -439,7 +455,7 @@ class Network:
         nickName, host = self.__splitHostmask(response[0])
         
         # Find the nick in the master list.
-        nickObject = self.__findNick(nickName)
+        nickObject = self.findNick(nickName)
         
         # If that nick exists, remove it.
         if not nickObject == None:
@@ -453,7 +469,7 @@ class Network:
             
         debug.message("Processed a quit message from " + nickName + ".")           
     
-    def __findNick(self, nickName):
+    def findNick(self, nickName):
         '''Find a nick in the master list.'''
         result = None
         
@@ -475,9 +491,9 @@ class Network:
                 
         return existing
     
-    def __addNick(self, nickName):
+    def addNick(self, nickName):
         '''Add a nick to the master list.'''
-        existing = self.__findNick(nickName)
+        existing = self.findNick(nickName)
         if existing == None:
             newNick = nick.Nick(nickName, self.users)
             self.nicks.append(newNick)
@@ -487,7 +503,7 @@ class Network:
     
     def processWho(self, response):
         '''Process the server response from the WHO command.'''
-        nick = self.__findNick(response[4])
+        nick = self.findNick(response[4])
         nick.host = response[5]
         debug.message("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
     
@@ -516,7 +532,7 @@ class Network:
                 name = name[1:]
             
             # First, add the nick to the master list.
-            nick = self.__addNick(name)
+            nick = self.addNick(name)
             if nick.host == "":
                 self.sendCommands(nick.getHost())
             
@@ -533,7 +549,7 @@ class Network:
         # never be a time when a NICK message comes in that it is not already
         # in the list.
         nickName, userHost = self.__splitHostmask(response[0])
-        nickObject = self.__findNick(nickName)
+        nickObject = self.findNick(nickName)
         nickObject.name = response[2]
         
         debug.message("Processed a nick change from " + nickName + " to " + response[2] + ".")

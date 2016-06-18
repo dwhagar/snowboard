@@ -26,6 +26,8 @@ def triggers(ircMsg):
     
     if ircMsg.dataList[0].lower() == "init" and ircMsg.net.config.init > 0:
         commands = __initCmd(ircMsg)
+    if ircMsg.dataList[0].lower() == "ident":
+        commands = __identCmd(ircMsg)
                 
     return commands
     
@@ -36,3 +38,12 @@ def __initCmd(ircMsg):
     ircMsg.net.config.init = 0
     message = "Added user " + ircMsg.src + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again."
     return ["PRIVMSG " + ircMsg.src + " :" + message]
+
+def __identCmd(ircMsg):
+    '''Identify command to authenticate a user.'''
+    commands = []
+    
+    nick = ircMsg.net.findNick(ircMsg.src)
+    commands = nick.auth(ircMsg.dataList[1])
+    
+    return commands

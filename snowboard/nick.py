@@ -33,6 +33,9 @@ The user@host of a particular nick on IRC.
 .priv
 A NickPriv object to store global privleges for a particular user.
 
+.authed
+Boolean value, has the user been authenticated yet?
+
 ///Constructor///
 Nick(nick, users, [host], [priv])
 Accepts three inputs, two are options.
@@ -64,6 +67,16 @@ no user is found.
 Retreives the privileges of a user in the database.  If the UID is not yet
 known, it will attempt to look it up based on hostname.  If no UID can be
 found, the function returns None.
+
+.auth(password)
+Authenticates a nick against the user database.  Also assumes that the uid
+is already retreived, if it exists when the message initially comes into
+the server.  Thus if it doesn't see a uid present, it assume there is not
+one.
+
+Accepts one parameter:
+password
+The users password, unencrypted.
 '''
 class Nick:
     '''
@@ -77,6 +90,7 @@ class Nick:
             priv = NickPriv()
         self.priv = priv # NickPriv object
         self.users = users
+        self.authed = False
         
     def getHost(self):
         return ["WHO " + self.name]
@@ -98,10 +112,11 @@ class Nick:
         
         # If we already know who this user is, that's fine, if not
         # then we need to find out.
-        if self.priv.uid == None:
-            uid = self.users.matchHost(self.host)
-        else:
-            uid = self.priv.uid
+        
+        uid = self.getUID()
+        
+        if uid == None:
+            return
         
         # If there is still no UID, the user does not exist.
         if not uid == None:
@@ -113,6 +128,29 @@ class Nick:
         
         return uid
         
+    def auth(self, password):
+        '''Authenticates a user against the user database.'''
+        commands = []
+        
+        if self.priv.uid == None:
+            debug.message("No user information for " + self.name + " could be found.")
+            commands.append("PRIVMSG " + self.name + " :You were not found in my database.")
+            authorized = False
+        else:
+            debug.message("Attempting to authenticate " + self.name + ".")
+            authorized = nick.users.verifyUser(self.priv.uid, password)
+        
+        self.auth = authorized
+        
+        if authorized:
+            debug.message("Authentication for " + self.name + " was successful.")
+            commands.append("PRIVMSG " + self.name + " :Authentication successful.")
+        else:
+            debug.message("Authentication for " + self.name + " failed.")
+            commands.append("PRIVMSG " + self.name + " :Authentication failed.")
+                   
+        return commands
+            
 '''
 Stores global information about a particular nicks privleges.
 

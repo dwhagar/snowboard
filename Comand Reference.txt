@@ -9,3 +9,7 @@ specified.  This command is only enabled if the bot is run with the -i or
 
 For security, this command should only been enabled once, when the bot is
 configured for the first time.
+
+ident user password
+
+Identifies a user to the bot by username and password.
