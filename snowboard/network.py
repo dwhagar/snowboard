@@ -14,6 +14,7 @@
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
 import time
+import random
 
 from . import debug
 from . import connection
@@ -284,25 +285,35 @@ class Network:
     def auth(self):
         '''Authenticate with the network.'''
         debug.message("Attempting to authenticate.")
-        
-        # Some servers can be douchebags
-        self.__authwait()
-        # Begin authentication process.
-        self.__connection.write("NICK " + self.config.botnick)
-        # Some servers can be douchebags
-        self.__authwait()        
-        # Send user information.
-        self.__connection.write("USER " + self.config.botnick + " 0 * :" + self.config.realname)
-        
+        stage = 0 # What stage of authentication are we in?
+                
         # Wait for the server to signal that authentication is complete.
         while (not self.__authenticated) and (self.__connection.connected()):
+            if stage == 1: # Choose a nick to go by.
+                # Begin authentication process.
+                self.__connection.write("NICK " + self.botnick)
+            elif stage == 2: # Send user information
+                # Send user information.
+                self.__connection.write("USER " + self.botnick.lower() + " 0 * :" + self.config.realname)
+            
+            stage += 1
+            
             data = self.__connection.read()
             if not data == None:
-                self.__pingpong(data)
                 line = data.split()
-                if line[1] == "396":
+                if line[1] == "001":
                     debug.message("Authentication successful.")
                     self.__authenticated = True
+                elif line[1] == "433":
+                    # The nick we wanted was in use, must choose another one.
+                    debug.message("Primary nick was taken, choosing a replacement.")
+                    stage = 1
+                    random.seed()
+                    addition = str(random.randrange(10000,20000))
+                    self.botnick += addition
+                else:
+                    self.__pingpong(data)
+                    
     
     def __pingpong(self, message):
         '''Respond to a ping request.'''
@@ -370,6 +381,8 @@ class Network:
         '''Split the hostname into host and nick.'''
         # Handle the leading ':' on messages, then split at the '!'
         hostmask = hostmask.split('!')
+        if len(hostmask) < 2:
+            hostmask.append("")
         return (hostmask[0], hostmask[1])
     
     def processJoinPart(self, response):
