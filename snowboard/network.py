@@ -697,7 +697,7 @@ class Network:
         
         if not exists:
             self.users.addUser(uid, name, password, hosts, level, approved, denied)
-        if exists:
-            debug.info("Found user " + name + " in the database already and replaced that record.")
-            self.users.updateUser(uid, name, password, hosts, level, approved, denied)
+            return True
+        else:
+            return False
         

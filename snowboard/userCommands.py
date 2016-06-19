@@ -81,8 +81,8 @@ def __addCmd(ircMsg):
             try:
                 level = int(ircMsg.dataList[4])
             except ValueError:
-                debug.error("Error with 'adduser':  Level must be specified as a number.")
-                commands.append("PRIVMSG " + ircMsg.src + " :Unable to execute command, access level must be a number.")
+                debug.error("Error with 'adduser':  Level '" + ircMsg.dataList[4] + "' is not a number.")
+                commands.append("PRIVMSG " + ircMsg.src + " :Unable to execute command, access level '" + ircMsg.dataList[4] + "' is not a number.")
                 return commands
             
             if len(ircMsg.dataList) > 4:
@@ -103,7 +103,11 @@ def __addCmd(ircMsg):
                 approved = []
                 denied = []
                 
-            ircMsg.net.addUser(user, password, hostmask, level, approved, denied)
+            result = ircMsg.net.addUser(user, password, hostmask, level, approved, denied)
+            
+            if not result:
+                debug.error("Error with 'adduser':  User " + user + " already exists.")
+                commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")
                 
         else:
             debug.message("Nick " + ircMsg.src + " tried to use the 'adduser' command, but does not have sufficient access.")

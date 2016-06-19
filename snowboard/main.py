@@ -172,6 +172,9 @@ def main(argv):
     __parse_args(argv, cfg)    
     cfg.read()
     
+    if cfg.init > 0:
+        debug.warn("The 'init' command has been enabled.  See docs for more information.")
+    
     result = 0    # Define a result value, so we can pass it back to the shell
     
     net = network.Network(cfg)
