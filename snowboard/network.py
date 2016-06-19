@@ -223,6 +223,7 @@ class Network:
         self.channels = cfg.channels
         self.nicks = []
         self.users = users.Users(cfg.network)
+        self.orphans = []
     
     def online(self):
         '''Let the outside see if the bot is online.'''
@@ -436,15 +437,8 @@ class Network:
                 nickObject.host = host
                 nickObject.getPrivs()
                 cPriv = channel.ChannelPriv(False, False)
-                chanObject.addNick(nickObject, cPriv)
-                
+                chanObject.addNick(nickObject, cPriv)                
                 debug.message("Processed a join message on " + cJoined + " from " + nck + ".")
-            
-            # TODO:  Adjust this so that a nick remains authenticated a
-            #        certain amount of time after they have left all
-            #        channels.  This will require modifying the loop in main
-            #        as well to clear out Nick objects from the master
-            #        list on a timer.
             
             # Process a part.
             elif response[1] == "PART":
@@ -458,6 +452,16 @@ class Network:
         Clean up the mast nick list, removing nicks that are no longer in
         a channel where the bot resides.
         '''
+        # If a nick remains with an open who request after it has been
+        # requested once (the last round) remove it from our list.
+        for nickObject in self.orphans:
+            if nickObject.openWHO:
+                debug.info("Removing " + nickObject.name + " from the master list.")
+                self.nicks.remove(nickObject)
+        
+        # Start with a clean list of orphans (nicks who are without channel)
+        self.orphans = []
+        
         # A flag to see if a nick was found.
         found = False
         
@@ -471,10 +475,14 @@ class Network:
                 if not chanNick == None:
                     found = True
                     break
+                else:
+                    found = False
             
             # If the channels are all checked, and nothing found, remove it.
             if not found:
-                self.nicks.remove(nickObject)
+                debug.info("Found that " + nickObject.name + " was orphaned from any channels, checking online status.")
+                self.orphans.append(nickObject)
+                self.sendCommands(nickObject.sendWHO())
     
     def processQuit(self, response):
         '''
@@ -535,6 +543,7 @@ class Network:
         '''Process the server response from the WHO command.'''
         nick = self.findNick(response[7])
         nick.host = response[4] + "@" + response[5]
+        nick.openWHO = False
         debug.message("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
     
     def processNames(self, response):
@@ -564,7 +573,7 @@ class Network:
             # First, add the nick to the master list.
             nick = self.addNick(name)
             if nick.host == "":
-                self.sendCommands(nick.getHost())
+                self.sendCommands(nick.sendWHO())
             
             # Second, add the nick to the channel's nick list with privileges
             cPriv = channel.ChannelPriv(opped, voiced)

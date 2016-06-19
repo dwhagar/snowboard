@@ -188,19 +188,28 @@ def main(argv):
         debug.error("Failed to connect.")
         return 1
     
+    lastTimer = int(time.time())
+    
     # Loop until we break the loop.
     while net.online():
         # Is there data?
         data = net.checkMessages()
-        if data == None:
-            time.sleep(0)
-            continue
-        else:
+        if not data == None:
             # If anything needs to be sent to the server, we'll get a list
             # of commands from the response processor.
             cmds = __process_responses(net, data)
             if len(cmds) > 0:
                 net.sendCommands(cmds)
+        
+        # Basis for the loop to execute timers, we only want to execute a
+        # timer if there at least one second between this loop and when
+        # timers were last run.
+        currentTime = int(time.time())
+        if lastTimer < currentTime:
+            cmds = scripts.timers(net, currentTime)
+            lastTimer = currentTime
+            if len(cmds) > 0:
+                net.sendCommands(cmd)
         
         # Make sure we don't amp up the CPU to max.
         time.sleep(0)

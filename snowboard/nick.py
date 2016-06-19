@@ -54,7 +54,7 @@ priv
 A NickPriv object, this is optional and defaults to None.
 
 ///Methods///
-.gethost()
+.sendWHO()
 Sends back a command for the Network object to then send to the server and
 request the WHO information on a user, to derrive their hostname.
 
@@ -94,10 +94,13 @@ class Nick:
         self.priv = priv # NickPriv object
         self.users = users
         self.authed = False
+        self.openWHO = False
         
-    def getHost(self):
+    def sendWHO(self):
+        '''Issues a WHO command to establish a hostname for a user.'''
+        self.openWHO = True
         return ["WHO " + self.name]
-        
+    
     def getUID(self):
         '''Gets the user ID based on the host, only works if host is known'''
         if self.host == "":
@@ -148,7 +151,7 @@ class Nick:
             commands.append("PRIVMSG " + self.name + " :You were not found in my database.")
             authorized = False
         else:
-            debug.message("Attempting to authenticate " + self.name + ".")
+            debug.info("Attempting to authenticate " + self.name + ".")
             authorized = self.users.verifyUser(self.priv.uid, password)
         
         self.authed = authorized

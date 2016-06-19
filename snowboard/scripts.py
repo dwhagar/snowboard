@@ -48,8 +48,20 @@ def messageScripts(ircMsg):
     
 def privNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a notice message.'''
-    pass
+    cmds = []
+    
+    return cmds
     
 def chanNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a notice message.'''
-    pass
+    cmds = []
+    
+    return cmds
+    
+def timers(net, time):
+    '''Passes the current time onto a series of timers.'''
+    cmds = []
+    
+    cmds += userCommands.cleanTimer(net, time)
+    
+    return cmds
