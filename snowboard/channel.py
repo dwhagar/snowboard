@@ -142,7 +142,6 @@ class Channel:
         if not uid == None:
             data = self.users.userInformation(uid)
             if not data == None:
-                priv.user = data[0]
                 priv.level = data[1]
                 priv.approved = data[2]
                 priv.denied = data[3]
@@ -185,9 +184,9 @@ A list of flags which determine specific things a user has no access to.
 '''
 class ChannelPriv:
     '''Stores users privleges associated with a channel.'''
-    def __init__(self, isop = False, isvoice = False, level = 0, approved = [], denied = []):
+    def __init__(self, isop = False, isvoice = False):
         self.op = isop
         self.voice = isvoice
-        self.level = level
-        self.approved = approved
-        self.denied = denied
+        self.level = 0
+        self.approved = []
+        self.denied = []

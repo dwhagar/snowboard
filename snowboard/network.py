@@ -695,6 +695,13 @@ class Network:
         #       possible hostmasks.
         
         hosts = [host]
-        self.users.addUser(name, password, hosts, level, approved, denied)
-        debug.message("Added user " + name + " to the master database.")
+        uid = self.users.uidHash(name)
+        exists = self.users.uidExists(uid)
+        
+        if not exists:
+            self.users.addUser(uid, name, password, hosts, level, approved, denied)
+        if exists:
+            self.users.updateUser(uid, name, password, hosts, level, approved, denied)
+
+        debug.message("Added user " + name + " to the global database.")
         

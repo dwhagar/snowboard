@@ -47,7 +47,7 @@ def cleanTimer(net, time):
         checkNext = time + checkInterval
     
     if checkNext == time:
-        debug.message("Running cleaning routine for the master nicks list.")
+        debug.info("Running cleaning routine for the master nicks list.")
         net.cleanNicks()
         checkNext = time + checkInterval
     
@@ -55,7 +55,7 @@ def cleanTimer(net, time):
     
 def __initCmd(ircMsg):
     '''Execute the tasks for the special init command.'''
-    debug.message("Initialized admin user " + ircMsg.src + " with hostmask " + messagelist[2] + ".")
+    debug.message("Initialized admin user " + ircMsg.src + " with hostmask " + ircMsg.dataList[1] + ".")
     ircMsg.net.addUser(ircMsg.src, ircMsg.dataList[2], ircMsg.dataList[1], 255, ["admin"], [])
     ircMsg.net.config.init = 0
     message = "Added user " + ircMsg.src + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again."

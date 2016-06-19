@@ -128,9 +128,10 @@ class Nick:
         if not uid == None:
             data = self.users.userInformation(uid)
             self.priv.user = data[0]
-            self.priv.level = data[1]
-            self.priv.approved = data[2]
-            self.priv.denied = data[3]
+            self.priv.hostmasks = data[1]
+            self.priv.level = data[2]
+            self.priv.approved = data[3]
+            self.priv.denied = data[4]
         
         return uid
     
@@ -141,6 +142,7 @@ class Nick:
         self.priv.level = 0
         self.priv.approved = []
         self.priv.denied = []
+        self.priv.hostmasks = []
         
     def auth(self, password):
         '''Authenticates a user against the user database.'''
@@ -208,10 +210,11 @@ defaults to an empty list
 '''
 class NickPriv:
     '''Stores information about privileges of a nick, across all channels.'''
-    def __init__(self, level = 0, uid = None, user = None, approved = [], denied = []):
-        self.uid = uid            # UID of a particular user, unique ID in DB
-        self.user = user          # The Username of the Nick in the database
-        self.level = level
-        self.approved = approved
-        self.denied = denied        
+    def __init__(self):
+        self.uid = None           # UID of a particular user, unique ID in DB
+        self.user = None          # The Username of the Nick in the database
+        self.hostmasks = []
+        self.level = 0
+        self.approved = []
+        self.denied = []        
         
