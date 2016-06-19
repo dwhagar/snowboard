@@ -1,8 +1,6 @@
 Snowboard Command Reference
 ---------------------------
-
 init hostmask password
-
 Initializes the bot with an admin user with the hostmask and password
 specified.  This command is only enabled if the bot is run with the -i or
 --init command line options.
@@ -10,9 +8,14 @@ specified.  This command is only enabled if the bot is run with the -i or
 For security, this command should only been enabled once, when the bot is
 configured for the first time.
 
-ident user password
+ident password
+Identifies a user to the bot by password.
 
-Identifies a user to the bot by username and password.
+adduser user hostmask password level approved:denied
+Adds a user to the user global database.
+
+addaccess user level approved denied
+Adds access for a user to a channel database.
 
 Snowboard Flag Reference
 ------------------------
@@ -24,3 +27,7 @@ The deny list is processed first.
 
 admin = User is an administrator, access to all commands unless denied.
 quit = User can cause the bot to quit from IRC.
+usermanager = User can manage the accounts of other users.*
+
+* = No user can make changes to an account for an admin without also having
+    the admin flag, or alter a user higher than their user level.

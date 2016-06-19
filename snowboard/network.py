@@ -544,7 +544,7 @@ class Network:
         nick = self.findNick(response[7])
         nick.host = response[4] + "@" + response[5]
         nick.openWHO = False
-        debug.message("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
+        debug.info("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
     
     def processNames(self, response):
         '''
@@ -582,7 +582,7 @@ class Network:
         
         existing.updateSelf()
         
-        debug.message("Processed a list of names on " + channelName + ".")
+        debug.info("Processed a list of names on " + channelName + ".")
     
     def processNick(self, response):
         '''Process a nick change.'''
@@ -600,7 +600,7 @@ class Network:
         nickObject = self.findNick(nickName)
         nickObject.name = response[2]
         
-        debug.message("Processed a nick change from " + nickName + " to " + response[2] + ".")
+        debug.info("Processed a nick change from " + nickName + " to " + response[2] + ".")
     
     def processMode(self, response):
         '''Process a mode change.'''
@@ -659,19 +659,19 @@ class Network:
                     # subtract, keep the same add/sub flags until changed by
                     # a different mode character.
                     if add and op:
-                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was opped.")
+                        debug.info("Processed mode change on " + chan.name + " where " + nck.name + " was opped.")
                         chanNick[1].op = True
                         op = False
                     elif add and voice:
-                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was voiced.")
+                        debug.info("Processed mode change on " + chan.name + " where " + nck.name + " was voiced.")
                         chanNick[1].voice = True
                         voice = False
                     elif sub and op:
-                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was deopped.")
+                        debug.info("Processed mode change on " + chan.name + " where " + nck.name + " was deopped.")
                         chanNick[1].op = False
                         op = False
                     elif sub and voice:
-                        debug.message("Processed mode change on " + chan.name + " where " + nck.name + " was devoiced.")
+                        debug.info("Processed mode change on " + chan.name + " where " + nck.name + " was devoiced.")
                         chanNick[1].voice = False
                         voice = False
                     
@@ -689,11 +689,8 @@ class Network:
             self.addChannel(channel)
             
     def addUser(self, name, password, host,
-                level = 1, approved = [], denied = []):
+                level = 1, approved = [], denied = [], chan = None):
         '''Adds a user to the network.'''
-        # TODO: Make the bot able to recognize a comma separated list of
-        #       possible hostmasks.
-        
         hosts = [host]
         uid = self.users.uidHash(name)
         exists = self.users.uidExists(uid)
@@ -701,7 +698,6 @@ class Network:
         if not exists:
             self.users.addUser(uid, name, password, hosts, level, approved, denied)
         if exists:
+            debug.info("Found user " + name + " in the database already and replaced that record.")
             self.users.updateUser(uid, name, password, hosts, level, approved, denied)
-
-        debug.message("Added user " + name + " to the global database.")
         

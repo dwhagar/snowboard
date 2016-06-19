@@ -161,6 +161,17 @@ class Channel:
         
         self.opped = me[1].op
         self.voiced = me[1].voice
+        
+    def addUser(self, uid, level = 1, approved = [], denied = []):
+        '''Adds a user to the network.'''
+        exists = self.users.uidExists(uid)
+        
+        if not exists:
+            self.users.addUser(uid, None, None, None, level, approved, denied)
+        if exists:
+            self.users.updateUser(uid, None, None, None, level, approved, denied)
+
+        debug.message("Added user " + name + " to the " + self.name + " database.")
 
 '''
 An object to store user privleges for a particular channel.
@@ -190,3 +201,16 @@ class ChannelPriv:
         self.level = 0
         self.approved = []
         self.denied = []
+        
+    def checkFlag(self, flag):
+        '''Checks to see if a flag is valid.'''
+        if flag.lower() in self.denied:
+            valid = False
+        elif flag.lower() in self.approved:
+            valid = True
+        elif "admin" in self.approved:
+            valid = True
+        else:
+            valid = False
+        
+        return valid   

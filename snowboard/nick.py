@@ -216,5 +216,18 @@ class NickPriv:
         self.hostmasks = []
         self.level = 0
         self.approved = []
-        self.denied = []        
+        self.denied = []
+        
+    def checkFlag(self, flag):
+        '''Checks to see if a flag is valid.'''
+        if flag.lower() in self.denied:
+            valid = False
+        elif flag.lower() in self.approved:
+            valid = True
+        elif "admin" in self.approved:
+            valid = True
+        else:
+            valid = False
+        
+        return valid        
         

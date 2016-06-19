@@ -48,10 +48,7 @@ def __quitCommand(ircMsg):
     nick = ircMsg.net.findNick(ircMsg.src)
     
     if nick.authed:
-        if ("admin" in nick.priv.denied) or ("quit" in nick.priv.denied):
-            debug.message("User " + ircMsg.src + " tried to use the 'quit' command but is expressly blocked from doing so.")
-            command.append("PRIVMSG " + ircMsg.src + " :Access to the 'quit' command is expressly denied.")
-        elif ("admin" in nick.priv.approved) or ("quit" in nick.priv.approved):
+        if nick.priv.checkFlag("admin"):
             # Generally speaking we should not make a habit of invoking the
             # sendCommands function directly, and just return a list.  This is a
             # special case, since once we send the Quit command the connection will
@@ -61,11 +58,11 @@ def __quitCommand(ircMsg):
             ircMsg.net.quit()
             return [] # Normally I wouldn't do this either
         else:
-            debug.message("User " + ircMsg.src + " tried to use the 'quit' command, but does not have sufficient access.")
-            commands.append("PRIVMSG " + ircMsg.src + " :You access to the 'quit' command.")
+            debug.message("Nick " + ircMsg.src + " tried to use the 'quit' command, but does not have sufficient access.")
+            commands.append("PRIVMSG " + ircMsg.src + " :You cannot access to the 'quit' command.")
     else:
-        debug.message("User " + ircMsg.src + " tried to use the 'quit' command, but has not been authenticated.")
-        commands.append("PRIVMSG " + ircMsg.src + " :You have not authenticated yet, you have to do that first with the 'ident' command.")
+        debug.message("Nick " + ircMsg.src + " tried to use the 'quit' command, but has not been authenticated.")
+        commands.append("PRIVMSG " + ircMsg.src + " :You are not identified.")
         
     return commands
     

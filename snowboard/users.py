@@ -250,7 +250,6 @@ class Users:
         
         if self.table == "global":
             data = [
-                uid,
                 user,
                 self.__passwordHash(password),
                 masks,
@@ -260,7 +259,6 @@ class Users:
             ]
         else:
             data = [
-                uid,
                 level,
                 approved.lower(),
                 denied.lower()

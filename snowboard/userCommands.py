@@ -30,7 +30,9 @@ def msgTriggers(ircMsg):
     
     if ircMsg.dataList[0].lower() == "init" and ircMsg.net.config.init > 0:
         commands = __initCmd(ircMsg)
-    if ircMsg.dataList[0].lower() == "ident":
+    elif ircMsg.dataList[0].lower() == "adduser":
+        commands = __addCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "ident":
         commands = __identCmd(ircMsg)
                 
     return commands
@@ -60,6 +62,57 @@ def __initCmd(ircMsg):
     ircMsg.net.config.init = 0
     message = "Added user " + ircMsg.src + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again."
     return ["PRIVMSG " + ircMsg.src + " :" + message]
+
+def __addCmd(ircMsg):
+    '''Execute the tasks for the special init command.'''
+    commands = []
+    
+    nick = ircMsg.net.findNick(ircMsg.src)
+    
+    if nick.authed:
+        if nick.priv.checkFlag("usermanager"):
+            user = ircMsg.dataList[1]
+            hostmask = ircMsg.dataList[2]
+            password = ircMsg.dataList[3]
+            
+            debug.message("Adding new user " + user + " to the global user database for " + ircMsg.src + ".")
+            commands.append("PRIVMSG " + ircMsg.src + " :Adding " + user + " to the global user database.")
+            
+            try:
+                level = int(ircMsg.dataList[4])
+            except ValueError:
+                debug.error("Error with 'adduser':  Level must be specified as a number.")
+                commands.append("PRIVMSG " + ircMsg.src + " :Unable to execute command, access level must be a number.")
+                return commands
+            
+            if len(ircMsg.dataList) > 4:
+                flags = "".join(ircMsg.dataList[5:])
+                flags = flags.replace(' ','')
+                flags = flags.split(':')
+                approved = flags[0].split(',')
+                if approved[0] == '':
+                    approved = []
+                    
+                if len(flags) > 1:
+                    denied = flags[1].split(',')
+                    if denied[0] == '':
+                        denied = []
+                else:
+                    denied = []
+            else:
+                approved = []
+                denied = []
+                
+            ircMsg.net.addUser(user, password, hostmask, level, approved, denied)
+                
+        else:
+            debug.message("Nick " + ircMsg.src + " tried to use the 'adduser' command, but does not have sufficient access.")
+            commands.append("PRIVMSG " + ircMsg.src + " :You cannot access the 'adduser' command.")
+    else:
+        debug.message("Nick " + ircMsg.src + " tried to use the 'adduser' command, but was not identified.")
+        commands.append("PRIVMSG " + ircMsg.src + " :You are not identified.")
+
+    return commands
 
 def __identCmd(ircMsg):
     '''Identify command to authenticate a user.'''
