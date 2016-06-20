@@ -1,4 +1,11 @@
 __pycache__/
 *.py[cod]
 
+<<<<<<< HEAD
+=======
+*.pyc
+
+>>>>>>> origin/master
 test.*.py
+
+*.db
