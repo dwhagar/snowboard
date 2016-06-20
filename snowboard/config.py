@@ -28,6 +28,11 @@ class Config:
     # Constructor
     def __init__(self, configFile = "snowboard.ini"):
         # Set Defaults.
+        self.versionNumber = 0
+        self.revisionNUmber = 0
+        self.buildNumber = 1
+        self.releaseStage = "pre-Alpha"
+        self.version = str(self.versionNumber) + "." + str(self.revisionNUmber) + "." + str(self.buildNumber) + "-" + self.releaseStage
         self.botnick = "Snowboard"
         self.realname = "Project Snowboard"
         self.network = "Network"

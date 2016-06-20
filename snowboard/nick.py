@@ -218,8 +218,8 @@ class NickPriv:
         self.approved = []
         self.denied = []
         
-    def checkFlag(self, flag):
-        '''Checks to see if a flag is valid.'''
+    def checkApproved(self, flag):
+        '''Checks to see if a user is approved for a flag.'''
         if flag.lower() in self.denied:
             valid = False
         elif flag.lower() in self.approved:
@@ -229,5 +229,16 @@ class NickPriv:
         else:
             valid = False
         
-        return valid        
+        return valid
+    
+    def checkDenied(self, flag):
+        '''Checks to see if a user is denied for a flag.'''
+        # Unlike the checkApproved function, this is designed so that a person
+        # can only deny specific people from a function without adding a flag
+        # to everyone else's approved list.
+        if flag.lower() in self.denied:
+            valid = True
+        else:
+            valid = False
         
+        return valid

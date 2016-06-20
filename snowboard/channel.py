@@ -161,17 +161,6 @@ class Channel:
         
         self.opped = me[1].op
         self.voiced = me[1].voice
-        
-    def addUser(self, uid, level = 1, approved = [], denied = []):
-        '''Adds a user to the network.'''
-        exists = self.users.uidExists(uid)
-        
-        if not exists:
-            self.users.addUser(uid, None, None, None, level, approved, denied)
-        if exists:
-            self.users.updateUser(uid, None, None, None, level, approved, denied)
-
-        debug.message("Added user " + name + " to the " + self.name + " database.")
 
 '''
 An object to store user privleges for a particular channel.

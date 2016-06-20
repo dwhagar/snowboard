@@ -50,7 +50,7 @@ def __addCmd(ircMsg):
     nick = ircMsg.net.findNick(ircMsg.src)
     
     if nick.authed:
-        if nick.priv.checkFlag("usermanager"):
+        if nick.priv.checkApproved("usermanager"):
             user = ircMsg.dataList[1]
             hostmask = ircMsg.dataList[2]
             password = ircMsg.dataList[3]
