@@ -13,19 +13,20 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+Connection object, designed to be the only object to directly interface with
+the server.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
+'''
+
 import time
 import socket
 import ssl
 import sys
-import select
 
 from . import debug
 from . import server
-
-'''
-Connection object, designed to be the only object to directly interface with
-the server.
-'''
 
 class Connection:
     def __init__(self, srv):

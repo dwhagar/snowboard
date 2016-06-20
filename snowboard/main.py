@@ -24,8 +24,6 @@ import argparse
 import time
 
 from . import config
-from . import connection
-from . import channel
 from . import network
 from . import debug
 from . import scripts
