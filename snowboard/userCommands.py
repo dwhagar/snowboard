@@ -20,10 +20,6 @@ management and authentication.
 
 from . import debug
 
- # The interval at which the system will clean the master nicks list.
-checkInterval = 300
-checkNext = 0
-
 def msgTriggers(ircMsg):
     '''Process triggers for basic commands.'''
     commands = []
@@ -35,24 +31,6 @@ def msgTriggers(ircMsg):
     elif ircMsg.dataList[0].lower() == "ident":
         commands = __identCmd(ircMsg)
                 
-    return commands
-    
-def cleanTimer(net, time):
-    '''Executes the Nick list cleaning every checkInterval seconds.'''
-    commands = []
-    global checkNext
-    global checkInterval
-    
-    # When initialized, set next time it will run, but don't run immediately.
-    if checkNext == 0:
-        debug.message("Master nick cleaning timer initialized.")
-        checkNext = time + checkInterval
-    
-    if checkNext == time:
-        debug.info("Running cleaning routine for the master nicks list.")
-        net.cleanNicks()
-        checkNext = time + checkInterval
-    
     return commands
     
 def __initCmd(ircMsg):

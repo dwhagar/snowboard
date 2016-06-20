@@ -17,6 +17,7 @@ import time
 import socket
 import ssl
 import sys
+import select
 
 from . import debug
 from . import server
@@ -104,21 +105,24 @@ class Connection:
     
     # Read information from the server, up to a new-line character.
     def read(self):
-        # Keep track on if the loop should be done.
-        done = False
-        received = ""
-        
+        '''Read data from the server, if there is anything to be read.'''
         # Only do something if we're connected.
         if self.__connected:
+            done = False
+            received = ""
+            
             while not done:
                 try:
                     if self.ssl:
-                        data = self.__ssl.recv(1).decode('utf-8')
+                        data = self.__ssl.recv(1)
                     else:
-                        data = self.__socket.recv(1).decode('utf-8')
+                        data = self.__socket.recv(1)
                 except (ssl.SSLWantReadError, BlockingIOError):
                     received = None
                     break
+                except OSError as err:
+                    debug.error("Error #" + str(err.errno) + ": '" + err.strerror + "' disconnecting.")
+                    data = False
                 
                 # Process the data.
                 # socket.recv is supposed to return a False if the connection
@@ -127,10 +131,13 @@ class Connection:
                     self.disconnect()
                     done = True
                     received = None
-                elif data == '\n':
-                    done = True
                 else:
-                    received += data
+                    text = data.decode('utf-8')
+                    if text == '\n':
+                        done = True
+                    else:
+                        received += text
+
         else:
             received = None
         
@@ -162,15 +169,21 @@ class Connection:
         if self.__connected:
             # Loop to send the data.
             while dataSent < bufferSize:
-                if self.ssl:
-                    sentNow = self.__ssl.send(data[dataSent:])
-                else:
-                    sentNow = self.__socket.send(data[dataSent:])
+                try:
+                    if self.ssl:
+                        sentNow = self.__ssl.send(data[dataSent:])
+                    else:
+                        sentNow = self.__socket.send(data[dataSent:])
+                except OSError as err:
+                    debug.error("Error #" + str(err.errno) + ": '" + err.strerror + "' disconnecting.")
+                    self.disconnect()
+                    return False
                 
                 # If nothing gets sent, we are disconnected from the server.
                 if sentNow == 0:
+                    debug.error("Data could not be sent for an unknown reason, disconnecting.")
                     self.disconnect()
-                    sent = False
+                    return False
                 
                 # Keep track of the data.
                 dataSent += sentNow

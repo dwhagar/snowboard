@@ -91,6 +91,10 @@ def __process_responses(net, raw):
     # Process mode messages.
     elif response[1] == "MODE":
         net.processMode(response)
+    # Pong received, reset the number of pings missed.
+    elif response[1] == "PONG":
+        net.missedPings = 0
+        debug.info("Received a PONG response from the server.")
 
     cmds = __get_commands(raw, net)
     if cmds == None:
@@ -179,42 +183,50 @@ def main(argv):
     
     net = network.Network(cfg)
     
-    # Establish a connection.
-    if net.connect():
-        net.auth()
-        if net.ready():
-            net.joinAll()
+    while net.reconnect:
+        # Establish a connection.
+        if net.connect():
+            net.auth()
+            if net.ready():
+                net.joinAll()
+            else:
+                debug.error("Failed to authenticate.")
+                return 1
         else:
-            debug.error("Failed to authenticate.")
+            debug.error("Failed to connect.")
             return 1
-    else:
-        debug.error("Failed to connect.")
-        return 1
     
-    lastTimer = int(time.time())
+        lastTimer = int(time.time())
     
-    # Loop until we break the loop.
-    while net.online():
-        # Is there data?
-        data = net.checkMessages()
-        if not data == None:
-            # If anything needs to be sent to the server, we'll get a list
-            # of commands from the response processor.
-            cmds = __process_responses(net, data)
-            if len(cmds) > 0:
-                net.sendCommands(cmds)
+        while net.online() and net.ready():
+            # Is there data?
+            data = net.checkMessages()
+            if not data == None:
+                # If anything needs to be sent to the server, we'll get a list
+                # of commands from the response processor.
+                cmds = __process_responses(net, data)
+                if len(cmds) > 0:
+                    net.sendCommands(cmds)
         
-        # Basis for the loop to execute timers, we only want to execute a
-        # timer if there at least one second between this loop and when
-        # timers were last run.
-        currentTime = int(time.time())
-        if lastTimer < currentTime:
-            cmds = scripts.timers(net, currentTime)
-            lastTimer = currentTime
-            if len(cmds) > 0:
-                net.sendCommands(cmd)
+            # Basis for the loop to execute timers, we only want to execute a
+            # timer if there at least one second between this loop and when
+            # timers were last run.
+            cmds = []
+            
+            currentTime = int(time.time())
+            if lastTimer < currentTime:
+                cmds += net.pingTimer(currentTime)
+                cmds += net.cleanTimer(currentTime)
+                cmds += scripts.timers(net, currentTime)
+                lastTimer = currentTime
+                if len(cmds) > 0:
+                    net.sendCommands(cmds)
         
-        # Make sure we don't amp up the CPU to max.
-        time.sleep(0)
+            # Make sure we don't amp up the CPU to max.
+            time.sleep(0)
+        
+        if (not (net.online() and net.ready())) and net.reconnect:
+            debug.message("Disconnected from the server.  Attempting to reconnect in " + str(net.config.delay) + " seconds...")
+            time.sleep(net.config.delay)
     
     return result

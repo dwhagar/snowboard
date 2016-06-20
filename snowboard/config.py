@@ -39,6 +39,10 @@ class Config:
         self.retries = 3
         self.delay = 1
         self.init = 0
+        self.pingInterval = 300
+        self.pingNext = 0
+        self.checkInterval = 300
+        self.checkNext = 0
         
         # Read configuration.
         self.file = configFile
@@ -97,4 +101,8 @@ class Config:
                 if "retries" in keys:
                     self.retries = int(config[section]["retries"])
                 if "delay" in keys:
-                    self.delay = float(config[section]["delay"]) 
+                    self.delay = float(config[section]["delay"])
+                if "pingtimer" in keys:
+                    self.pingInterval = int(config[section]["pingtimer"])
+                if "cleantimer" in keys:
+                    self.cleanInterval = int(config[section]["cleantimer"])

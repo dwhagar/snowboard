@@ -62,6 +62,4 @@ def timers(net, time):
     '''Passes the current time onto a series of timers.'''
     cmds = []
     
-    cmds += userCommands.cleanTimer(net, time)
-    
     return cmds

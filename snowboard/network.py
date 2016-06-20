@@ -213,17 +213,23 @@ denied
 Optional, defaults to an empty list.  A list of flags for defnied functions.
 '''
 
+import time
+
 class Network:
     def __init__(self, cfg):
         self.config = cfg
         self.botnick = self.config.botnick[:] # Copied, not just a reference
         self.name = self.config.network
+        self.server = None
         self.__connection = None
         self.__authenticated = False
         self.channels = cfg.channels
         self.nicks = []
         self.users = users.Users(cfg.network)
         self.orphans = []
+        self.reconnect = True
+        self.missedPings = 0
+        self.lastActivity = 0
     
     def online(self):
         '''Let the outside see if the bot is online.'''
@@ -238,16 +244,14 @@ class Network:
 
     def connect(self):
         '''Connect to the network.'''
-        attempt = 0
-        
         if self.__connection == None:
             connected = False
         else:
-            connected = self.__connection.connected
+            connected = self.__connection.connected()
+            result = connected
         
         # Retry connecting until either the system is connected or none left
-        while (not connected) and (attempt < len(self.config.servers)):
-            attempt += 1
+        while not connected:
             for server in self.config.servers:
                 # Create the connection object, load settings from config
                 self.__connection = connection.Connection(server)
@@ -264,9 +268,13 @@ class Network:
                     debug.message("Connection to " + server.host + ":" + str(server.port) + " succeeded.")
                     break
                 else:
-                    debug.message("Connection to " + server.host + ":" + str(server.port) + "failed.")
+                    debug.message("Connection to " + server.host + ":" + str(server.port) + " failed.")
                 
                 time.sleep(self.config.delay)
+            
+            # If we aren't connected yet, display a message about it.
+            if not result:
+                debug.message("Connection failed, trying again in " + str(self.config.delay) + " seconds...")
                 
             connected = result
         
@@ -274,6 +282,7 @@ class Network:
 
     def quit(self):
         '''Properly quit from the server.'''
+        self.reconnect = False
         self.sendCommands(["QUIT " + self.config.quitmsg])
 
     def disconnect(self):
@@ -283,6 +292,25 @@ class Network:
             self.__connection.disconnect()
         else:
             debug.info("Not connected to server.")
+        
+        # Return the object to a disconnected state.
+        self.__authenticated = False
+        # There are no nicks to keep track of when disconnected.
+        self.nicks = []
+        self.orphans = []
+        
+        # There are no nicks in any channels while disconnected.
+        for chan in self.channels:
+            chan.botnick = None
+            chan.joined = False
+            chan.members = []
+            chan.opped = False
+            chan.voiced = False
+        
+        # Reset timers.
+        self.config.checkNext = 0
+        self.config.pingNext = 0
+        self.missedPings = 0
 
         return self.__connection.connected
     
@@ -290,7 +318,7 @@ class Network:
         '''Authenticate with the network.'''
         debug.message("Attempting to authenticate.")
         stage = 0 # What stage of authentication are we in?
-                
+        
         # Wait for the server to signal that authentication is complete.
         while (not self.__authenticated) and (self.__connection.connected()):
             if stage == 1: # Choose a nick to go by.
@@ -307,8 +335,10 @@ class Network:
                 line = data.split()
                 if line[1] == "001":
                     debug.message("Authentication successful.")
+                    self.server = line[0]
                     self.__suppressMOTD() # Not really required
                     self.__authenticated = True
+                    self.lastActivity = int(time.time())
                 elif line[1] == "433":
                     # The nick we wanted was in use, must choose another one.
                     debug.message("Primary nick was taken, choosing a replacement.")
@@ -333,8 +363,10 @@ class Network:
         while stillMOTD:
             data = self.__connection.read()
             if not data == None:
-                if data.split()[1] == "376":
-                    stillMOTD = False
+                dataList = data.split()
+                if len(dataList) > 1:
+                    if dataList[1] == "376":
+                        stillMOTD = False
             
     
     def __authwait(self):
@@ -360,6 +392,7 @@ class Network:
         data = self.__connection.read()
         if not (data == None):
             self.__pingpong(data)
+            self.lastActivity = int(time.time())
             
         return data
     
@@ -700,4 +733,49 @@ class Network:
             return True
         else:
             return False
+    
+    def pingTimer(self, time):
+        '''Pings the server to make sure it is still there.'''
+        commands = []
         
+        # Check when the last time a message was received by the server.
+        timeout = self.lastActivity + self.config.pingInterval
+        if time > timeout:
+            # Initialize the timer.
+            if self.config.pingNext == 0:
+                debug.info("Initialized ping timer.")
+                self.config.pingNext = time + self.config.pingInterval
+            # Execute the ping when time.
+            if self.config.pingNext > time:
+                debug.info("Pinging server " + self.server + " now.")
+                commands.append("PING " + self.server)
+                self.config.pingNext += self.config.pingInterval
+                # One missed ping, notify the user.
+                if self.missedPings > 0:
+                    debug.warn("No ping response from server, continuing to try.")
+                # Too many missed pings, disconnect.
+                if self.missedPings > 2:
+                    debug.error("No ping response from server for three consecutive tries, resetting connection.")
+                    self.disconnect()
+                self.missedPings += 1
+        # If the timeout has not been reached, keep resetting the next time
+        # a ping should be sent.
+        else:
+            self.config.pingNext = time + self.config.pingInterval
+
+        return commands
+        
+    def cleanTimer(self, time):
+        '''Executes the Nick list cleaning every checkInterval seconds.'''
+        commands = []
+    
+        # When initialized, set next time it will run, but don't run immediately.
+        if self.config.checkNext == 0:
+            debug.message("Initialized master nick cleaning timer.")
+            self.config.checkNext = time + self.config.checkInterval
+        elif self.config.checkNext == time:
+            debug.info("Running cleaning routine for the master nicks list.")
+            self.cleanNicks()
+            self.config.checkNext = time + self.config.checkInterval
+    
+        return commands
