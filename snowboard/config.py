@@ -45,9 +45,8 @@ class Config:
         self.delay = 1
         self.init = 0
         self.pingInterval = 300
-        self.pingNext = 0
         self.checkInterval = 300
-        self.checkNext = 0
+
         
         # Read configuration.
         self.file = configFile

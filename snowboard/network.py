@@ -230,6 +230,9 @@ class Network:
         self.reconnect = True
         self.missedPings = 0
         self.lastActivity = 0
+        self.pingNext = 0
+        self.checkNext = 0
+
     
     def online(self):
         '''Let the outside see if the bot is online.'''
@@ -308,8 +311,8 @@ class Network:
             chan.voiced = False
         
         # Reset timers.
-        self.config.checkNext = 0
-        self.config.pingNext = 0
+        self.checkNext = 0
+        self.pingNext = 0
         self.missedPings = 0
 
         return self.__connection.connected
@@ -729,14 +732,14 @@ class Network:
         timeout = self.lastActivity + self.config.pingInterval
         if time > timeout:
             # Initialize the timer.
-            if self.config.pingNext == 0:
+            if self.pingNext == 0:
                 debug.info("Initialized ping timer.")
-                self.config.pingNext = time + self.config.pingInterval
+                self.pingNext = time + self.config.pingInterval
             # Execute the ping when time.
-            if self.config.pingNext > time:
+            if self.pingNext > time:
                 debug.info("Pinging server " + self.server + " now.")
                 commands.append("PING " + self.server)
-                self.config.pingNext += self.config.pingInterval
+                self.pingNext += self.config.pingInterval
                 # One missed ping, notify the user.
                 if self.missedPings > 0:
                     debug.warn("No ping response from server, continuing to try.")
@@ -748,7 +751,7 @@ class Network:
         # If the timeout has not been reached, keep resetting the next time
         # a ping should be sent.
         else:
-            self.config.pingNext = time + self.config.pingInterval
+            self.pingNext = time + self.config.pingInterval
 
         return commands
         
@@ -756,13 +759,13 @@ class Network:
         '''Executes the Nick list cleaning every checkInterval seconds.'''
         commands = []
     
-        # When initialized, set next time it will run, but don't run immediately.
-        if self.config.checkNext == 0:
+        # When initialized, set next time it will run.
+        if self.checkNext == 0:
             debug.message("Initialized master nick cleaning timer.")
-            self.config.checkNext = time + self.config.checkInterval
-        elif self.config.checkNext == time:
+            self.checkNext = time + self.config.checkInterval
+        elif self.checkNext == time:
             debug.info("Running cleaning routine for the master nicks list.")
             self.cleanNicks()
-            self.config.checkNext = time + self.config.checkInterval
+            self..checkNext = time + self.config.checkInterval
     
         return commands
