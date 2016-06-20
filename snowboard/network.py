@@ -294,7 +294,7 @@ class Network:
             debug.info("Disconnecting from server.")
             self.__connection.disconnect()
         else:
-            debug.info("Not connected to server.")
+            debug.info("Cannot disconnect, not currently connected to server.")
         
         # Return the object to a disconnected state.
         self.__authenticated = False
@@ -311,9 +311,10 @@ class Network:
             chan.voiced = False
         
         # Reset timers.
-        self.checkNext = 0
-        self.pingNext = 0
         self.missedPings = 0
+        self.lastActivity = 0
+        self.pingNext = 0
+        self.checkNext = 0
 
         return self.__connection.connected
     
