@@ -90,7 +90,7 @@ class Users:
         if self.table == "global":
             initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, user TEXT UNIQUE, password TEXT, hostmasks TEXT, level INTEGER, approved TEXT, denied TEXT)"
         else:
-            initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, level INTEGER, approved TEXT, denied TEXT)"
+            initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, user TEXT UNIQUE, level INTEGER, approved TEXT, denied TEXT)"
 
         self.db.execute(initCmd)
         
@@ -161,7 +161,7 @@ class Users:
         
         self.__openDB()
         
-        query = "SELECT uid FROM " + self.table + " WHERE user IS '" + userName + "' COLLATE NOCASE"
+        query = "SELECT uid FROM " + self.table + " WHERE user IS '" + userName.lower() + "'"
         self.db.execute(query)
         data = self.db.fetchone()
         
@@ -175,7 +175,7 @@ class Users:
         '''Checks to see if a UID exists in the database already.'''
         self.__openDB()
         
-        query = "SELECT uid FROM " + self.table + " WHERE uid IS '" + uid + "' COLLATE NOCASE"
+        query = "SELECT uid FROM " + self.table + " WHERE uid IS '" + uid + "'"
         self.db.execute(query)
         data = self.db.fetchone()
         
@@ -206,7 +206,7 @@ class Users:
         if self.table == "global":
             data = [
                 uid,
-                user,
+                user.lower(),
                 self.__passwordHash(password),
                 masks,
                 level,
@@ -250,7 +250,7 @@ class Users:
         
         if self.table == "global":
             data = [
-                user,
+                user.lower(),
                 self.__passwordHash(password),
                 masks,
                 level,
@@ -346,3 +346,21 @@ class Users:
         self.__closeDB()
         
         return result
+        
+    def getUsers(self):
+        '''Gets a list of all users.'''
+        result = None
+        
+        self.__openDB()
+        
+        query = "SELECT user, level, approved, denied FROM " + self.table
+        
+        self.db.execute(query)
+        data = self.db.fetchall()
+        
+        if not data == None:
+            result = data
+        
+        self.__closeDB()
+        return result
+        

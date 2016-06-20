@@ -560,7 +560,7 @@ class Network:
                 result = existing
                 break
                 
-        return existing
+        return result
     
     def addNick(self, nickName):
         '''Add a nick to the master list.'''
@@ -720,19 +720,6 @@ class Network:
         debug.message("Attempting to join all configured channels.")
         for channel in self.config.channels:
             self.addChannel(channel)
-            
-    def addUser(self, name, password, host,
-                level = 1, approved = [], denied = [], chan = None):
-        '''Adds a user to the network.'''
-        hosts = [host]
-        uid = self.users.uidHash(name)
-        exists = self.users.uidExists(uid)
-        
-        if not exists:
-            self.users.addUser(uid, name, password, hosts, level, approved, denied)
-            return True
-        else:
-            return False
     
     def pingTimer(self, time):
         '''Pings the server to make sure it is still there.'''

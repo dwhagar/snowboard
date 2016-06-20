@@ -28,6 +28,8 @@ def msgTriggers(ircMsg):
         commands = __initCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "adduser":
         commands = __addCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "listusers":
+        commands = __listCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "ident":
         commands = __identCmd(ircMsg)
                 
@@ -81,12 +83,15 @@ def __addCmd(ircMsg):
                 approved = []
                 denied = []
                 
-            result = ircMsg.net.addUser(user, password, hostmask, level, approved, denied)
-            
-            if not result:
+            hosts = [hostmask]
+            uid = ircMsg.net.users.uidHash(user)
+            exists = ircMsg.net.users.uidExists(uid)
+        
+            if not exists:
+                ircMsg.net.users.addUser(uid, name, password, hosts, level, approved, denied)
+            else:
                 debug.error("Error with 'adduser':  User " + user + " already exists.")
-                commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")
-                
+                commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")                        
         else:
             debug.message("Nick " + ircMsg.src + " tried to use the 'adduser' command, but does not have sufficient access.")
             commands.append("PRIVMSG " + ircMsg.src + " :You cannot access the 'adduser' command.")
@@ -104,3 +109,62 @@ def __identCmd(ircMsg):
     commands = nick.auth(ircMsg.dataList[1])
     
     return commands
+
+def __listCmd(ircMsg):
+    '''Provides a list of users.'''
+    commands = []
+    
+    if len(ircMsg.dataList) > 1:
+        channel = ircMsg.dataList[1]
+    else:
+        channel = None
+    
+    nick = ircMsg.net.findNick(ircMsg.src)
+    
+    if nick.authed:
+        if channel == None:
+            data = ircMsg.net.users.getUsers()
+        else:
+            chan = ircMsg.net.findChannel(channel)
+            
+            if chan == None:
+                debug.info("Nick " + ircMsg.src + " was looking for the user list of " + channel + ", but the channel was not found.")
+                commands.append("PRIVMSG " + ircMsg.src + " :Channel " + channel + " was not found in my database.")
+                data = []
+            else:
+                data = chan.users.getUsers()
+        
+        if len(data) > 0:
+            for item in data:
+                message = __formatUserLine(item)
+                commands.append("PRIVMSG " + ircMsg.src + " :" + message)
+        else:
+            if channel == None:
+                debug.info("Nick " + ircMsg.src + " was looking for the global user list, but there are no users in that channel.")
+                commands.append("PRIVMSG " + ircMsg.src + " :There are no users on the globel user list.  I think something went wrong!")
+            elif not chan == None:
+                debug.info("Nick " + ircMsg.src + " was looking for the user list of " + channel + ", but there are no users in that channel.")
+                commands.append("PRIVMSG " + ircMsg.src + " :There are no users listed on " + channel + ".")
+    else:
+        debug.message("Nick " + ircMsg.src + " tried to use the 'listusers' command, but was not identified.")
+        commands.append("PRIVMSG " + ircMsg.src + " :You are not identified.")
+            
+    return commands
+    
+def __formatUserLine(item):
+    '''Formats a single line of user information.'''
+    user = item[0]
+    level = str(item[1])
+    approved = item[2]
+    denied = item[3]
+    
+    if approved == "" and denied == "":
+        message = "User: " + user + "; Level: " + level
+    elif approved == "":
+        message = "User: " + user + "; Level: " + level + "; Denied Flags: " + denied
+    elif denied == "":
+        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved
+    else:
+        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved + "; Denied Flags: " + denied
+
+    return message
