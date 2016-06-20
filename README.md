@@ -10,18 +10,18 @@ We are writing this in Python because it allows everyone to make their own edits
 All we have right now is to-do, as we're just starting, so this is going to be pretty simple and not sound like a good bot until we get the basics in place and can really start expanding into different features.
 
 * Self-Identify to NickServ on supported networks
-** Leverage use of NickServ on supported networks
-** NickServ or Q/X/Z ID Support for Ops
+ * Leverage use of NickServ on supported networks
+ * NickServ or Q/X/Z ID Support for Ops
 * Finish basic user management suite
-** removeuser command
-** modifyuser command
-** searchusers command
+ * removeuser command
+ * modifyuser command
+ * searchusers command
 * Basic channel management suite
-** op/deop
-** voice/devoice
-** ban/unban
-** kick
-** invite
+ * op/deop
+ * voice/devoice
+ * ban/unban
+ * kick
+ * invite
 
 See Issues for more to-dos.
 
@@ -30,8 +30,8 @@ v0.0.1 - Early pre-Alpha
 * Unreleased version.
 * Still not operational as a full-time bot.
 * User Management under development.
-** adduer command written
-** listusers command written
+ * adduer command written
+ * listusers command written
 * Connection self-managed.
 * Timer framework in place.
 * Scripting framework in place.
