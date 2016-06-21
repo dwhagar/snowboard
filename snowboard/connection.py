@@ -35,19 +35,17 @@ class Connection:
         self.__socket = None
         self.__ssl = None
         self.__connected = False
-        self.ssl = False
+        self.ssl = srv.ssl
         self.sslVerify = True
         self.retries = 3           # Numbers of times to retry a connection
         self.delay = 1             # Delay between connection attempts
         
-    # The connection object should be the only one to change if it is in a
-    # connected state.
     def connected(self):
+        '''Returns the state of the connection.'''
         return self.__connected
     
-    # Connect to the perscribed host and the proper port, retries with a pause
-    # until the configured limit is reached.
     def connect(self):
+        '''Connect to the configured server.'''
         # Keep track of attempts.
         attempt = 0
         
@@ -77,7 +75,7 @@ class Connection:
             
             # Assume connection errors are no big deal but do display an error.
             except ConnectionAbortedError:
-                debug.error("Connection to "  + self.host + " aborted by server.")
+                debug.error("Connection to " + self.host + " aborted by server.")
             except ConnectionRefusedError:
                 debug.error("Connection to " + self.host + " refused by server.")
             except TimeoutError:
@@ -90,9 +88,9 @@ class Connection:
             time.sleep(self.delay)
         
         return self.__connected
-    
-    # Disconnect the socket.
+
     def disconnect(self):
+        '''Disconnect from the server.'''
         debug.message("Disconnected from " + self.host + ":" + str(self.port) + ".")
         if ssl:
             if not self.__ssl == None:
@@ -104,9 +102,8 @@ class Connection:
         self.__socket = None
         self.__connected = False
     
-    # Read information from the server, up to a new-line character.
     def read(self):
-        '''Read data from the server, if there is anything to be read.'''
+        '''Read a line of data from the server, if any.'''
         # Only do something if we're connected.
         if self.__connected:
             done = False
@@ -156,8 +153,8 @@ class Connection:
         
         return received
     
-    # Send data to the server.
     def write(self, data):
+        '''Sends data to the server.'''
         # Encode the data for the server.
         debug.trace(data)
         data += '\n'

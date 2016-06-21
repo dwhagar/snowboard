@@ -17,6 +17,8 @@
 This is where the core processing is done for the systems scripts and
 commands.
 
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
+
 Scripts can be added like any other module, placing the pythong file into the
 folder "snowboard/snowboard" with the other module files, then imported here.
 

@@ -14,6 +14,8 @@
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
+Snowboard module initialization.
+
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 

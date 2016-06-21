@@ -76,9 +76,6 @@ class Network:
                 self.__connection.delay = self.config.delay
                 self.__connection.sslVerify = self.config.sslVerify
                 
-                # This setting is per-server, loaded from server object
-                self.__connection.ssl = server.ssl
-                
                 # Try to connect, decide what to do next.
                 result = self.__connection.connect()
                 if result:

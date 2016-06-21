@@ -16,38 +16,7 @@
 '''
 Defines a class to store data on an IRC message from the server.
 
-//Constructor//
-Accepts 5 paremeters:
-net
-A network object.
-
-src
-A string, the source Nick of the message.
-
-srcHost
-A string, the source user@host of the message.
-
-dest
-A string, the destination of the message.
-
-command
-A string, the command from the IRC server (such as PRIVMSG, NOTICE, etc...)
-
-data
-A string, the actual message itself.
-
-//Data//
-The following are defined in the constructor.
-.net
-.src
-.srchost
-.dest
-.command
-.data
-
-.dataList
-A list of words in the .data member variable, makes for easier processing to
-just do this once when the object is created.
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 class ircMessage:

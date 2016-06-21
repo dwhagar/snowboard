@@ -15,6 +15,8 @@
 
 '''
 Processes basic IRC commands.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import debug

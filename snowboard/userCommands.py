@@ -16,6 +16,8 @@
 '''
 Provides triggers and processing to handle commands relating to user
 management and authentication.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import debug
