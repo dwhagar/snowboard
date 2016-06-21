@@ -46,6 +46,8 @@ class Network:
         self.lastActivity = 0
         self.pingNext = 0
         self.checkNext = 0
+        self.pingSent = 0
+        self.pongReceived = 0
 
     
     def online(self):
@@ -153,7 +155,7 @@ class Network:
                     self.server = line[0]
                     self.__suppressMOTD() # Not really required
                     self.__authenticated = True
-                    self.lastActivity = int(time.time())
+                    self.lastActivity = time.time()
                 elif line[1] == "433":
                     # The nick we wanted was in use, must choose another one.
                     debug.message("Primary nick was taken, choosing a replacement.")
@@ -207,7 +209,7 @@ class Network:
         data = self.__connection.read()
         if not (data == None):
             self.__pingpong(data)
-            self.lastActivity = int(time.time())
+            self.lastActivity = time.time()
             
         return data
     
@@ -539,18 +541,16 @@ class Network:
     def pingTimer(self, time):
         '''Pings the server to make sure it is still there.'''
         commands = []
-        
+
         # Check when the last time a message was received by the server.
         timeout = self.lastActivity + self.config.pingInterval
         if time > timeout:
-            # Initialize the timer.
-            if self.pingNext == 0:
-                debug.info("Initialized ping timer.")
-                self.pingNext = time + self.config.pingInterval
             # Execute the ping when time.
-            if self.pingNext > time:
+            if self.pingNext < time:
                 debug.info("Pinging server " + self.server + " now.")
                 commands.append("PING " + self.server)
+                # Provide a mechanism to measure server lag as well.
+                self.pingSent = time
                 self.pingNext += self.config.pingInterval
                 # One missed ping, notify the user.
                 if self.missedPings > 0:
@@ -563,9 +563,21 @@ class Network:
         # If the timeout has not been reached, keep resetting the next time
         # a ping should be sent.
         else:
-            self.pingNext = time + self.config.pingInterval
+            # Initialize the timer.
+            if self.pingNext == 0:
+                debug.message("Initialized ping timer.")
+                self.pingNext = time + self.config.pingInterval
 
         return commands
+    
+    def checkLag(self):
+        '''Checks to see how much server lag there is.'''
+        lag = self.pongReceived - self.pingSent
+        
+        debug.info("Server lag is at " + str(round(lag, 3)) + " seconds.")
+        if lag > self.config.maxLag:
+            debug.warn("Server lag is " + str(round(lag - self.config.maxLag, 3)) + " seconds longer than acceptable.  Disconnecting.")
+            self.disconnect()
         
     def cleanTimer(self, time):
         '''Executes the Nick list cleaning every checkInterval seconds.'''

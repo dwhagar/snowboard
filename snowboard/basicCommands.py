@@ -50,7 +50,7 @@ def __quitCommand(ircMsg):
     nick = ircMsg.net.findNick(ircMsg.src)
     
     if nick.authed:
-        if nick.priv.checkFlag("admin"):
+        if nick.priv.checkApproved("admin"):
             # Generally speaking we should not make a habit of invoking the
             # sendCommands function directly, and just return a list.  This is a
             # special case, since once we send the Quit command the connection will

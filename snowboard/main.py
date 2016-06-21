@@ -58,7 +58,7 @@ def __parse_args(argv, cfg):
     
     # Load all the options from the configuration.
     cfg.options = argparser.parse_args(argv)
-    config.verbosity = cfg.options.verbose
+    debug.verbosity = cfg.options.verbose
     cfg.init = cfg.options.init
     cfg.file = cfg.options.config
 
@@ -94,7 +94,9 @@ def __process_responses(net, raw):
     # Pong received, reset the number of pings missed.
     elif response[1] == "PONG":
         net.missedPings = 0
+        net.pongReceived = time.time()
         debug.info("Received a PONG response from the server.")
+        net.checkLag()
 
     cmds = __get_commands(raw, net)
     if cmds == None:
@@ -196,7 +198,7 @@ def main(argv):
             debug.error("Failed to connect.")
             return 1
     
-        lastTimer = int(time.time())
+        lastTimer = time.time()
     
         while net.online() and net.ready():
             # Is there data?
@@ -213,8 +215,8 @@ def main(argv):
             # timers were last run.
             cmds = []
             
-            currentTime = int(time.time())
-            if lastTimer < currentTime:
+            currentTime = time.time()
+            if (lastTimer + 1) < currentTime:
                 cmds += net.pingTimer(currentTime)
                 cmds += net.cleanTimer(currentTime)
                 cmds += scripts.timers(net, currentTime)
@@ -226,7 +228,7 @@ def main(argv):
             time.sleep(0)
         
         if (not (net.online() and net.ready())) and net.reconnect:
-            debug.message("Disconnected from the server.  Attempting to reconnect in " + str(net.config.delay) + " seconds...")
+            debug.message("Disconnected from the server.  Attempting to reconnect in " + str(int(net.config.delay)) + " seconds...")
             time.sleep(net.config.delay)
     
     return result
