@@ -15,8 +15,14 @@
 
 # Defines a server connection configuration, does not handle the actual
 # connection, but provides settings such as name, port, and ssl options.
+
+'''
+Stores information on a server.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
+'''
+
 class Server:
-    # Constructor
     def __init__(self, host, port, ssl):
         self.host = host
         self.port = port

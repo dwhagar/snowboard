@@ -17,66 +17,7 @@
 Stores information about a nick on the IRC network including hostname and
 privleges associated with the nick in a global sense.
 
-///Data///
-.name
-The nick of a paticular person on IRC.
-
-.network
-The name of the network the bot is on.
-
-.users
-Users object, provides access to the user database.
-
-.host
-The user@host of a particular nick on IRC.
-
-.priv
-A NickPriv object to store global privleges for a particular user.
-
-.authed
-Boolean value, has the user been authenticated yet?
-
-///Constructor///
-Nick(nick, users, [host], [priv])
-Accepts three inputs, two are options.
-
-nick
-The nick of the person in question.
-
-users
-Users object which provides access to the user database.
-
-host
-The user@host of the nick on IRC, this is optional and defaults to an empty
-string.
-
-priv
-A NickPriv object, this is optional and defaults to None.
-
-///Methods///
-.sendWHO()
-Sends back a command for the Network object to then send to the server and
-request the WHO information on a user, to derrive their hostname.
-
-.getUID()
-Retreives the UID from the dabase, only works if the system already knows
-the nost of a particular nick, otherwise it will do nothing.  Return None if
-no user is found.
-
-.getPrivs()
-Retreives the privileges of a user in the database.  If the UID is not yet
-known, it will attempt to look it up based on hostname.  If no UID can be
-found, the function returns None.
-
-.auth(password)
-Authenticates a nick against the user database.  Also assumes that the uid
-is already retreived, if it exists when the message initially comes into
-the server.  Thus if it doesn't see a uid present, it assume there is not
-one.
-
-Accepts one parameter:
-password
-The users password, unencrypted.
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import debug

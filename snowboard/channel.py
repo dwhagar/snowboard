@@ -17,64 +17,7 @@
 These two classes server to store information on a person in a channel and
 what that person's privleges are within the channel.
 
-///Properties///
-.name
-The name of the channel, as it would be read by the IRC server.
-
-.network
-The nam eof the network the channel is on.
-
-.joined
-Boolean value of if the channel has been joined or not.
-
-.members
-A list of members, each member in the format of [Nick, ChanPriv].
-
-.users
-A Users object, acts as the interface to the channels user database.
-
-///Constructor///
-Users(name, network, [members])
-Initializes the object, the constructor can take up to 3 inputs, but requires
-a name and a network name at the very least.
-
-name:
-The name of the channel itself.
-
-network:
-The name of the network the channel is on.
-
-members:
-A list of Nick objects and ChanPriv objects in the format of
-[[Nick, ChanPriv], [Nick, ChanPriv], ...]
-
-///Methods///
-.join():
-Instructs the bot to join the channel.
-
-.part():
-Instructs the bot to leave the channel.
-
-.findNick(nick)
-Finds a particular nick, if it exists, within the channel's member list.
-This will return None if no nick is found.
-
-Takes one input, a Nick object.
-
-.addNick(nick, priv)
-Adds a nick to the members list, if a member is found with that nick, it
-will return the Nick object.
-
-Takes two inputs, a Nick object and a ChanPriv objects.
-
-.removeNick(nick)
-Removes a nick from the member list if that nick exists.
-
-Takes one input, a Nick object.
-
-.getAllPrivs()
-Accesses the database and get the channel privleges for all members of
-that channel.
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import users

@@ -13,6 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+Sends debugging messages to the console.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
+'''
+
 import sys
 
 from . import config

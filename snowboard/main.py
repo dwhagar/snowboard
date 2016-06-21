@@ -18,14 +18,14 @@ This acts at the core of the script where the network and configuration
 objects are directly created and manipulated.  Commands to be sent back to
 the network object for sending to the IRC server should be formatted as lists
 of strings, each item being a single command.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 import argparse
 import time
 
 from . import config
-from . import connection
-from . import channel
 from . import network
 from . import debug
 from . import scripts

@@ -15,6 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+Loads and executes an instance of Snowboard.
+
+See https://github.com/dwhagar/snowboard/ for more information.
+'''
+
 import sys
 import snowboard
 

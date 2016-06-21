@@ -13,4 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+Snowboard module initialization.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
+'''
+
 from .main import main

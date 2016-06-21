@@ -13,7 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
-# Configuration File for Snowboard
+'''
+Reads all configuration data for an instance of snowboard.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
+'''
 
 import configparser
 
@@ -23,9 +27,7 @@ from .server import Server
 # Global verbosity.
 verbosity = 0
 
-# Class to store and load configuration data.
 class Config:
-    # Constructor
     def __init__(self, configFile = "snowboard.ini"):
         # Set Defaults.
         self.versionNumber = 0
@@ -45,15 +47,14 @@ class Config:
         self.delay = 1
         self.init = 0
         self.pingInterval = 300
-        self.pingNext = 0
         self.checkInterval = 300
-        self.checkNext = 0
+
         
         # Read configuration.
         self.file = configFile
     
-    # Read the config file into memory.
     def read(self):
+        '''Reads configuration data from the perscribed file.'''
         # Get everything out of the configuration file.
         config = configparser.ConfigParser()
         config.read(self.file)
