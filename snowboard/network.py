@@ -112,7 +112,7 @@ class Network:
     def quit(self):
         '''Properly quit from the server.'''
         self.reconnect = False
-        self.sendCommands(["QUIT " + self.config.quitmsg])
+        self.sendCommands(["QUIT :" + self.config.quitmsg])
 
     def disconnect(self):
         '''Disconnect from the server.'''

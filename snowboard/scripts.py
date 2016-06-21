@@ -59,6 +59,8 @@ def privNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a private notice message.'''
     cmds = []
     
+    cmds += basicCommands.noticeTriggers(ircMsg)
+    
     return cmds
     
 def chanActionScripts(ircMsg):

@@ -41,8 +41,21 @@ def msgTriggers(ircMsg):
 def __initCmd(ircMsg):
     '''Execute the tasks for the special init command.'''
     debug.message("Initialized admin user " + ircMsg.src + " with hostmask " + ircMsg.dataList[1] + ".")
-    ircMsg.net.addUser(ircMsg.src, ircMsg.dataList[2], ircMsg.dataList[1], 255, ["admin"], [])
+    
+    hosts = [ircMsg.dataList[1]]
+    password = ircMsg.dataList[2]
+    user = ircMsg.src
+    uid = ircMsg.net.users.uidHash(user)
+    exists = ircMsg.net.users.uidExists(uid)
+    
+    if not exists:
+        ircMsg.net.users.addUser(uid, user, password, hosts, 255, ["admin"], [])
+    else:
+        debug.error("Error with 'adduser':  User " + user + " already exists.")
+        commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")  
+
     ircMsg.net.config.init = 0
+
     message = "Added user " + ircMsg.src + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again."
     return ["PRIVMSG " + ircMsg.src + " :" + message]
 

@@ -48,6 +48,7 @@ class Config:
         self.pingInterval = 300
         self.checkInterval = 300
         self.maxLag = 90
+        self.nickPass = None
 
         
         # Read configuration.
@@ -94,8 +95,10 @@ class Config:
                     self.botnick = config[section]["botnick"]
                 if "realname" in keys:
                     self.realname = config[section]["realname"]
+                if "nickpass" in keys:
+                    self.nickPass = config[section]["nickpass"]
             elif section == "Messages":
-                if "quitmsg" in keys:
+                if "quit" in keys:
                     self.quitmsg = config[section]["quit"]
             elif section == "Network":
                 if "sslverify" in keys:
