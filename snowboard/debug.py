@@ -19,15 +19,15 @@ Sends debugging messages to the console.
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
-import sys
+verbosity = 0
 
-from . import config
+import sys
 
 def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, level=1):
     """Writes a message if the level is high enough.
     
     Works just like the standard print function, if and only if `level`
-    is at least `config.verbosity`. Otherwise it does nothing.
+    is at least `verbosity`. Otherwise it does nothing.
     
     Its primary purpose is as the underlying implementation for all the
     normal output functions in the debug module.
@@ -45,15 +45,16 @@ def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, lev
     flush : bool
         If `True`, flush `file` after output.
     level : int
-        `config.verbosity` must be at least `level` for any output.
+        `verbosity` must be at least `level` for any output.
     """
-    if level <= config.verbosity:
+    global verbosity
+    if level <= verbosity:
         print(*objects, sep=sep, end=end, file=file, flush=flush)
 
 def debug_message(*objects, sep=" ", end="\n", type="DEBUG", level=3):
     """Writes an error message if the level is high enough.
     
-    If `level` is at least `config.verbosity`, basically equivalent to:
+    If `level` is at least `verbosity`, basically equivalent to:
         print("[" + type + "]: ", *objects, sep=sep, end=end, 
             file=sys.stderr, flush=True)
     Otherwise it does nothing.
@@ -72,14 +73,14 @@ def debug_message(*objects, sep=" ", end="\n", type="DEBUG", level=3):
     type : str
         What to tag output as.
     level : int
-        `config.verbosity` must be at least `level` for any output.
+        `verbosity` must be at least `level` for any output.
     """
-    if level <= config.verbosity:
+    if level <= verbosity:
         print("[", type, "]: ", sep="", end="", file=sys.stderr, flush=False)
         print(*objects, sep=sep, end=end, file=sys.stderr, flush=True)
 
 def message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
-    """Writes a message if `config.verbosity` is at least 1.
+    """Writes a message if `verbosity` is at least 1.
     
     Parameters
     ----------
@@ -97,7 +98,7 @@ def message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=1)
 
 def info(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
-    """Writes a message if `config.verbosity` is at least 2.
+    """Writes a message if `verbosity` is at least 2.
     
     Parameters
     ----------
@@ -115,7 +116,7 @@ def info(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     print_message(*objects, sep=sep, end=end, file=file, flush=flush, level=2)
 
 def trace(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
-    """Writes a message if `config.verbosity` is at least 3.
+    """Writes a message if `verbosity` is at least 3.
     
     Parameters
     ----------
@@ -153,7 +154,7 @@ def warn(*objects, sep=" ", end="\n"):
     
     The message is written to `sys.stderr`.
     
-    `config.verbosity` must be at least 1 to show any output.
+    `verbosity` must be at least 1 to show any output.
     
     Parameters
     ----------
@@ -171,7 +172,7 @@ def debug(*objects, sep=" ", end="\n"):
     
     The message is written to `sys.stderr`.
     
-    `config.verbosity` must be at least 3 to show any output.
+    `verbosity` must be at least 3 to show any output.
     
     Parameters
     ----------

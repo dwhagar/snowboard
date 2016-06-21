@@ -47,15 +47,40 @@ def messageScripts(ircMsg):
     cmds += userCommands.msgTriggers(ircMsg)
     
     return cmds
+
+def privActionScripts(ircMsg):
+    '''Executes scripts that should be triggered by a private action.'''
+    cmds = []
     
+    return cmds
+    
+
 def privNoticeScripts(ircMsg):
-    '''Executes scripts that should be triggered by a notice message.'''
+    '''Executes scripts that should be triggered by a private notice message.'''
+    cmds = []
+    
+    return cmds
+    
+def chanActionScripts(ircMsg):
+    '''Executes scripts that should be triggered by public action.'''
     cmds = []
     
     return cmds
     
 def chanNoticeScripts(ircMsg):
-    '''Executes scripts that should be triggered by a notice message.'''
+    '''Executes scripts that should be triggered by a public notice message.'''
+    cmds = []
+    
+    return cmds
+    
+def ctcpScripts(ircMsg):
+    '''Executes scripts that should be triggered by a CTCP message.'''
+    cmds = []
+    
+    return cmds
+    
+def rawMessages(net, message):
+    '''Executes scripts that process raw messages from the server.'''
     cmds = []
     
     return cmds

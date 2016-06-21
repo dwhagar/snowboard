@@ -21,6 +21,7 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import debug
+from . import basicMessages
 
 def msgTriggers(ircMsg):
     '''Process triggers for basic commands.'''
@@ -95,11 +96,9 @@ def __addCmd(ircMsg):
                 debug.error("Error with 'adduser':  User " + user + " already exists.")
                 commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")                        
         else:
-            debug.message("Nick " + ircMsg.src + " tried to use the 'adduser' command, but does not have sufficient access.")
-            commands.append("PRIVMSG " + ircMsg.src + " :You cannot access the 'adduser' command.")
+            commands += basicMessages.denyMessages(ircMsg.src, "adduser")
     else:
-        debug.message("Nick " + ircMsg.src + " tried to use the 'adduser' command, but was not identified.")
-        commands.append("PRIVMSG " + ircMsg.src + " :You are not identified.")
+        commands += basicMessages.noAuth(ircMsg.src, "adduser")
 
     return commands
 
@@ -148,8 +147,7 @@ def __listCmd(ircMsg):
                 debug.info("Nick " + ircMsg.src + " was looking for the user list of " + channel + ", but there are no users in that channel.")
                 commands.append("PRIVMSG " + ircMsg.src + " :There are no users listed on " + channel + ".")
     else:
-        debug.message("Nick " + ircMsg.src + " tried to use the 'listusers' command, but was not identified.")
-        commands.append("PRIVMSG " + ircMsg.src + " :You are not identified.")
+        commands += basicMessages.noAuth(ircMsg.src, "listusers")
             
     return commands
     

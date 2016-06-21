@@ -108,47 +108,6 @@ class Nick:
                    
         return commands
             
-'''
-Stores global information about a particular nicks privleges.
-
-///Data///
-.uid
-The unique user ID for this nick in the user database.
-
-.user
-The unique user name for this nick in the user database.
-
-.level
-Integer value of the users acccess level, globally.
-
-.approved
-A list of flags for which access is to be approved.
-
-.denied
-A list of flags for which access is to be denied.
-
-.users
-Users object to provide access to the user database.
-
-///Constructor///
-NickPriv([level], [uid], [user], [approved], [denied])
-Accepts up to 4 inputs, all of which are optional.
-
-level
-defaults to 0
-
-uid
-defaults to None
-
-user
-defaults to None
-
-approved
-defaults to an empty list
-
-denied
-defaults to an empty list
-'''
 class NickPriv:
     '''Stores information about privileges of a nick, across all channels.'''
     def __init__(self):

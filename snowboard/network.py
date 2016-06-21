@@ -37,6 +37,7 @@ class Network:
         self.server = None
         self.__connection = None
         self.__authenticated = False
+        self.__lastServer = 0  # The index of the last server connected
         self.channels = cfg.channels
         self.nicks = []
         self.users = users.Users(cfg.network)
@@ -46,6 +47,8 @@ class Network:
         self.lastActivity = 0
         self.pingNext = 0
         self.checkNext = 0
+        self.pingSent = 0
+        self.pongReceived = 0
 
     
     def online(self):
@@ -67,9 +70,19 @@ class Network:
             connected = self.__connection.connected()
             result = connected
         
+        serverIndex = 0
+        
+        # Change the order of the servers so that the system reconnects to
+        # the next server on the list if it has to reconnect, assuming there
+        # is more than one server in the list.
+        if (len(self.config.servers) > 0) and (self.__lastServer > 0):
+            servers = self.config.servers[self.__lastServer:] + self.config.servers[:self.__lastServer]
+        else:
+            servers = self.config.servers[:]
+        
         # Retry connecting until either the system is connected or none left
         while not connected:
-            for server in self.config.servers:
+            for server in servers:
                 # Create the connection object, load settings from config
                 self.__connection = connection.Connection(server)
                 self.__connection.retries = self.config.retries
@@ -80,8 +93,10 @@ class Network:
                 result = self.__connection.connect()
                 if result:
                     debug.message("Connection to " + server.host + ":" + str(server.port) + " succeeded.")
+                    self.__lastServer = serverIndex
                     break
                 else:
+                    serverIndex += 1
                     debug.message("Connection to " + server.host + ":" + str(server.port) + " failed.")
                 
                 time.sleep(self.config.delay)
@@ -109,6 +124,7 @@ class Network:
         
         # Return the object to a disconnected state.
         self.__authenticated = False
+        
         # There are no nicks to keep track of when disconnected.
         self.nicks = []
         self.orphans = []
@@ -153,7 +169,7 @@ class Network:
                     self.server = line[0]
                     self.__suppressMOTD() # Not really required
                     self.__authenticated = True
-                    self.lastActivity = int(time.time())
+                    self.lastActivity = time.time()
                 elif line[1] == "433":
                     # The nick we wanted was in use, must choose another one.
                     debug.message("Primary nick was taken, choosing a replacement.")
@@ -199,7 +215,26 @@ class Network:
     
     def sendCommands(self, list):
         '''Sends a list of commands to the server.'''
-        for cmd in list:
+        ctcpChar = '\x01'
+        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
+        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
+        
+        # Encode any CTCP messages.
+        encodedCommands = []
+    
+        for command in list:
+            cmdList = command.split()
+
+            if cmdList[0].upper() in ctcpQueries:
+                command = "PRIVMSG " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
+            if cmdList[0].upper() in ctcpReplies:
+                cmdList[0] = ctcpQueries[ctcpReplies.index(cmdList[0]) + 1]
+                command = "NOTICE " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
+
+            encodedCommands.append(command)
+
+        # After encoding any CTCP messages, send them.
+        for cmd in encodedCommands:
             self.__connection.write(cmd)
     
     def checkMessages(self):
@@ -207,10 +242,38 @@ class Network:
         data = self.__connection.read()
         if not (data == None):
             self.__pingpong(data)
-            self.lastActivity = int(time.time())
+            if '\x01' in data:
+                data = self.__processCTCP(data)
+            self.lastActivity = time.time()
             
         return data
+        
+    def __processCTCP(self, data):
+        '''Correctly handle CTCP message and responses.'''
+        ctcpChar = '\x01'
+        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
+        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
+                
+        data = data.replace(ctcpChar, '')
+        dataList = data.split()
+        
+        if dataList[1] == "PRIVMSG":
+            ctcpReply = False
+        elif dataList[1] == "NOTICE":
+            ctcpReply = True
+
+        ctcpCmd = dataList[3].strip(':')
     
+        if ctcpReply and ctcpCmd in ctcpQueries:
+            ctcpCmd = ctcpReplies[ctcpQueries.index(cmdCmd) - 1]
+        
+        if len(dataList) > 4:
+            data = dataList[0] + " " + ctcpCmd + " :" + " ".join(dataList[4:])
+        else:
+            data = dataList[0] + " " + ctcpCmd
+    
+        return data
+      
     def __checkChannels(self, channel):
         '''See if a channel already exists.'''
         result = None
@@ -539,18 +602,16 @@ class Network:
     def pingTimer(self, time):
         '''Pings the server to make sure it is still there.'''
         commands = []
-        
+
         # Check when the last time a message was received by the server.
         timeout = self.lastActivity + self.config.pingInterval
         if time > timeout:
-            # Initialize the timer.
-            if self.pingNext == 0:
-                debug.info("Initialized ping timer.")
-                self.pingNext = time + self.config.pingInterval
             # Execute the ping when time.
-            if self.pingNext > time:
+            if self.pingNext < time:
                 debug.info("Pinging server " + self.server + " now.")
                 commands.append("PING " + self.server)
+                # Provide a mechanism to measure server lag as well.
+                self.pingSent = time
                 self.pingNext += self.config.pingInterval
                 # One missed ping, notify the user.
                 if self.missedPings > 0:
@@ -563,9 +624,21 @@ class Network:
         # If the timeout has not been reached, keep resetting the next time
         # a ping should be sent.
         else:
-            self.pingNext = time + self.config.pingInterval
+            # Initialize the timer.
+            if self.pingNext == 0:
+                debug.message("Initialized ping timer.")
+                self.pingNext = time + self.config.pingInterval
 
         return commands
+    
+    def checkLag(self):
+        '''Checks to see how much server lag there is.'''
+        lag = self.pongReceived - self.pingSent
+        
+        debug.info("Server lag is at " + str(round(lag, 3)) + " seconds.")
+        if lag > self.config.maxLag:
+            debug.warn("Server lag is " + str(round(lag - self.config.maxLag, 3)) + " seconds longer than acceptable.  Disconnecting.")
+            self.disconnect()
         
     def cleanTimer(self, time):
         '''Executes the Nick list cleaning every checkInterval seconds.'''
@@ -581,3 +654,9 @@ class Network:
             self.checkNext = time + self.config.checkInterval
     
         return commands
+        
+    def ctcpPingReply(self, src):
+        '''Replies to CTCP Ping Requests'''
+        command = "PINGREPLY " + src + " :" + str(time.time())
+        
+        return [command]        

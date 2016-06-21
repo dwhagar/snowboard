@@ -18,11 +18,10 @@ Reads all configuration data for an instance of snowboard.
 
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
-
 import configparser
 
-from .channel import Channel
-from .server import Server
+from . import channel
+from . import server
 
 # Global verbosity.
 verbosity = 0
@@ -48,6 +47,7 @@ class Config:
         self.init = 0
         self.pingInterval = 300
         self.checkInterval = 300
+        self.maxLag = 90
 
         
         # Read configuration.
@@ -74,15 +74,15 @@ class Config:
             else:
                 ssl = False           
             
-            newServer = Server(line[0], int(line[1]), ssl)
+            newServer = server.Server(line[0], int(line[1]), ssl)
             self.servers.append(newServer)
         
         # Parse Channels into a List
         channels = config['Network']['channels']
         channels = channels.replace(' ','')
         channelList = channels.split(',')
-        for channel in channelList:
-            newChannel = Channel(channel, self.network)
+        for chan in channelList:
+            newChannel = channel.Channel(chan, self.network)
             self.channels.append(newChannel)
             
         # These sections all have reasonable defaults, so it checks to see if
@@ -112,3 +112,5 @@ class Config:
                     self.pingInterval = int(config[section]["pingtimer"])
                 if "cleantimer" in keys:
                     self.cleanInterval = int(config[section]["cleantimer"])
+                if "maxlag" in keys:
+                    self.maxLag = int(config[section]["maxlag"])

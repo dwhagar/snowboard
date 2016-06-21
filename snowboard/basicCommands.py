@@ -18,8 +18,10 @@ Processes basic IRC commands.
 
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
+import time
 
 from . import debug
+from . import basicMessages
 
 def msgTriggers(ircMsg):
     '''Process triggers for basic commands.'''
@@ -27,6 +29,8 @@ def msgTriggers(ircMsg):
     
     if ircMsg.dataList[0].lower() == "quit":
         commands = __quitCommand(ircMsg)
+    if ircMsg.dataList[0].lower() == "hop":
+        commands = __hopServers(ircMsg)
     elif ircMsg.data.lower() == "who are you?":
         commands = __identifySelf(ircMsg)
 
@@ -50,7 +54,7 @@ def __quitCommand(ircMsg):
     nick = ircMsg.net.findNick(ircMsg.src)
     
     if nick.authed:
-        if nick.priv.checkFlag("admin"):
+        if nick.priv.checkApproved("admin"):
             # Generally speaking we should not make a habit of invoking the
             # sendCommands function directly, and just return a list.  This is a
             # special case, since once we send the Quit command the connection will
@@ -60,14 +64,30 @@ def __quitCommand(ircMsg):
             ircMsg.net.quit()
             return [] # Normally I wouldn't do this either
         else:
-            debug.message("Nick " + ircMsg.src + " tried to use the 'quit' command, but does not have sufficient access.")
-            commands.append("PRIVMSG " + ircMsg.src + " :You cannot access to the 'quit' command.")
+            commands += basicMessages.denyMessages(ircMsg.src, "quit")
     else:
-        debug.message("Nick " + ircMsg.src + " tried to use the 'quit' command, but has not been authenticated.")
-        commands.append("PRIVMSG " + ircMsg.src + " :You are not identified.")
+        commands += basicMessages.noAuth(ircMsg.src, "quit")
         
     return commands
+
+def __hopServers(ircMsg):
+    '''Tells the bot to hop from one server to another.'''
+    commands = []
     
+    nick = ircMsg.net.findNick(ircMsg.src)
+    
+    if nick.authed:
+        if nick.priv.checkApproved("admin"):
+            debug.message("User " + ircMsg.src + " initiated a server hop.")
+            commands.append("PRIVMSG " + ircMsg.src + " :Initiatating a server hop.")
+            commands.append("QUIT Server hop by order of " + ircMsg.src + ".")
+        else:
+            commands += basicMessages.denyMessages(ircMsg.src, "hop")
+    else:
+        commands += basicMessages.noAuth(ircMsg.src, "hop")
+    
+    return commands
+
 def __identifySelf(ircMsg):
     '''The bot will send back identifying information.'''
     commands = []
