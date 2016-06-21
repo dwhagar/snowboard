@@ -77,7 +77,7 @@ def __process_responses(net, raw):
     elif response[1] == "353":
         net.processNames(response)
     # Process the server closing the link (per RFC 2812)
-    elif response[1:2] == ":Closing Link:":
+    elif " ".join(response[1:3]).strip(':').lower() == "closing link":
         net.disconnect()
     # Process a QUIT message.
     elif response[1] == "QUIT":
@@ -157,21 +157,32 @@ def __get_commands(raw, net):
             nick.clearPrivs()
             
         nick.getPrivs()
+        
+    # Reply to CTCP ping requests.
+    if cmd == "PING" and (not srcNick == net.server):
+        commands += net.ctcpPingReply(srcNick)
     
     # Send the message to be processed by the scripts.
+    commands += scripts.rawMessages(net, raw)
+    commands += scripts.ctcpScripts(ircMsg)
+    
     if toChannel:
         if cmd == "NOTICE":
-            commands = scripts.chanNoticeScripts(ircMsg)
-        if cmd == "PRIVMSG":
-            commands = scripts.channelScripts(ircMsg)
-    if not toChannel:
+            commands += scripts.chanNoticeScripts(ircMsg)
+        elif cmd == "PRIVMSG":
+            commands += scripts.channelScripts(ircMsg)
+        elif cmd == "ACTION":
+            commands += scripts.chanActionScripts(ircMsg)
+    else:
         if cmd == "NOTICE":
-            commands = scripts.privNoticeScripts(ircMsg)
-        if cmd == "PRIVMSG":
-            commands = scripts.messageScripts(ircMsg)
+            commands += scripts.privNoticeScripts(ircMsg)
+        elif cmd == "PRIVMSG":
+            commands += scripts.messageScripts(ircMsg)
+        elif cmd == "ACTION":
+            commands += scripts.privActionScripts(ircMsg)
         
     return commands
-
+    
 def main(argv):
     # Get the configuration from the file specified by the command line options.
     cfg = config.Config()
@@ -228,6 +239,7 @@ def main(argv):
             time.sleep(0)
         
         if (not (net.online() and net.ready())) and net.reconnect:
+            
             debug.message("Disconnected from the server.  Attempting to reconnect in " + str(int(net.config.delay)) + " seconds...")
             time.sleep(net.config.delay)
     
