@@ -42,6 +42,10 @@ class Network:
         self.nicks = []
         self.users = users.Users(cfg.network)
         self.orphans = []
+        self.queue = []
+        self.delay = 0.25
+        self.nextSend = 0
+        self.sendBlock = 6
         self.reconnect = True
         self.missedPings = 0
         self.lastActivity = 0
@@ -232,10 +236,39 @@ class Network:
                 command = "NOTICE " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
 
             encodedCommands.append(command)
+        
+        # After encoding any CTCP messages, add them to the queue.
+        self.queue += encodedCommands
 
-        # After encoding any CTCP messages, send them.
-        for cmd in encodedCommands:
-            self.__connection.write(cmd)
+    def send(self):
+        '''Actually send a certain number of commands from the queue.'''
+        
+        if len(self.queue) > 0:
+            if time.time() > self.nextSend:
+                # Send a couple of lines, then wait.
+                for cmd in self.queue[:self.sendBlock]:
+                    self.__connection.write(cmd)
+                self.queue = self.queue[self.sendBlock:]
+                
+                # Set up the next time the Queue will be processed.
+                self.delay += 0.25
+                self.sendBlock -= 1
+                self.nextSend = time.time() + self.delay
+                
+                # Once those lines are sent, delay longer before the next.
+                if self.delay > 2:
+                    self.delay = 2
+
+                if self.sendBlock < 1:
+                    self.sendBlock = 1
+        # When there is nothing to send, reset the block size and delay.
+        else:
+            if time.time() > self.nextSend:
+                if self.delay > 0.25:
+                    self.delay -= 0.25
+                if self.sendBlock < 6:
+                    self.sendBlock += 1
+                self.nextSend = time.time() + self.delay
     
     def checkMessages(self):
         '''Check for new messages from the server.'''
@@ -503,6 +536,8 @@ class Network:
         
         # If the bot's nick is the one that has changed, keep track.
         nickName, userHost = self.__splitHostmask(response[0])
+        if response[2][0] == ':':
+            response[2] = response[2][1:]
         if nickName.lower() == self.botnick.lower():
             self.botnick == response[2]
             for chan in self.channels:

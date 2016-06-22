@@ -130,7 +130,7 @@ class Connection:
                     done = True
                     received = None
                 else:
-                    text = data.decode('utf-8')
+                    text = data.decode('utf-8','replace')
                     if text == '\n':
                         done = True
                     else:

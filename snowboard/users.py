@@ -51,6 +51,7 @@ class Users:
         text = text.replace('(', '')
         text = text.replace(')', '')
         text = text.replace(';', '')
+        text = text.replace('`', '')
         return text
         
     def __cleanList(self, list):
