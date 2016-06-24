@@ -132,9 +132,12 @@ class Users:
         self.__openDB()
         
         query = "SELECT uid, hostmasks FROM " + self.table
-                
+        
+        self.db.execute(query)
+        data = self.db.fetchall()
+        
         # Iterate through all entries in that list.
-        for row in self.db.execute(query):
+        for row in data:
             uid, masks = row
             maskList = masks.split(',')
             for mask in maskList:
@@ -192,7 +195,7 @@ class Users:
         self.__openDB()
         
         # Convert the lists into CSV format.
-        masks = ','.join(self.__cleanList(hostmasks))
+        masks = ','.join(hostmasks)
         approved = ','.join(self.__cleanList(approvedList))
         denied = ','.join(self.__cleanList(deniedList))
         
@@ -239,7 +242,7 @@ class Users:
             level = 0
 
         # Convert the lists into CSV format.
-        masks = ','.join(self.__cleanList(hostmasks))
+        masks = ','.join(hostmasks)
         approved = ','.join(self.__cleanList(approvedList))
         denied = ','.join(self.__cleanList(deniedList))
         
@@ -276,7 +279,6 @@ class Users:
         
         # Build the query, then execute.
         query = "DELETE FROM " + self.table + " WHERE uid IS '" + uid + "'"
-        print(query)
         self.db.execute(query)
         
         self.__closeDB()
@@ -341,7 +343,7 @@ class Users:
         self.__closeDB()
         
         return result
-        
+
     def getUsers(self):
         '''Gets a list of all users.'''
         result = None

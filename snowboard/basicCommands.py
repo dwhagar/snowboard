@@ -65,6 +65,30 @@ def noticeTriggers(ircMsg):
     
     return commands
 
+def __acceptedNickServ(ircMsg):
+    '''Provides handling for NickServ accepting the identify command.'''
+    debug.message("I have confirmed my identity with " + ircMsg.src + ".")
+    
+    return []
+
+def __authNickServ(ircMsg):
+    '''Sends authorization to NickServ'''
+    commands = []
+    
+    if ircMsg.net.config.nickPass == None:
+        debug.warn(ircMsg.src + " is requesting that I identify myself, but I have no password configured.")
+    else:
+        debug.message(ircMsg.src + " is requesting that I identify myself, attempting to do so.")
+        commands.append("PRIVMSG " + ircMsg.src + " :identify " + ircMsg.net.config.nickPass)
+    
+    return commands
+    
+def __deniedNickServ(ircMsg):
+    '''Provides handling for NickServ denying the identify commands.'''
+    debug.warn(ircMsg.src + " would not accept my password, I cannot identify myself.")
+    
+    return []
+
 def __hopServers(ircMsg):
     '''Tells the bot to hop from one server to another.'''
     commands = []
@@ -99,30 +123,6 @@ def __identifySelf(ircMsg):
     
     return commands
 
-def __acceptedNickServ(ircMsg):
-    '''Provides handling for NickServ accepting the identify command.'''
-    debug.message("I have confirmed my identity with " + ircMsg.src + ".")
-    
-    return []
-
-def __authNickServ(ircMsg):
-    '''Sends authorization to NickServ'''
-    commands = []
-    
-    if ircMsg.net.config.nickPass == None:
-        debug.warn(ircMsg.src + " is requesting that I identify myself, but I have no password configured.")
-    else:
-        debug.message(ircMsg.src + " is requesting that I identify myself, attempting to do so.")
-        commands.append("PRIVMSG " + ircMsg.src + " :identify " + ircMsg.net.config.nickPass)
-    
-    return commands
-    
-def __deniedNickServ(ircMsg):
-    '''Provides handling for NickServ denying the identify commands.'''
-    debug.warn(ircMsg.src + " would not accept my password, I cannot identify myself.")
-    
-    return []
-
 def __quitCommand(ircMsg):
     '''Quits from IRC.'''
     commands = []
@@ -140,7 +140,7 @@ def __quitCommand(ircMsg):
             ircMsg.net.quit()
             return [] # Normally I wouldn't do this either
         else:
-            commands += basicMessages.denyMessages(ircMsg.src, "quit")
+            commands += basicMessages.denyMessage(ircMsg.src, "quit")
     else:
         commands += basicMessages.noAuth(ircMsg.src, "quit")
         
