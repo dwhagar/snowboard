@@ -32,35 +32,163 @@ from . import users
 class Network:
     def __init__(self, cfg):
         self.config = cfg
+        
         self.botnick = self.config.botnick[:] # Copied, not just a reference
-        self.name = self.config.network
-        self.server = None
-        self.__connection = None
-        self.__authenticated = False
-        self.__lastServer = 0  # The index of the last server connected
         self.channels = cfg.channels
-        self.nicks = []
-        self.users = users.Users(cfg.network)
-        self.orphans = []
-        self.reconnect = True
-        self.missedPings = 0
-        self.lastActivity = 0
-        self.pingNext = 0
         self.checkNext = 0
+        self.delay = 0.25
+        self.lastActivity = 0
+        self.missedPings = 0
+        self.name = self.config.network
+        self.nextSend = 0
+        self.nicks = []
+        self.orphans = []
+        self.pingNext = 0
         self.pingSent = 0
         self.pongReceived = 0
+        self.queue = []
+        self.reconnect = True
+        self.sendBlock = 6
+        self.server = None
+        self.users = users.Users(cfg.network)
+        self.whoList = []
+        self.__authenticated = False
+        self.__connection = None
+        self.__lastServer = 0  # The index of the last server connected
 
-    
-    def online(self):
-        '''Let the outside see if the bot is online.'''
-        if self.__connection == None:
-            return False
+    def addChannel(self, chan):
+        '''Add a channel to the network.'''
+        existing = self.__checkChannels(chan.name)
+        if existing == None:
+            newChannel = channel.Channel(chan, self.name)
+            self.channels.append(newChannel)
+            self.sendCommands(newChannel.join())
         else:
-            return self.__connection.connected()
+            if not existing.joined:
+                self.sendCommands(existing.join())
 
-    def ready(self):
-        '''Let the outside world see if the connection is ready.'''
-        return self.__authenticated
+    def addNick(self, nickName):
+        '''Add a nick to the master list.'''
+        existing = self.findNick(nickName)
+        if existing == None:
+            newNick = nick.Nick(nickName, self.users)
+            self.nicks.append(newNick)
+            return newNick
+        else:
+            return existing
+
+    def auth(self):
+        '''Authenticate with the network.'''
+        debug.message("Attempting to authenticate.")
+        stage = 0 # What stage of authentication are we in?
+        
+        # Wait for the server to signal that authentication is complete.
+        while (not self.__authenticated) and (self.__connection.connected()):
+            if stage == 1: # Choose a nick to go by.
+                # Begin authentication process.
+                self.__connection.write("NICK " + self.botnick)
+            elif stage == 2: # Send user information
+                # Send user information.
+                self.__connection.write("USER " + self.botnick.lower() + " 0 * :" + self.config.realname)
+            
+            stage += 1
+            
+            data = self.__connection.read()
+            if not data == None:
+                line = data.split()
+                if line[1] == "001":
+                    debug.message("Authentication successful.")
+                    self.server = line[0]
+                    self.__suppressMOTD() # Not really required
+                    self.__authenticated = True
+                    self.lastActivity = time.time()
+                elif line[1] == "433":
+                    # The nick we wanted was in use, must choose another one.
+                    debug.message("Primary nick was taken, choosing a replacement.")
+                    stage = 1
+                    random.seed()
+                    addition = str(random.randrange(10000,20000))
+                    self.botnick += addition
+                else:
+                    self.__pingpong(data)
+
+    def checkLag(self):
+        '''Checks to see how much server lag there is.'''
+        lag = self.pongReceived - self.pingSent
+        
+        debug.info("Server lag is at " + str(round(lag, 3)) + " seconds.")
+        if lag > self.config.maxLag:
+            debug.warn("Server lag is " + str(round(lag - self.config.maxLag, 3)) + " seconds longer than acceptable.  Disconnecting.")
+            self.disconnect()
+
+    def checkMessages(self):
+        '''Check for new messages from the server.'''
+        data = self.__connection.read()
+        if not (data == None):
+            self.__pingpong(data)
+            if '\x01' in data:
+                data = self.__processCTCP(data)
+            self.lastActivity = time.time()
+            
+        return data
+
+    def cleanNicks(self):
+        '''
+        Clean up the mast nick list, removing nicks that are no longer in
+        a channel where the bot resides.
+        '''
+        # If a nick remains with an open who request after it has been
+        # requested once (the last round) remove it from our list.
+        for nickObject in self.orphans:
+            if nickObject.openWHO:
+                debug.info("Removing " + nickObject.name + " from the master list.")
+                self.nicks.remove(nickObject)
+        
+        # Start with a clean list of orphans (nicks who are without channel)
+        self.orphans = []
+        
+        # A flag to see if a nick was found.
+        found = False
+        
+        # Search each nick in turn.
+        for nickObject in self.nicks:
+            # Search for each nick in each channel.
+            for chanObject in self.channels:
+                chanNick = chanObject.findNick(nickObject)
+                
+                # If we find it, set the flag, and break
+                if not chanNick == None:
+                    found = True
+                    break
+                else:
+                    found = False
+            
+            # If the channels are all checked, and nothing found, remove it.
+            if not found:
+                debug.info("Found that " + nickObject.name + " was orphaned from any channels, checking online status.")
+                self.orphans.append(nickObject)
+                self.sendCommands(nickObject.sendWHO())
+
+    def cleanTimer(self, time):
+        '''Executes the Nick list cleaning every checkInterval seconds.'''
+        commands = []
+    
+        # When initialized, set next time it will run.
+        if self.checkNext == 0:
+            debug.message("Initialized master nick cleaning timer.")
+            self.checkNext = time + self.config.checkInterval
+        elif self.checkNext == time:
+            debug.info("Running cleaning routine for the master nicks list.")
+            self.cleanNicks()
+            self.checkNext = time + self.config.checkInterval
+    
+        return commands
+
+    def ctcpPingReply(self, src):
+        '''Replies to CTCP Ping Requests'''
+        command = "PINGREPLY " + src + " :" + str(time.time())
+        
+        return [command]
 
     def connect(self):
         '''Connect to the network.'''
@@ -109,11 +237,6 @@ class Network:
         
         return result
 
-    def quit(self):
-        '''Properly quit from the server.'''
-        self.reconnect = False
-        self.sendCommands(["QUIT " + self.config.quitmsg])
-
     def disconnect(self):
         '''Disconnect from the server.'''
         if self.__connection.connected:
@@ -128,6 +251,7 @@ class Network:
         # There are no nicks to keep track of when disconnected.
         self.nicks = []
         self.orphans = []
+        self.queue = []
         
         # There are no nicks in any channels while disconnected.
         for chan in self.channels:
@@ -144,174 +268,74 @@ class Network:
         self.checkNext = 0
 
         return self.__connection.connected
-    
-    def auth(self):
-        '''Authenticate with the network.'''
-        debug.message("Attempting to authenticate.")
-        stage = 0 # What stage of authentication are we in?
-        
-        # Wait for the server to signal that authentication is complete.
-        while (not self.__authenticated) and (self.__connection.connected()):
-            if stage == 1: # Choose a nick to go by.
-                # Begin authentication process.
-                self.__connection.write("NICK " + self.botnick)
-            elif stage == 2: # Send user information
-                # Send user information.
-                self.__connection.write("USER " + self.botnick.lower() + " 0 * :" + self.config.realname)
-            
-            stage += 1
-            
-            data = self.__connection.read()
-            if not data == None:
-                line = data.split()
-                if line[1] == "001":
-                    debug.message("Authentication successful.")
-                    self.server = line[0]
-                    self.__suppressMOTD() # Not really required
-                    self.__authenticated = True
-                    self.lastActivity = time.time()
-                elif line[1] == "433":
-                    # The nick we wanted was in use, must choose another one.
-                    debug.message("Primary nick was taken, choosing a replacement.")
-                    stage = 1
-                    random.seed()
-                    addition = str(random.randrange(10000,20000))
-                    self.botnick += addition
-                else:
-                    self.__pingpong(data)
-                    
-    
-    def __pingpong(self, message):
-        '''Respond to a ping request.'''
-        line = message.split()
-        if line[0] == "PING":
-            self.__connection.write("PONG " + line[1])
-            
-    def __suppressMOTD(self):
-        '''Waits until the MOTD is done before going further.'''
-        stillMOTD = True
-        
-        while stillMOTD:
-            data = self.__connection.read()
-            if not data == None:
-                dataList = data.split()
-                if len(dataList) > 1:
-                    if dataList[1] == "376":
-                        stillMOTD = False
-            
-    
-    def __authwait(self):
-        '''
-        Some servers require that clients receive data before it can auth
-        with the server.  Some even require a ping be responded to before
-        authenticating.  This takes care of that by waiting for the server
-        to send something back, and responding to any pings that get sent.
-        '''
-        time.sleep(0.25) # Give the sever a chance to say something.
-        data = self.__connection.read()
-        while not data == None:
-            self.__pingpong(data)
-            data = self.__connection.read()
-    
-    def sendCommands(self, list):
-        '''Sends a list of commands to the server.'''
-        ctcpChar = '\x01'
-        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
-        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
-        
-        # Encode any CTCP messages.
-        encodedCommands = []
-    
-        for command in list:
-            cmdList = command.split()
 
-            if cmdList[0].upper() in ctcpQueries:
-                command = "PRIVMSG " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
-            if cmdList[0].upper() in ctcpReplies:
-                cmdList[0] = ctcpQueries[ctcpReplies.index(cmdList[0]) + 1]
-                command = "NOTICE " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
+    def joinAll(self):
+        '''Join all channels the bot is configured it.'''
+        debug.message("Attempting to join all configured channels.")
+        for channel in self.config.channels:
+            self.addChannel(channel)
 
-            encodedCommands.append(command)
-
-        # After encoding any CTCP messages, send them.
-        for cmd in encodedCommands:
-            self.__connection.write(cmd)
-    
-    def checkMessages(self):
-        '''Check for new messages from the server.'''
-        data = self.__connection.read()
-        if not (data == None):
-            self.__pingpong(data)
-            if '\x01' in data:
-                data = self.__processCTCP(data)
-            self.lastActivity = time.time()
-            
-        return data
-        
-    def __processCTCP(self, data):
-        '''Correctly handle CTCP message and responses.'''
-        ctcpChar = '\x01'
-        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
-        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
-                
-        data = data.replace(ctcpChar, '')
-        dataList = data.split()
-        
-        if dataList[1] == "PRIVMSG":
-            ctcpReply = False
-        elif dataList[1] == "NOTICE":
-            ctcpReply = True
-
-        ctcpCmd = dataList[3].strip(':')
-    
-        if ctcpReply and ctcpCmd in ctcpQueries:
-            ctcpCmd = ctcpReplies[ctcpQueries.index(cmdCmd) - 1]
-        
-        if len(dataList) > 4:
-            data = dataList[0] + " " + ctcpCmd + " :" + " ".join(dataList[4:])
-        else:
-            data = dataList[0] + " " + ctcpCmd
-    
-        return data
-      
-    def __checkChannels(self, channel):
-        '''See if a channel already exists.'''
+    def findChannel(self, channel):
+        '''Find a channel in the networks channel list.'''
         result = None
         
-        # Find if a channel exists already in the list.
-        for chan in self.channels:
-            if chan.name.lower() == channel.lower():
-                result = chan
+        for existing in self.channels:
+            if channel.lower() == existing.name.lower():
+                result = existing
+                break
+                
+        return result
+
+    def findNick(self, nickName):
+        '''Find a nick in the master list.'''
+        result = None
+        
+        for existing in self.nicks:
+            if nickName.lower() == existing.name.lower():
+                result = existing
                 break
         
         return result
-    
-    def addChannel(self, chan):
-        '''Add a channel to the network.'''
-        existing = self.__checkChannels(chan.name)
-        if existing == None:
-            newChannel = channel.Channel(chan, self.name)
-            self.channels.append(newChannel)
-            self.sendCommands(newChannel.join())
+
+    def online(self):
+        '''Let the outside see if the bot is online.'''
+        if self.__connection == None:
+            return False
         else:
-            if not existing.joined:
-                self.sendCommands(existing.join())
+            return self.__connection.connected()
 
-    def removeChannel(self, chan):
-        '''Remove a channel from the network.'''
-        existing = self.__checkChannels(chan.name)
-        if not existing == None:
-            if existing.joined:
-                self.sendCommands(existing.part())
+    def pingTimer(self, time):
+        '''Pings the server to make sure it is still there.'''
+        commands = []
 
-    def __splitHostmask(self, hostmask):
-        '''Split the hostname into host and nick.'''
-        # Handle the leading ':' on messages, then split at the '!'
-        hostmask = hostmask.split('!')
-        if len(hostmask) < 2:
-            hostmask.append("")
-        return (hostmask[0], hostmask[1])
-    
+        # Check when the last time a message was received by the server.
+        timeout = self.lastActivity + self.config.pingInterval
+        if time > timeout:
+            # Execute the ping when time.
+            if self.pingNext < time:
+                debug.info("Pinging server " + self.server + " now.")
+                commands.append("PING " + self.server)
+                # Provide a mechanism to measure server lag as well.
+                self.pingSent = time
+                self.pingNext += self.config.pingInterval
+                # One missed ping, notify the user.
+                if self.missedPings > 0:
+                    debug.warn("No ping response from server, continuing to try.")
+                # Too many missed pings, disconnect.
+                if self.missedPings > 2:
+                    debug.error("No ping response from server for three consecutive tries, resetting connection.")
+                    self.disconnect()
+                self.missedPings += 1
+        # If the timeout has not been reached, keep resetting the next time
+        # a ping should be sent.
+        else:
+            # Initialize the timer.
+            if self.pingNext == 0:
+                debug.message("Initialized ping timer.")
+                self.pingNext = time + self.config.pingInterval
+
+        return commands
+
     def processJoinPart(self, response):
         '''Process a join or part message from the server.'''
         nck, host = self.__splitHostmask(response[0])
@@ -357,162 +381,7 @@ class Network:
                 if not nickObject == None:
                     chanObject.removeNick(nickObject)
                 debug.message("Processed a part message on " + cJoined + " from " + nck + ".")
-    
-    def cleanNicks(self):
-        '''
-        Clean up the mast nick list, removing nicks that are no longer in
-        a channel where the bot resides.
-        '''
-        # If a nick remains with an open who request after it has been
-        # requested once (the last round) remove it from our list.
-        for nickObject in self.orphans:
-            if nickObject.openWHO:
-                debug.info("Removing " + nickObject.name + " from the master list.")
-                self.nicks.remove(nickObject)
-        
-        # Start with a clean list of orphans (nicks who are without channel)
-        self.orphans = []
-        
-        # A flag to see if a nick was found.
-        found = False
-        
-        # Search each nick in turn.
-        for nickObject in self.nicks:
-            # Search for each nick in each channel.
-            for chanObject in self.channels:
-                chanNick = chanObject.findNick(nickObject)
-                
-                # If we find it, set the flag, and break
-                if not chanNick == None:
-                    found = True
-                    break
-                else:
-                    found = False
-            
-            # If the channels are all checked, and nothing found, remove it.
-            if not found:
-                debug.info("Found that " + nickObject.name + " was orphaned from any channels, checking online status.")
-                self.orphans.append(nickObject)
-                self.sendCommands(nickObject.sendWHO())
-    
-    def processQuit(self, response):
-        '''
-        Processes a quit message from the server to remove said user from
-        the master nick list and all other lists.
-        '''
-        # Unpack the nick from the host, the host part isn't required
-        nickName, host = self.__splitHostmask(response[0])
-        
-        # Find the nick in the master list.
-        nickObject = self.findNick(nickName)
-        
-        # If that nick exists, remove it.
-        if not nickObject == None:
-        
-            # Remove the nick from all channel lists first.
-            for chan in self.channels:
-                chan.removeNick(nickObject)
-                
-            # Remove the nick from the master list last.
-            self.nicks.remove(nickObject) 
-            
-        debug.message("Processed a quit message from " + nickName + ".")           
-    
-    def findNick(self, nickName):
-        '''Find a nick in the master list.'''
-        result = None
-        
-        for existing in self.nicks:
-            if nickName.lower() == existing.name.lower():
-                result = existing
-                break
-        
-        return result
-        
-    def findChannel(self, channel):
-        '''Find a channel in the networks channel list.'''
-        result = None
-        
-        for existing in self.channels:
-            if channel.lower() == existing.name.lower():
-                result = existing
-                break
-                
-        return result
-    
-    def addNick(self, nickName):
-        '''Add a nick to the master list.'''
-        existing = self.findNick(nickName)
-        if existing == None:
-            newNick = nick.Nick(nickName, self.users)
-            self.nicks.append(newNick)
-            return newNick
-        else:
-            return existing
-    
-    def processWho(self, response):
-        '''Process the server response from the WHO command.'''
-        nick = self.findNick(response[7])
-        nick.host = response[4] + "@" + response[5]
-        nick.openWHO = False
-        debug.info("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
-    
-    def processNames(self, response):
-        '''
-        Process a server response to a NAMES command, parse out the names
-        for a given channel.
-        '''
-        # Whittle down to just a list of names, with privs still attached
-        channelName = response[4]
-        names = response[5:]
-        names[0] = names[0][1:]
-        
-        # Go through each name, progressively building its privs and adding
-        # each name to the channel list and the master list.
-        for name in names:
-            # Recognized channel privileges
-            opped = False
-            voiced = False
-            
-            if name[0] == '@':
-                opped = True
-                name = name[1:]
-            elif name[0] == '+':
-                voiced = True
-                name = name[1:]
-            
-            # First, add the nick to the master list.
-            nick = self.addNick(name)
-            if nick.host == "":
-                self.sendCommands(nick.sendWHO())
-            
-            # Second, add the nick to the channel's nick list with privileges
-            cPriv = channel.ChannelPriv(opped, voiced)
-            existing = self.findChannel(channelName)
-            existing.addNick(nick, cPriv)
-        
-        existing.updateSelf()
-        
-        debug.info("Processed a list of names on " + channelName + ".")
-    
-    def processNick(self, response):
-        '''Process a nick change.'''
-        # Since the bot processes NAMES and JOINS messages, there should
-        # never be a time when a NICK message comes in that it is not already
-        # in the list.
-        
-        # If the bot's nick is the one that has changed, keep track.
-        nickName, userHost = self.__splitHostmask(response[0])
-        if nickName.lower() == self.botnick.lower():
-            self.botnick == response[2]
-            for chan in self.channels:
-                chan.botnick = self.botnick
-        
-        nickObject = self.findNick(nickName)
-        nickObject.name = response[2]
-        
-        debug.info("Processed a nick change from " + nickName + " to " + response[2] + ".")
-    
+
     def processMode(self, response):
         '''Process a mode change.'''
         nickName, userHost = self.__splitHostmask(response[0])
@@ -592,71 +461,248 @@ class Network:
             # Update the bot itself at every mode change, so it knows where
             # it stands in the channel.
             chan.updateSelf()
+
+    def processNames(self, response):
+        '''
+        Process a server response to a NAMES command, parse out the names
+        for a given channel.
+        '''
+        # Whittle down to just a list of names, with privs still attached
+        channelName = response[4]
+        names = response[5:]
+        names[0] = names[0][1:]
+        
+        # Go through each name, progressively building its privs and adding
+        # each name to the channel list and the master list.
+        for name in names:
+            # Recognized channel privileges
+            opped = False
+            voiced = False
             
-    def joinAll(self):
-        '''Join all channels the bot is configured it.'''
-        debug.message("Attempting to join all configured channels.")
-        for channel in self.config.channels:
-            self.addChannel(channel)
+            if name[0] == '@':
+                opped = True
+                name = name[1:]
+            elif name[0] == '+':
+                voiced = True
+                name = name[1:]
+            
+            # First, add the nick to the master list.
+            nick = self.addNick(name)
+            if nick.host == "":
+                self.sendCommands(nick.sendWHO())
+            
+            # Second, add the nick to the channel's nick list with privileges
+            cPriv = channel.ChannelPriv(opped, voiced)
+            existing = self.findChannel(channelName)
+            existing.addNick(nick, cPriv)
+        
+        existing.updateSelf()
+        
+        debug.info("Processed a list of names on " + channelName + ".")
     
-    def pingTimer(self, time):
-        '''Pings the server to make sure it is still there.'''
-        commands = []
+    def processNick(self, response):
+        '''Process a nick change.'''
+        # Since the bot processes NAMES and JOINS messages, there should
+        # never be a time when a NICK message comes in that it is not already
+        # in the list.
+        
+        # If the bot's nick is the one that has changed, keep track.
+        nickName, userHost = self.__splitHostmask(response[0])
+        if response[2][0] == ':':
+            response[2] = response[2][1:]
+        if nickName.lower() == self.botnick.lower():
+            self.botnick = response[2]
+            for chan in self.channels:
+                chan.botnick = self.botnick
+        elif nickName.lower() == self.config.botnick.lower():
+            self.sendCommands(["NICK " + self.config.botnick])
+            debug.message("My default nick is no longer in use, changing nicks.")
+        
+        nickObject = self.findNick(nickName)
+        nickObject.name = response[2]
+        
+        debug.info("Processed a nick change from " + nickName + " to " + response[2] + ".")
 
-        # Check when the last time a message was received by the server.
-        timeout = self.lastActivity + self.config.pingInterval
-        if time > timeout:
-            # Execute the ping when time.
-            if self.pingNext < time:
-                debug.info("Pinging server " + self.server + " now.")
-                commands.append("PING " + self.server)
-                # Provide a mechanism to measure server lag as well.
-                self.pingSent = time
-                self.pingNext += self.config.pingInterval
-                # One missed ping, notify the user.
-                if self.missedPings > 0:
-                    debug.warn("No ping response from server, continuing to try.")
-                # Too many missed pings, disconnect.
-                if self.missedPings > 2:
-                    debug.error("No ping response from server for three consecutive tries, resetting connection.")
-                    self.disconnect()
-                self.missedPings += 1
-        # If the timeout has not been reached, keep resetting the next time
-        # a ping should be sent.
+    def processQuit(self, response):
+        '''
+        Processes a quit message from the server to remove said user from
+        the master nick list and all other lists.
+        '''
+        # Unpack the nick from the host, the host part isn't required
+        nickName, host = self.__splitHostmask(response[0])
+        
+        # Find the nick in the master list.
+        nickObject = self.findNick(nickName)
+        
+        # If that nick exists, remove it.
+        if not nickObject == None:
+            if nickObject.name == self.config.botnick:
+                self.sendCommands("NICK " + self.config.botnick)
+                debug.message("My default nick is no longer in use, changing nicks.")
+            
+            # Remove the nick from all channel lists first.
+            for chan in self.channels:
+                chan.removeNick(nickObject)
+                
+            # Remove the nick from the master list last.
+            self.nicks.remove(nickObject) 
+            
+        debug.message("Processed a quit message from " + nickName + ".")           
+
+    def processWho(self, response):
+        '''Process the server response from the WHO command.'''
+        nick = self.findNick(response[7])
+        nick.host = response[4] + "@" + response[5]
+        nick.openWHO = False
+        debug.info("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
+
+    def quit(self):
+        '''Properly quit from the server.'''
+        self.reconnect = False
+        self.sendCommands(["QUIT :" + self.config.quitmsg])
+
+    def ready(self):
+        '''Let the outside world see if the connection is ready.'''
+        return self.__authenticated
+
+    def removeChannel(self, chan):
+        '''Remove a channel from the network.'''
+        existing = self.__checkChannels(chan.name)
+        if not existing == None:
+            if existing.joined:
+                self.sendCommands(existing.part())
+
+    def send(self):
+        '''Actually send a certain number of commands from the queue.'''        
+        if len(self.queue):
+            if time.time():
+                # Send a couple of lines, then wait.
+                for cmd in self.queue[:self.sendBlock]:
+                    self.__connection.write(cmd)
+                self.queue = self.queue[self.sendBlock:]
+                
+                # Set up the next time the Queue will be processed.
+                self.delay += 0.25
+                self.sendBlock -= 1
+                self.nextSend = time.time() + self.delay
+                
+                # Once those lines are sent, delay longer before the next.
+                if self.delay > 2:
+                    self.delay = 2
+
+                if self.sendBlock < 1:
+                    self.sendBlock = 1
+        # When there is nothing to send, reset the block size and delay.
         else:
-            # Initialize the timer.
-            if self.pingNext == 0:
-                debug.message("Initialized ping timer.")
-                self.pingNext = time + self.config.pingInterval
+            if time.time() > self.nextSend:                
+                if self.delay > 0.25:
+                    self.delay -= 0.25
+                if self.sendBlock < 6:
+                    self.sendBlock += 1
+                self.nextSend = time.time() + self.delay
+  
+    def sendCommands(self, list):
+        '''Sends a list of commands to the server.'''
+        ctcpChar = '\x01'
+        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
+        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
+        
+        # Encode any CTCP messages.
+        encodedCommands = []
 
-        return commands
+        for command in list:
+            noAppend = False  # Some commands we don't want to actually queue
+            cmdList = command.split()
+
+            if len(cmdList) > 0:
+                if cmdList[0].upper() in ctcpQueries:
+                    command = "PRIVMSG " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
+                elif cmdList[0].upper() in ctcpReplies:
+                    cmdList[0] = ctcpQueries[ctcpReplies.index(cmdList[0]) + 1]
+                    command = "NOTICE " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
+                elif cmdList[0].upper() == "WHO":
+                    if command in self.queue:
+                        noAppend = True
+            
+            if not noAppend:
+                encodedCommands.append(command)
+        
+        # After encoding any CTCP messages, add them to the queue.
+        self.queue += encodedCommands  
+
+    def __authwait(self):
+        '''
+        Some servers require that clients receive data before it can auth
+        with the server.  Some even require a ping be responded to before
+        authenticating.  This takes care of that by waiting for the server
+        to send something back, and responding to any pings that get sent.
+        '''
+        time.sleep(0.25) # Give the sever a chance to say something.
+        data = self.__connection.read()
+        while not data == None:
+            self.__pingpong(data)
+            data = self.__connection.read()
+      
+    def __checkChannels(self, channel):
+        '''See if a channel already exists.'''
+        result = None
+        
+        # Find if a channel exists already in the list.
+        for chan in self.channels:
+            if chan.name.lower() == channel.lower():
+                result = chan
+                break
+        
+        return result
+
+    def __pingpong(self, message):
+        '''Respond to a ping request.'''
+        line = message.split()
+        if line[0] == "PING":
+            self.__connection.write("PONG " + line[1])
+
+    def __processCTCP(self, data):
+        '''Correctly handle CTCP message and responses.'''
+        ctcpChar = '\x01'
+        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
+        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
+                
+        data = data.replace(ctcpChar, '')
+        dataList = data.split()
+        
+        if dataList[1] == "PRIVMSG":
+            ctcpReply = False
+        elif dataList[1] == "NOTICE":
+            ctcpReply = True
+
+        ctcpCmd = dataList[3].strip(':')
     
-    def checkLag(self):
-        '''Checks to see how much server lag there is.'''
-        lag = self.pongReceived - self.pingSent
+        if ctcpReply and ctcpCmd in ctcpQueries:
+            ctcpCmd = ctcpReplies[ctcpQueries.index(cmdCmd) - 1]
         
-        debug.info("Server lag is at " + str(round(lag, 3)) + " seconds.")
-        if lag > self.config.maxLag:
-            debug.warn("Server lag is " + str(round(lag - self.config.maxLag, 3)) + " seconds longer than acceptable.  Disconnecting.")
-            self.disconnect()
-        
-    def cleanTimer(self, time):
-        '''Executes the Nick list cleaning every checkInterval seconds.'''
-        commands = []
+        if len(dataList) > 4:
+            data = dataList[0] + " " + ctcpCmd + " :" + " ".join(dataList[4:])
+        else:
+            data = dataList[0] + " " + ctcpCmd
     
-        # When initialized, set next time it will run.
-        if self.checkNext == 0:
-            debug.message("Initialized master nick cleaning timer.")
-            self.checkNext = time + self.config.checkInterval
-        elif self.checkNext == time:
-            debug.info("Running cleaning routine for the master nicks list.")
-            self.cleanNicks()
-            self.checkNext = time + self.config.checkInterval
-    
-        return commands
+        return data
+
+    def __splitHostmask(self, hostmask):
+        '''Split the hostname into host and nick.'''
+        # Handle the leading ':' on messages, then split at the '!'
+        hostmask = hostmask.split('!')
+        if len(hostmask) < 2:
+            hostmask.append("")
+        return (hostmask[0], hostmask[1])
+
+    def __suppressMOTD(self):
+        '''Waits until the MOTD is done before going further.'''
+        stillMOTD = True
         
-    def ctcpPingReply(self, src):
-        '''Replies to CTCP Ping Requests'''
-        command = "PINGREPLY " + src + " :" + str(time.time())
-        
-        return [command]        
+        while stillMOTD:
+            data = self.__connection.read()
+            if not data == None:
+                dataList = data.split()
+                if len(dataList) > 1:
+                    if dataList[1] == "376":
+                        stillMOTD = False

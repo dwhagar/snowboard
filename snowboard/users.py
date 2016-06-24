@@ -30,11 +30,39 @@ class Users:
     def __init__(self, network, table = "global"):
         self.network = network
         self.database = network.lower() + "-users.db"
-        self.table = table
+        self.table = self.__cleanInput(table)
         self.conn = None
         self.db = None
         
         self.__initDB() # Make sure there is a database and it has the table.
+        
+    def __cleanInput(self, text):
+        '''Cleans text of characters that are not allowed.'''
+        text = text.replace('|', '')
+        text = text.replace('-', '')
+        text = text.replace('*', '')
+        text = text.replace('/', '')
+        text = text.replace('<', '')
+        text = text.replace('>', '')
+        text = text.replace(',', '')
+        text = text.replace('=', '')
+        text = text.replace('~', '')
+        text = text.replace('~', '')
+        text = text.replace('(', '')
+        text = text.replace(')', '')
+        text = text.replace(';', '')
+        text = text.replace('`', '')
+        return text
+        
+    def __cleanList(self, list):
+        '''Cleans a list of strings.'''
+        newList = []
+        
+        for item in list:
+            item = self.__cleanInput(item)
+            newList.append(item)
+            
+        return newList
         
     def __openDB(self):
         '''Opens the user database up for use.'''
@@ -55,7 +83,7 @@ class Users:
             initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, user TEXT UNIQUE, password TEXT, hostmasks TEXT, level INTEGER, approved TEXT, denied TEXT)"
         else:
             initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, user TEXT UNIQUE, level INTEGER, approved TEXT, denied TEXT)"
-
+        
         self.db.execute(initCmd)
         
         self.__closeDB()
@@ -105,8 +133,11 @@ class Users:
         
         query = "SELECT uid, hostmasks FROM " + self.table
         
+        self.db.execute(query)
+        data = self.db.fetchall()
+        
         # Iterate through all entries in that list.
-        for row in self.db.execute(query):
+        for row in data:
             uid, masks = row
             maskList = masks.split(',')
             for mask in maskList:
@@ -124,6 +155,8 @@ class Users:
         result = None
         
         self.__openDB()
+        
+        userName = self.__cleanInput(userName)
         
         query = "SELECT uid FROM " + self.table + " WHERE user IS '" + userName.lower() + "'"
         self.db.execute(query)
@@ -163,14 +196,14 @@ class Users:
         
         # Convert the lists into CSV format.
         masks = ','.join(hostmasks)
-        approved = ','.join(approvedList)
-        denied = ','.join(deniedList)
+        approved = ','.join(self.__cleanList(approvedList))
+        denied = ','.join(self.__cleanList(deniedList))
         
         # Create a list to pass onto the function and store in the DB.
         if self.table == "global":
             data = [
                 uid,
-                user.lower(),
+                self.__cleanInput(user.lower()),
                 self.__passwordHash(password),
                 masks,
                 level,
@@ -180,6 +213,7 @@ class Users:
         else:
             data = [
                 uid,
+                self.__cleanInput(user.lower()),
                 level,
                 approved.lower(),
                 denied.lower()
@@ -190,7 +224,7 @@ class Users:
         if self.table == "global":
             query = "INSERT INTO " + self.table + " VALUES (?, ?, ?, ?, ?, ?, ?)"
         else:
-            query = "INSERT INTO " + self.table + " VALUES (?, ?, ?, ?)"
+            query = "INSERT INTO " + self.table + " VALUES (?, ?, ?, ?, ?)"
 
         self.db.execute(query, data)
         
@@ -206,15 +240,15 @@ class Users:
             level = 255
         elif level < 0:
             level = 0
-        
+
         # Convert the lists into CSV format.
         masks = ','.join(hostmasks)
-        approved = ','.join(approvedList)
-        denied = ','.join(deniedList)
+        approved = ','.join(self.__cleanList(approvedList))
+        denied = ','.join(self.__cleanList(deniedList))
         
         if self.table == "global":
             data = [
-                user.lower(),
+                self.__cleanInput(user.lower()),
                 self.__passwordHash(password),
                 masks,
                 level,
@@ -223,17 +257,17 @@ class Users:
             ]
         else:
             data = [
+                self.__cleanInput(user.lower()),
                 level,
                 approved.lower(),
                 denied.lower()
             ]
-
         
         # Set the query.
         if self.table == "global":
             query = "UPDATE " + self.table + " SET user = ?, password = ?, hostmasks = ?, level = ?, approved = ?, denied = ? WHERE uid IS '" + uid + "'"
         else:
-            query = "UPDATE " + self.table + " SET level = ?, approved = ?, denied = ? WHERE uid IS '" + uid + "'"
+            query = "UPDATE " + self.table + " SET user = ?, level = ?, approved = ?, denied = ? WHERE uid IS '" + uid + "'"
         
         self.db.execute(query, data)
         
@@ -245,7 +279,6 @@ class Users:
         
         # Build the query, then execute.
         query = "DELETE FROM " + self.table + " WHERE uid IS '" + uid + "'"
-        print(query)
         self.db.execute(query)
         
         self.__closeDB()
@@ -310,7 +343,7 @@ class Users:
         self.__closeDB()
         
         return result
-        
+
     def getUsers(self):
         '''Gets a list of all users.'''
         result = None

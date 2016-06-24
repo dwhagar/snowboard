@@ -31,84 +31,182 @@ def msgTriggers(ircMsg):
         commands = __initCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "adduser":
         commands = __addCmd(ircMsg)
-    elif ircMsg.dataList[0].lower() == "listusers":
-        commands = __listCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "deluser":
+        commands = __delCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "ident":
         commands = __identCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "listusers":
+        commands = __listCmd(ircMsg)
                 
     return commands
-    
-def __initCmd(ircMsg):
-    '''Execute the tasks for the special init command.'''
-    debug.message("Initialized admin user " + ircMsg.src + " with hostmask " + ircMsg.dataList[1] + ".")
-    ircMsg.net.addUser(ircMsg.src, ircMsg.dataList[2], ircMsg.dataList[1], 255, ["admin"], [])
-    ircMsg.net.config.init = 0
-    message = "Added user " + ircMsg.src + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again."
-    return ["PRIVMSG " + ircMsg.src + " :" + message]
 
 def __addCmd(ircMsg):
     '''Execute the tasks for the special init command.'''
     commands = []
+    thisCmd = "adduser"
     
-    nick = ircMsg.net.findNick(ircMsg.src)
+    if len(ircMsg.dataList) >= 5:
+        nick = ircMsg.net.findNick(ircMsg.src)
     
-    if nick.authed:
-        if nick.priv.checkApproved("usermanager"):
-            user = ircMsg.dataList[1]
-            hostmask = ircMsg.dataList[2]
-            password = ircMsg.dataList[3]
+        if nick.authed:
+            if nick.priv.checkApproved("usermanager"):
+                user = ircMsg.dataList[1]
+                hostmask = ircMsg.dataList[2]
+                password = ircMsg.dataList[3]
             
-            debug.message("Adding new user " + user + " to the global user database for " + ircMsg.src + ".")
-            commands.append("PRIVMSG " + ircMsg.src + " :Adding " + user + " to the global user database.")
+                debug.message("Adding new user " + user + " to the global user database for " + ircMsg.src + ".")
+                commands.append("PRIVMSG " + ircMsg.src + " :Adding " + user + " to the global user database.")
             
-            try:
-                level = int(ircMsg.dataList[4])
-            except ValueError:
-                debug.error("Error with 'adduser':  Level '" + ircMsg.dataList[4] + "' is not a number.")
-                commands.append("PRIVMSG " + ircMsg.src + " :Unable to execute command, access level '" + ircMsg.dataList[4] + "' is not a number.")
-                return commands
+                try:
+                    level = int(ircMsg.dataList[4])
+                except ValueError:
+                    debug.error("Error with 'adduser':  Level '" + ircMsg.dataList[4] + "' is not a number.")
+                    commands.append("PRIVMSG " + ircMsg.src + " :Unable to execute command, access level '" + ircMsg.dataList[4] + "' is not a number.")
+                    return commands
             
-            if len(ircMsg.dataList) > 4:
-                flags = "".join(ircMsg.dataList[5:])
-                flags = flags.replace(' ','')
-                flags = flags.split(':')
-                approved = flags[0].split(',')
-                if approved[0] == '':
-                    approved = []
+                if len(ircMsg.dataList) > 4:
+                    flags = "".join(ircMsg.dataList[5:])
+                    flags = flags.replace(' ','')
+                    flags = flags.split(':')
+                    approved = flags[0].split(',')
+                    if approved[0] == '':
+                        approved = []
                     
-                if len(flags) > 1:
-                    denied = flags[1].split(',')
-                    if denied[0] == '':
+                    if len(flags) > 1:
+                        denied = flags[1].split(',')
+                        if denied[0] == '':
+                            denied = []
+                    else:
                         denied = []
                 else:
+                    approved = []
                     denied = []
-            else:
-                approved = []
-                denied = []
+            
+                # Need to make sure, if a user does not have access to a flag
+                # they cannot add it to a new user.
+                block = False
+            
+                for flag in approved:
+                    if not nick.priv.checkApproved(flag):
+                        block = True
+                    
+                if nick.priv.level < level:
+                    block = True
                 
-            hosts = [hostmask]
-            uid = ircMsg.net.users.uidHash(user)
-            exists = ircMsg.net.users.uidExists(uid)
-        
-            if not exists:
-                ircMsg.net.users.addUser(uid, name, password, hosts, level, approved, denied)
+                hosts = [hostmask]
+                uid = ircMsg.net.users.uidHash(user)
+                exists = ircMsg.net.users.uidExists(uid)
+            
+                if not block:
+                    if not exists:
+                        ircMsg.net.users.addUser(uid, user, password, hosts, level, approved, denied)
+                    else:
+                        debug.error("Error with 'adduser':  User " + user + " already exists.")
+                        commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")
+                else:
+                    debug.error("Error with 'adduser':  User " + ircMsg.src + " attempted to grant privleges to " + user + " greater than his/her own access.")
+                    commands.append("PRIVMSG " + ircMsg.src + " :Command failed, you cannot add greater privleges than the ones you possess.")
             else:
-                debug.error("Error with 'adduser':  User " + user + " already exists.")
-                commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")                        
+                commands += basicMessages.denyMessages(ircMsg.src, thisCmd)
         else:
-            commands += basicMessages.denyMessages(ircMsg.src, "adduser")
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
     else:
-        commands += basicMessages.noAuth(ircMsg.src, "adduser")
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
 
     return commands
+
+def __delCmd(ircMsg):
+    '''Removes a user from the user database.'''
+    commands = []
+    thisCmd = "deluser"
+    
+    if len(ircMsg.dataList) >= 2:
+        nick = ircMsg.net.findNick(ircMsg.src)
+    
+        user = ircMsg.dataList[1]
+    
+        if nick.authed:
+            if nick.priv.checkApproved("usermanager"):
+                uid = ircMsg.net.users.uidHash(user)
+                exists = ircMsg.net.users.uidExists(uid)
+                
+                if exists:
+                    data = ircMsg.net.users.userInformation(uid)
+                    level = data[2]
+                    
+                    if nick.priv.level >= level:
+                        ircMsg.net.users.removeUser(uid)
+                        debug.message("User " + ircMsg.src + " removed " + user + " from the global user database.")
+                        commands.append("PRIVMSG " + ircMsg.src + " :Removing " + user + " from the global user database.")
+                    else:
+                        debug.message("User " + ircMsg.src + " tried to remove " + user + " from the global database, did not have high enough access.")
+                        commands.append("PRIVMSG " + ircMsg.src + " :You cannot remove " + user + ", your access level is not high enough.")
+                else:
+                    commands += basicMessages.noUser(ircMsg.src, thisCmd, user)
+            else:
+                commands += basicMessages.denyMessages(ircMsg.src, thisCmd)
+        else:
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+    else:
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+    
+    return commands
+
+def __formatUserLine(item):
+    '''Formats a single line of user information.'''
+    user = item[0]
+    level = str(item[1])
+    approved = item[2]
+    denied = item[3]
+    
+    if approved == "" and denied == "":
+        message = "User: " + user + "; Level: " + level
+    elif approved == "":
+        message = "User: " + user + "; Level: " + level + "; Denied Flags: " + denied
+    elif denied == "":
+        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved
+    else:
+        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved + "; Denied Flags: " + denied
+
+    return message
 
 def __identCmd(ircMsg):
     '''Identify command to authenticate a user.'''
     commands = []
+    thisCmd = "ident"
     
-    nick = ircMsg.net.findNick(ircMsg.src)
-    commands = nick.auth(ircMsg.dataList[1])
+    if len(ircMsg.dataList) >= 2:
+        nick = ircMsg.net.findNick(ircMsg.src)
+        commands = nick.auth(ircMsg.dataList[1])
+    else:
+        commands += basicMessage.paramFail(ircMsg.src, thisCmd)
     
+    return commands
+
+def __initCmd(ircMsg):
+    '''Execute the tasks for the special init command.'''
+    commands = []
+    thisCmd = "init"
+    
+    if len(ircMsg.dataList) >= 3:
+        debug.message("Initialized admin user " + ircMsg.src + " with hostmask " + ircMsg.dataList[1] + ".")
+    
+        hosts = [ircMsg.dataList[1]]
+        password = ircMsg.dataList[2]
+        user = ircMsg.src
+        uid = ircMsg.net.users.uidHash(user)
+        exists = ircMsg.net.users.uidExists(uid)
+    
+        if not exists:
+            ircMsg.net.users.addUser(uid, user, password, hosts, 255, [], [])
+            ircMsg.net.config.init = 0
+            commands.append("PRIVMSG " + ircMsg.src + " :Added user " + user + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again.")
+        else:
+            debug.error("Error with 'adduser':  User " + user + " already exists.")
+            commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")
+    else:
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+        
     return commands
 
 def __listCmd(ircMsg):
@@ -150,21 +248,3 @@ def __listCmd(ircMsg):
         commands += basicMessages.noAuth(ircMsg.src, "listusers")
             
     return commands
-    
-def __formatUserLine(item):
-    '''Formats a single line of user information.'''
-    user = item[0]
-    level = str(item[1])
-    approved = item[2]
-    denied = item[3]
-    
-    if approved == "" and denied == "":
-        message = "User: " + user + "; Level: " + level
-    elif approved == "":
-        message = "User: " + user + "; Level: " + level + "; Denied Flags: " + denied
-    elif denied == "":
-        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved
-    else:
-        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved + "; Denied Flags: " + denied
-
-    return message

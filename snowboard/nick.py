@@ -21,6 +21,7 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import debug
+from . import userLevels
 
 class Nick:
     '''
@@ -36,11 +37,45 @@ class Nick:
         self.users = users
         self.authed = False
         self.openWHO = False
+    
+    def auth(self, password):
+        '''Authenticates a user against the user database.'''
+        commands = []
         
-    def sendWHO(self):
-        '''Issues a WHO command to establish a hostname for a user.'''
-        self.openWHO = True
-        return ["WHO " + self.name]
+        # See if we can get the privs on a user, just in case they were added
+        # after we last tried.
+        if self.priv.uid == None:
+            self.getPrivs()
+        
+        # Now if we still don't have the privs or the UID on file then, there
+        # is an issue.
+        if self.priv.uid == None:
+            debug.message("No user information for " + self.name + " could be found.")
+            commands.append("PRIVMSG " + self.name + " :You were not found in my database.")
+            authorized = False
+        else:
+            debug.info("Attempting to authenticate " + self.name + ".")
+            authorized = self.users.verifyUser(self.priv.uid, password)
+        
+        self.authed = authorized
+        
+        if authorized:
+            debug.message("Authentication for " + self.name + " was successful.")
+            commands.append("PRIVMSG " + self.name + " :Authentication successful.")
+        else:
+            debug.message("Authentication for " + self.name + " failed.")
+            commands.append("PRIVMSG " + self.name + " :Authentication failed.")
+                   
+        return commands
+       
+    def clearPrivs(self):
+        '''Clears privleges from the object.'''
+        self.priv.uid = None
+        self.priv.user = None
+        self.priv.level = 0
+        self.priv.approved = []
+        self.priv.denied = []
+        self.priv.hostmasks = []
     
     def getUID(self):
         '''Gets the user ID based on the host, only works if host is known'''
@@ -76,37 +111,10 @@ class Nick:
         
         return uid
     
-    def clearPrivs(self):
-        '''Clears privleges from the object.'''
-        self.priv.uid = None
-        self.priv.user = None
-        self.priv.level = 0
-        self.priv.approved = []
-        self.priv.denied = []
-        self.priv.hostmasks = []
-        
-    def auth(self, password):
-        '''Authenticates a user against the user database.'''
-        commands = []
-        
-        if self.priv.uid == None:
-            debug.message("No user information for " + self.name + " could be found.")
-            commands.append("PRIVMSG " + self.name + " :You were not found in my database.")
-            authorized = False
-        else:
-            debug.info("Attempting to authenticate " + self.name + ".")
-            authorized = self.users.verifyUser(self.priv.uid, password)
-        
-        self.authed = authorized
-        
-        if authorized:
-            debug.message("Authentication for " + self.name + " was successful.")
-            commands.append("PRIVMSG " + self.name + " :Authentication successful.")
-        else:
-            debug.message("Authentication for " + self.name + " failed.")
-            commands.append("PRIVMSG " + self.name + " :Authentication failed.")
-                   
-        return commands
+    def sendWHO(self):
+        '''Issues a WHO command to establish a hostname for a user.'''
+        self.openWHO = True
+        return ["WHO " + self.name]
             
 class NickPriv:
     '''Stores information about privileges of a nick, across all channels.'''
@@ -120,11 +128,15 @@ class NickPriv:
         
     def checkApproved(self, flag):
         '''Checks to see if a user is approved for a flag.'''
+        # Gant flags based on user level, but explicitly do not add them
+        # to the database.
+        approved = self.approved[:] + userLevels.grantFlags(self.level)
+        
         if flag.lower() in self.denied:
             valid = False
-        elif flag.lower() in self.approved:
+        elif flag.lower() in approved:
             valid = True
-        elif "admin" in self.approved:
+        elif "admin" in approved:
             valid = True
         else:
             valid = False

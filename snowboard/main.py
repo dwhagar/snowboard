@@ -22,6 +22,9 @@ of strings, each item being a single command.
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
+# The amount of time the loop with sleep before going on to the next loop.
+idleTime = 1 / 8
+
 import argparse
 import time
 
@@ -212,6 +215,8 @@ def main(argv):
         lastTimer = time.time()
     
         while net.online() and net.ready():
+            # Send any commands.
+            net.send()
             # Is there data?
             data = net.checkMessages()
             if not data == None:
@@ -236,7 +241,8 @@ def main(argv):
                     net.sendCommands(cmds)
         
             # Make sure we don't amp up the CPU to max.
-            time.sleep(0)
+            global idleTime
+            time.sleep(idleTime)
         
         if (not (net.online() and net.ready())) and net.reconnect:
             

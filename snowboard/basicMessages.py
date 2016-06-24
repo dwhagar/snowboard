@@ -37,3 +37,21 @@ def noAuth(src, cmd):
     commands.append("PRIVMSG " + src + " :You are not identified.")
     
     return commands
+    
+def noUser(src, cmd, user):
+    '''Stock message for a user that does not exist.'''
+    commands = []
+    
+    debug.message("Nick " + src + " tried to use the '" + cmd + "' command, but " + user + " could not be found in the database.")
+    commands.append("PRIVMSG " + src + " :I'm sorry but I could not find " + user + " in the database.")
+    
+    return commands
+    
+def paramFail(src, cmd):
+    '''Stock message for not enough parameters.'''
+    commands = []
+    
+    debug.info("Nick " + src + " tried to use the '" + cmd + "' command, but did not provide enough parameters.")
+    commands.append("PRIVMSG " + src + " :You did not provide enough parameters for the '" + cmd + "' command.")
+    
+    return commands

@@ -23,6 +23,17 @@ import time
 from . import debug
 from . import basicMessages
 
+def channelTriggers(ircMsg):
+    '''Process triggers for basic commands.'''
+    commands = []
+    
+    if ircMsg.dataList[0][:len(ircMsg.net.botnick)].lower() == ircMsg.net.botnick.lower():
+        data = " ".join(ircMsg.dataList[1:])
+        if data.lower() == "who are you?":
+            commands = __identifySelf(ircMsg)
+
+    return commands
+
 def msgTriggers(ircMsg):
     '''Process triggers for basic commands.'''
     commands = []
@@ -35,40 +46,48 @@ def msgTriggers(ircMsg):
         commands = __identifySelf(ircMsg)
 
     return commands
-    
-def channelTriggers(ircMsg):
-    '''Process triggers for basic commands.'''
-    commands = []
-    
-    if ircMsg.dataList[0][:len(ircMsg.net.botnick)].lower() == ircMsg.net.botnick.lower():
-        data = " ".join(ircMsg.dataList[1:])
-        if data.lower() == "who are you?":
-            commands = __identifySelf(ircMsg)
 
-    return commands
-
-def __quitCommand(ircMsg):
-    '''Quits from IRC.'''
+def noticeTriggers(ircMsg):
+    '''Process triggers for basic NOTICE commands'''
     commands = []
-    
-    nick = ircMsg.net.findNick(ircMsg.src)
-    
-    if nick.authed:
-        if nick.priv.checkApproved("admin"):
-            # Generally speaking we should not make a habit of invoking the
-            # sendCommands function directly, and just return a list.  This is a
-            # special case, since once we send the Quit command the connection will
-            # be closed by the server.
-            ircMsg.net.sendCommands(["PRIVMSG " + ircMsg.src + " :Quitting IRC now."])
-            debug.message("Quitting IRC by order of " + ircMsg.src + ".")
-            ircMsg.net.quit()
-            return [] # Normally I wouldn't do this either
-        else:
-            commands += basicMessages.denyMessages(ircMsg.src, "quit")
-    else:
-        commands += basicMessages.noAuth(ircMsg.src, "quit")
         
+    # Handle NickServ identification.
+    if ircMsg.data.lower().find("nickname is registered") > -1:
+        commands += __authNickServ(ircMsg)
+    elif ircMsg.data.lower().find("password accepted") > -1:
+        commands += __acceptedNickServ(ircMsg)
+    elif ircMsg.data.lower().find("you are now identified") > -1:
+        commands += __acceptedNickServ(ircMsg)
+    elif ircMsg.data.lower().find("password incorrect") > -1:
+        commands += __deniedNickServ(ircMsg)
+    elif ircMsg.data.lower().find("invalid password") > -1:
+        commands += __deniedNickServ(ircMsg)
+    
     return commands
+
+def __acceptedNickServ(ircMsg):
+    '''Provides handling for NickServ accepting the identify command.'''
+    debug.message("I have confirmed my identity with " + ircMsg.src + ".")
+    
+    return []
+
+def __authNickServ(ircMsg):
+    '''Sends authorization to NickServ'''
+    commands = []
+    
+    if ircMsg.net.config.nickPass == None:
+        debug.warn(ircMsg.src + " is requesting that I identify myself, but I have no password configured.")
+    else:
+        debug.message(ircMsg.src + " is requesting that I identify myself, attempting to do so.")
+        commands.append("PRIVMSG " + ircMsg.src + " :identify " + ircMsg.net.config.nickPass)
+    
+    return commands
+    
+def __deniedNickServ(ircMsg):
+    '''Provides handling for NickServ denying the identify commands.'''
+    debug.warn(ircMsg.src + " would not accept my password, I cannot identify myself.")
+    
+    return []
 
 def __hopServers(ircMsg):
     '''Tells the bot to hop from one server to another.'''
@@ -102,4 +121,27 @@ def __identifySelf(ircMsg):
     
     commands.append("PRIVMSG " + dest + " :I am " + botnick + ", a Snowboard bot.  Project Snowboard can be found at https://github.com/dwhagar/snowboard where my code is under development and documentation can be found.")
     
+    return commands
+
+def __quitCommand(ircMsg):
+    '''Quits from IRC.'''
+    commands = []
+    
+    nick = ircMsg.net.findNick(ircMsg.src)
+    
+    if nick.authed:
+        if nick.priv.checkApproved("admin"):
+            # Generally speaking we should not make a habit of invoking the
+            # sendCommands function directly, and just return a list.  This is a
+            # special case, since once we send the Quit command the connection will
+            # be closed by the server.
+            ircMsg.net.sendCommands(["PRIVMSG " + ircMsg.src + " :Quitting IRC now."])
+            debug.message("Quitting IRC by order of " + ircMsg.src + ".")
+            ircMsg.net.quit()
+            return [] # Normally I wouldn't do this either
+        else:
+            commands += basicMessages.denyMessage(ircMsg.src, "quit")
+    else:
+        commands += basicMessages.noAuth(ircMsg.src, "quit")
+        
     return commands
