@@ -38,6 +38,15 @@ def noAuth(src, cmd):
     
     return commands
     
+def noChannel(src, cmd, chan):
+    '''Stock message for unable to find a channel.'''
+    commands = []
+    
+    debug.message("Nick " + src + " tried to use the '" + cmd + "' command, but I was unable to find channel '" + chan + "' in the database.")
+    commands.append("PRIVMSG " + src + " :I'm sorry but I could not find " + chan + " in the database.")
+    
+    return commands
+    
 def noUser(src, cmd, user):
     '''Stock message for a user that does not exist.'''
     commands = []
