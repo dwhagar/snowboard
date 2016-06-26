@@ -489,7 +489,7 @@ class Network:
             
             # First, add the nick to the master list.
             nick = self.addNick(name)
-            print(nick.name, nick.user.uid)
+
             if nick.host == None or nick.host == "":
                 self.sendCommands(nick.sendWHO())
             

@@ -231,7 +231,7 @@ class Users:
         self.__openDB()
         
         # Retrieve everything about a user from the DB.
-        query = "SELECT user, hostmasks, level, flags, channels FROM users WHERE uid IS '" + uid + "'"
+        query = "SELECT user, password, hostmasks, level, flags, channels FROM users WHERE uid IS '" + uid + "'"
         
         # Actually do the search.
         self.db.execute(query)
@@ -242,13 +242,13 @@ class Users:
             result = None
         else:
             result = User()
-            result.uid = item[0]
-            result.user = item[1]
-            result.pwHash = item[2]
-            result.loadHostmasks(item[3])
-            result.level = int(item[4])
-            result.flags.toData(item[5])
-            result.loadChannels(item[6])
+            result.uid = uid
+            result.user = data[0]
+            result.pwHash = data[1]
+            result.loadHostmasks(data[2])
+            result.level = int(data[3])
+            result.flags.toData(data[4])
+            result.loadChannels(data[5])
         
         self.__closeDB()
         
