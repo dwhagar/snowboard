@@ -43,13 +43,16 @@ class User:
     
     def findChannel(self, channel):
         '''Finds a channel, if one exists, in the list of privleges.'''
-        result = False
+        result = None
         
         if len(channels) > 0:
+            index = 0
+            
             for chan in channels:
                 if chan.name.lower() == channel.lower():
-                    result = True
+                    result = channels[index]
                     break
+                index += 1
         
         return result
         

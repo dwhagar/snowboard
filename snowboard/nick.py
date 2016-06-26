@@ -88,8 +88,7 @@ class Nick:
             thisUser = None
         else:
             thisUser = self.users.userInformation(self.user.uid)
-        
-        self.user = thisUser
+            self.user = thisUser
         
         return thisUser
     

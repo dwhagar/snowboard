@@ -489,6 +489,7 @@ class Network:
             
             # First, add the nick to the master list.
             nick = self.addNick(name)
+            print(nick.name, nick.user.uid)
             if nick.host == None or nick.host == "":
                 self.sendCommands(nick.sendWHO())
             
@@ -555,6 +556,7 @@ class Network:
         nick = self.findNick(response[7])
         nick.host = response[4] + "@" + response[5]
         nick.openWHO = False
+        nick.user.uid = self.users.matchHost(nick.host)
         debug.info("Processed a WHO response for " + nick.name + "!" + nick.host + ".")
 
     def quit(self):
@@ -565,6 +567,13 @@ class Network:
     def ready(self):
         '''Let the outside world see if the connection is ready.'''
         return self.__authenticated
+
+    def removeAccess(self, uid):
+        '''Removes access for a uid across all nicks.'''
+        for nick in nicks:
+            if nick.user.uid == uid:
+                nick.clearPrivs()
+                break
 
     def removeChannel(self, chan):
         '''Remove a channel from the network.'''

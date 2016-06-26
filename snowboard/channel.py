@@ -20,7 +20,7 @@ what that person's privleges are within the channel.
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
-from . import users
+from .users import Users
 from .channelPriv import ChannelPriv
 
 class Channel:
@@ -30,7 +30,7 @@ class Channel:
         self.network = network
         self.joined = False
         self.members = members # A list of lists, storing Nick and ChanPriv
-        self.users = users.Users(self.network)
+        self.users = Users(self.network)
         self.botnick = None
         self.opped = False
         self.voiced = False
