@@ -21,19 +21,17 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import debug
-from . import userLevels
+from .user import User
 
 class Nick:
     '''
     Stores information about a nick on the IRC network including hostname and
     privleges associated with the nick in a global sense.
     '''
-    def __init__(self, nick, users, host = "", priv = None):
+    def __init__(self, nick, users):
         self.name = nick
-        self.host = host
-        if priv == None:
-            priv = NickPriv()
-        self.priv = priv # NickPriv object
+        self.host = None
+        self.user = User()
         self.users = users
         self.authed = False
         self.openWHO = False
@@ -44,18 +42,19 @@ class Nick:
         
         # See if we can get the privs on a user, just in case they were added
         # after we last tried.
-        if self.priv.uid == None:
-            self.getPrivs()
+        if self.user.uid == None:
+            uid = self.getUID()
         
         # Now if we still don't have the privs or the UID on file then, there
         # is an issue.
-        if self.priv.uid == None:
+        if self.user.uid == None:
             debug.message("No user information for " + self.name + " could be found.")
             commands.append("PRIVMSG " + self.name + " :You were not found in my database.")
             authorized = False
         else:
+            self.getPrivs()
             debug.info("Attempting to authenticate " + self.name + ".")
-            authorized = self.users.verifyUser(self.priv.uid, password)
+            authorized = self.user.verify(self.user.uid, password)
         
         self.authed = authorized
         
@@ -70,12 +69,7 @@ class Nick:
        
     def clearPrivs(self):
         '''Clears privleges from the object.'''
-        self.priv.uid = None
-        self.priv.user = None
-        self.priv.level = 0
-        self.priv.approved = []
-        self.priv.denied = []
-        self.priv.hostmasks = []
+        self.user = User()
     
     def getUID(self):
         '''Gets the user ID based on the host, only works if host is known'''
@@ -83,33 +77,21 @@ class Nick:
             return None
         
         # Get the UID itself, if one exists.
-        uid = self.users.matchHost(self.name + "!" + self.host)
+        self.user.uid = self.users.matchHost(self.name + "!" + self.host)
         
-        self.priv.uid = uid
-        
-        return uid
+        return self.user.uid
         
     def getPrivs(self):
         '''Gets access rights from the database for a user.'''
         
-        # If we already know who this user is, that's fine, if not
-        # then we need to find out.
+        if self.user.uid == None:
+            thisUser = None
+        else:
+            thisUser = self.users.userInformation(self.user.uid)
         
-        uid = self.getUID()
+        self.user = thisUser
         
-        if uid == None:
-            return
-        
-        # If there is still no UID, the user does not exist.
-        if not uid == None:
-            data = self.users.userInformation(uid)
-            self.priv.user = data[0]
-            self.priv.hostmasks = data[1]
-            self.priv.level = data[2]
-            self.priv.approved = data[3]
-            self.priv.denied = data[4]
-        
-        return uid
+        return thisUser
     
     def sendWHO(self):
         '''Issues a WHO command to establish a hostname for a user.'''

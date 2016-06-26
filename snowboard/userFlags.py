@@ -19,10 +19,10 @@ A place to store a users flags.
 
 from . import userLevels
 
-class userFlags:
-    def __init__():
-        approved = []
-        denied = []
+class UserFlags:
+    def __init__(self):
+        self.approved = []
+        self.denied = []
         
     def checkApproved(self, flag, level = 0):
         '''Checks to see if a user is approved for a flag.'''
@@ -53,18 +53,18 @@ class userFlags:
         
         return valid
         
-    def toString(self):
-        '''Converts the userflags to a single string.'''
-        approvedString = ",".join(self.approved).lower().replace(':','')
-        deniedString = ",".join(self.denied).lower().replace(':','')
-        
-        result = approved + ":" + denied
-        
-        return result
-        
-    def toFlags(self, flags):
+    def toData(self, flags):
         '''Converts a string of flags into lists for the object.'''
         flagList = flags.split(':')
         
         self.approved = flagList[0].split(',')
         self.denied = flagList[1].split(',')
+        
+    def toString(self):
+        '''Converts the userflags to a single string.'''
+        approvedString = ",".join(self.approved).lower().replace(':','')
+        deniedString = ",".join(self.denied).lower().replace(':','')
+        
+        result = approvedString + ":" + deniedString
+        
+        return result

@@ -24,10 +24,11 @@ import time
 import random
 
 from . import debug
-from . import connection
-from . import channel
-from . import nick
-from . import users
+from .connection import Connection
+from .channel import Channel
+from .nick import Nick
+from .users import Users
+from .channelPriv import ChannelPriv
 
 class Network:
     def __init__(self, cfg):
@@ -50,7 +51,7 @@ class Network:
         self.reconnect = True
         self.sendBlock = 6
         self.server = None
-        self.users = users.Users(cfg.network)
+        self.users = Users(cfg.network)
         self.whoList = []
         self.__authenticated = False
         self.__connection = None
@@ -60,7 +61,7 @@ class Network:
         '''Add a channel to the network.'''
         existing = self.__checkChannels(chan.name)
         if existing == None:
-            newChannel = channel.Channel(chan, self.name)
+            newChannel = Channel(chan, self.name)
             self.channels.append(newChannel)
             self.sendCommands(newChannel.join())
         else:
@@ -71,7 +72,7 @@ class Network:
         '''Add a nick to the master list.'''
         existing = self.findNick(nickName)
         if existing == None:
-            newNick = nick.Nick(nickName, self.users)
+            newNick = Nick(nickName, self.users)
             self.nicks.append(newNick)
             return newNick
         else:
@@ -212,7 +213,7 @@ class Network:
         while not connected:
             for server in servers:
                 # Create the connection object, load settings from config
-                self.__connection = connection.Connection(server)
+                self.__connection = Connection(server)
                 self.__connection.retries = self.config.retries
                 self.__connection.delay = self.config.delay
                 self.__connection.sslVerify = self.config.sslVerify
@@ -371,7 +372,7 @@ class Network:
                 nickObject = self.addNick(nck)
                 nickObject.host = host
                 nickObject.getPrivs()
-                cPriv = channel.ChannelPriv(False, False)
+                cPriv = ChannelPriv(False, False)
                 chanObject.addNick(nickObject, cPriv)                
                 debug.message("Processed a join message on " + cJoined + " from " + nck + ".")
             
@@ -488,11 +489,11 @@ class Network:
             
             # First, add the nick to the master list.
             nick = self.addNick(name)
-            if nick.host == "":
+            if nick.host == None or nick.host == "":
                 self.sendCommands(nick.sendWHO())
             
             # Second, add the nick to the channel's nick list with privileges
-            cPriv = channel.ChannelPriv(opped, voiced)
+            cPriv = ChannelPriv(opped, voiced)
             existing = self.findChannel(channelName)
             existing.addNick(nick, cPriv)
         

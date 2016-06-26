@@ -21,6 +21,7 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from . import users
+from .channelPriv import ChannelPriv
 
 class Channel:
     '''A class to store all information the bot knows about a channel.'''
@@ -29,7 +30,7 @@ class Channel:
         self.network = network
         self.joined = False
         self.members = members # A list of lists, storing Nick and ChanPriv
-        self.users = users.Users(self.network, self.name[1:])
+        self.users = users.Users(self.network)
         self.botnick = None
         self.opped = False
         self.voiced = False
@@ -58,7 +59,6 @@ class Channel:
         # Find the proper entry in members.
         for member in self.members:
             if member[0].name.lower() == nckStr.lower():
-                self.getPrivs(member[0], member[1])
                 result = member
         
         return result
@@ -67,7 +67,6 @@ class Channel:
         '''Add a nick to the list.'''        
         existing = self.findNick(nick)
         if existing == None:
-            self.getPrivs(nick, priv)
             member = [nick, priv]
             self.members.append(member)
 
@@ -76,30 +75,6 @@ class Channel:
         existing = self.findNick(nick)
         if not existing == None:
             self.members.remove(existing)
-    
-    def getPrivs(self, nick, priv = None):
-        '''Add access rights to a particular Nick and ChanPriv pair'''
-        uid = nick.priv.uid
-        result = uid
-        
-        if priv = None:
-            priv = ChanPriv()
-        
-        if not uid == None:
-            data = self.users.userInformation(uid)
-            if not data == None:
-                priv.level = data[1]
-                priv.approved = data[2]
-                priv.denied = data[3]
-            else:
-                result = None
-        
-        return priv)
-        
-    def getAllPrivs(self):
-        '''Load all privleges for all members.'''
-        for member in members:
-            self.getPrivs(member[0], member[1])
             
     def updateSelf(self):
         '''Update the bots knowledge of its own privleges.'''

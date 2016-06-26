@@ -26,64 +26,57 @@ import hashlib
 import base64
 import re
 
+from . import passwordTools
+from .user import User
+
 class Users:
     def __init__(self, network):
         self.network = network
         self.database = network.lower() + "-users.db"
-        self.table = "users"
         self.conn = None
         self.db = None
         
         self.__initDB() # Make sure there is a database and it has the table.
 
-    def addUser(self, uid, user = None, password = None, hostmasks = [],
-                level = 0, approvedList = [], deniedList = []):
+    def addUser(self, user, password = None):
         '''Adds a user record to the database'''
         
-        if level > 255:
-            level = 255
-        elif level < 0:
-            level = 0
+        if user.level > 255:
+            user.level = 255
+        elif user.level < 0:
+            user.level = 0
+        
+        if not password == None:
+            user.pwHash = passwordTools.passwordHash(password)
 
         self.__openDB()
         
-        # Convert the lists into CSV format.
-        masks = ','.join(hostmasks)
-        approved = ','.join(self.__cleanList(approvedList))
-        denied = ','.join(self.__cleanList(deniedList))
+        # Convert the lists into string format.
+        masks = user.saveHostmasks()
+        flags = user.flags.toString()
+        channels = user.saveChannels()
+        
+        # Change the username for the database.
+        user.name = self.__cleanInput(user.name.lower())
         
         # Create a list to pass onto the function and store in the DB.
-        if self.table == "global":
-            data = [
-                uid,
-                self.__cleanInput(user.lower()),
-                self.__passwordHash(password),
-                masks,
-                level,
-                approved.lower(),
-                denied.lower()
-            ]
-        else:
-            data = [
-                uid,
-                self.__cleanInput(user.lower()),
-                level,
-                approved.lower(),
-                denied.lower()
-            ]
+        data = [
+            user.uid,
+            user.name,
+            user.pwHash,
+            masks,
+            user.level,
+            flags,
+            channels
+        ]
         
         # Create the SQL query line, using ?'s where the function will
         # fill in the data from the list.
-        if self.table == "global":
-            query = "INSERT INTO " + self.table + " VALUES (?, ?, ?, ?, ?, ?, ?)"
-        else:
-            query = "INSERT INTO " + self.table + " VALUES (?, ?, ?, ?, ?)"
+        query = "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)"
 
         self.db.execute(query, data)
         
         self.__closeDB()
-        
-        return uid
 
     def getUsers(self):
         '''Gets a list of all users.'''
@@ -91,16 +84,27 @@ class Users:
         
         self.__openDB()
         
-        query = "SELECT user, level, approved, denied FROM " + self.table
+        query = "SELECT uid, user, password, hostmasks, level, flags, channels FROM users"
         
         self.db.execute(query)
         data = self.db.fetchall()
         
-        if not data == None:
-            result = data
+        userList = []
         
-        self.__closeDB()
-        return result
+        if len(data) > 0:
+            for item in data:
+                newUser = User()
+                newUser.uid = item[0]
+                newUser.user = item[1]
+                newUser.pwHash = item[2]
+                newUser.loadHostmasks(item[3])
+                newUser.level = int(item[4])
+                newUser.flags.toData(item[5])
+                newUser.loadChannels(item[6])
+                
+                userList.append(newUser)
+        
+        return userList
 
     def matchHost(self, hostmask):
         '''Finds a user based on a given hostmask.  Returns UID or None.'''
@@ -108,7 +112,7 @@ class Users:
         
         self.__openDB()
         
-        query = "SELECT uid, hostmasks FROM " + self.table
+        query = "SELECT uid, hostmasks FROM users"
         
         self.db.execute(query)
         data = self.db.fetchall()
@@ -135,8 +139,8 @@ class Users:
         
         userName = self.__cleanInput(userName)
         
-        query = "SELECT uid FROM " + self.table + " WHERE user IS '" + userName.lower() + "'"
-        self.db.execute(query)
+        query = "SELECT uid FROM users WHERE user IS '?'"
+        self.db.execute(query, userName)
         data = self.db.fetchone()
         
         if not data == None:
@@ -150,7 +154,7 @@ class Users:
         self.__openDB()
         
         # Build the query, then execute.
-        query = "DELETE FROM " + self.table + " WHERE uid IS '" + uid + "'"
+        query = "DELETE FROM users WHERE uid IS '" + uid + "'"
         self.db.execute(query)
         
         self.__closeDB()
@@ -159,7 +163,7 @@ class Users:
         '''Checks to see if a UID exists in the database already.'''
         self.__openDB()
         
-        query = "SELECT uid FROM " + self.table + " WHERE uid IS '" + uid + "'"
+        query = "SELECT uid FROM users WHERE uid IS '" + uid + "'"
         self.db.execute(query)
         data = self.db.fetchone()
         
@@ -183,42 +187,39 @@ class Users:
         
         return result
 
-    def updateUser(self, uid, user = None, password = None, hostmasks = [],
-                level = 0, approvedList = [], deniedList = []):
+    def updateUser(self, user, password = None):
+        '''Updates a user record in the database'''
+        
+        if user.level > 255:
+            user.level = 255
+        elif user.level < 0:
+            user.level = 0
+
+        if not password == None:
+            user.pwHash = passwordTools.passwordHash(password)
+
         self.__openDB()
         
-        if level > 255:
-            level = 255
-        elif level < 0:
-            level = 0
+        # Convert the lists into string format.
+        masks = user.saveHostmasks()
+        flags = user.flags.toString()
+        channels = user.saveChannels()
 
-        # Convert the lists into CSV format.
-        masks = ','.join(hostmasks)
-        approved = ','.join(self.__cleanList(approvedList))
-        denied = ','.join(self.__cleanList(deniedList))
+        # Change the username for the database.
+        user.name = self.__cleanInput(user.name.lower())
         
-        if self.table == "global":
-            data = [
-                self.__cleanInput(user.lower()),
-                self.__passwordHash(password),
-                masks,
-                level,
-                approved.lower(),
-                denied.lower()
-            ]
-        else:
-            data = [
-                self.__cleanInput(user.lower()),
-                level,
-                approved.lower(),
-                denied.lower()
-            ]
+        # Create a list to pass onto the function and store in the DB.
+        data = [
+            user.name,
+            user.pwHash,
+            masks,
+            user.level,
+            flags,
+            channels
+        ]
         
         # Set the query.
-        if self.table == "global":
-            query = "UPDATE " + self.table + " SET user = ?, password = ?, hostmasks = ?, level = ?, approved = ?, denied = ? WHERE uid IS '" + uid + "'"
-        else:
-            query = "UPDATE " + self.table + " SET user = ?, level = ?, approved = ?, denied = ? WHERE uid IS '" + uid + "'"
+        query = "UPDATE users SET user = ?, password = ?, hostmasks = ?, level = ?, flags = ?, channels = ? WHERE uid IS '" + user.uid + "'"
         
         self.db.execute(query, data)
         
@@ -230,10 +231,7 @@ class Users:
         self.__openDB()
         
         # Retrieve everything about a user from the DB.
-        if self.table == "global":
-            query = "SELECT user, hostmasks, level, approved, denied FROM " + self.table + " WHERE uid IS '" + uid + "'"
-        else:
-            query = "SELECT level, approved, denied FROM " + self.table + " WHERE uid IS '" + uid + "'"
+        query = "SELECT user, hostmasks, level, flags, channels FROM users WHERE uid IS '" + uid + "'"
         
         # Actually do the search.
         self.db.execute(query)
@@ -243,44 +241,15 @@ class Users:
         if data == None:
             result = None
         else:
-            # Split up the data as needed.
-            if self.table == "global":
-                user, hostmasks, level, approved, denied = data
-                hostmaskList = hostmasks.split(',')
-            else:
-                level, approved, denied = data
-
-            approvedList = approved.split(',')
-            deniedList = denied.split(',')
-
-            if self.table == "global":
-                result = (user, hostmaskList, level, approvedList, deniedList)
-            else:
-                result = (level, approvedList, deniedList)
+            result = User()
+            result.uid = item[0]
+            result.user = item[1]
+            result.pwHash = item[2]
+            result.loadHostmasks(item[3])
+            result.level = int(item[4])
+            result.flags.toData(item[5])
+            result.loadChannels(item[6])
         
-        self.__closeDB()
-        
-        return result
-
-    def verifyUser(self, uid, password):
-        '''Verifies a user password against that which is in the database.'''
-        result = False
-        
-        # Open the DB
-        self.__openDB()
-        
-        query = "SELECT password FROM " + self.table + " WHERE uid IS '" + uid + "'"
-        
-        # Look up the UID in the database, retrieve the password.
-        self.db.execute(query)
-        data = self.db.fetchone()
-        
-        # If there is data, check it.
-        if not data == None:
-            data = data[0]
-            result = self.__passwordCheck(password, data)
-        
-        # Close the DB    
         self.__closeDB()
         
         return result
@@ -302,7 +271,7 @@ class Users:
         text = text.replace(';', '')
         text = text.replace('`', '')
         return text
-        
+
     def __cleanList(self, list):
         '''Cleans a list of strings.'''
         newList = []
@@ -312,48 +281,31 @@ class Users:
             newList.append(item)
             
         return newList
-        
-    def __openDB(self):
-        '''Opens the user database up for use.'''
-        self.conn = sqlite3.connect(self.database)
-        self.db = self.conn.cursor()
-        
+    
     def __closeDB(self):
         '''Closes the user database.'''
         self.conn.commit()
         self.conn.close()
         self.conn = None
 
-    def __initDB(self):
-        '''Intended to initialize a database that doesn't yet exist.'''
-        self.__openDB()
-        
-        initCmd = "CREATE TABLE IF NOT EXISTS " + self.table + " (uid TEXT PRIMARY KEY, user TEXT UNIQUE, password TEXT, hostmasks TEXT, level INTEGER, flags TEXT, channels TEXT)"
-        
-        self.db.execute(initCmd)
-        
-        self.__closeDB()
-
-    def __passwordHash(self, password):
-        '''Creates a base64 encoded hash from a password.'''
-        sha512 = hashlib.sha256()
-        sha512.update(password.encode('utf-8'))
-        data = sha512.digest()
-        result = base64.b64encode(data).decode('utf-8')
-        return result
-        
-    def __passwordCheck(self, password, hash):
-        '''Give a true/false result if a password is valid given a hash.'''
-        result = False
-        
-        if self.__passwordHash(password) == hash:
-            result = True
-            
-        return result
-    
     def __convertWild(self, search):
         '''Converts a simple wildcard search into a regular expression.'''
         new = search.replace('.', "\.")
         new = new.replace('?',".?")
         new = new.replace('*',".*")
         return new
+
+    def __initDB(self):
+        '''Intended to initialize a database that doesn't yet exist.'''
+        self.__openDB()
+        
+        initCmd = "CREATE TABLE IF NOT EXISTS users (uid TEXT PRIMARY KEY, user TEXT UNIQUE, password TEXT, hostmasks TEXT, level INTEGER, flags TEXT, channels TEXT)"
+        
+        self.db.execute(initCmd)
+        
+        self.__closeDB()
+
+    def __openDB(self):
+        '''Opens the user database up for use.'''
+        self.conn = sqlite3.connect(self.database)
+        self.db = self.conn.cursor()

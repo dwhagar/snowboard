@@ -21,6 +21,8 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 
 from . import debug
 from . import basicMessages
+from . import passwordTools
+from .user import User
 
 def msgTriggers(ircMsg):
     '''Process triggers for basic commands.'''
@@ -189,20 +191,25 @@ def __initCmd(ircMsg):
     
     if len(ircMsg.dataList) >= 3:
         debug.message("Initialized admin user " + ircMsg.src + " with hostmask " + ircMsg.dataList[1] + ".")
-    
-        hosts = [ircMsg.dataList[1]]
-        password = ircMsg.dataList[2]
-        user = ircMsg.src
-        uid = ircMsg.net.users.uidHash(user)
-        exists = ircMsg.net.users.uidExists(uid)
-    
+        
+        userObject = User()
+        
+        userObject.uid = ircMsg.net.users.uidHash(ircMsg.src)
+        exists = ircMsg.net.users.uidExists(userObject.uid)
+        
         if not exists:
-            ircMsg.net.users.addUser(uid, user, password, hosts, 255, [], [])
+            userObject.hostmasks = [ircMsg.dataList[1]]
+            userObject.pwHash = passwordTools.passwordHash(ircMsg.dataList[2])
+            userObject.name = ircMsg.src
+            userObject.uid = ircMsg.net.users.uidHash(ircMsg.src)
+            userObject.level = 255
+
+            ircMsg.net.users.addUser(userObject)
             ircMsg.net.config.init = 0
-            commands.append("PRIVMSG " + ircMsg.src + " :Added user " + user + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again.")
+            commands.append("PRIVMSG " + ircMsg.src + " :Added user " + userObject.name + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again.")
         else:
-            debug.error("Error with 'adduser':  User " + user + " already exists.")
-            commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + user + " already exists.")
+            debug.error("Error with 'init':  User " + user + " already exists.")
+            commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + userObject.name + " already exists.")
     else:
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
         
