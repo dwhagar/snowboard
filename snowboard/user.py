@@ -40,18 +40,18 @@ class User:
 
     def checkDenied(self, flag):
         '''Checks with the users flags to see if they are denied.'''
-        return self.flags.checkDenied(self, flag)
+        return self.flags.checkDenied(flag)
 
     def findChannel(self, channel):
         '''Finds a channel, if one exists, in the list of privleges.'''
         result = None
 
-        if len(channels) > 0:
+        if len(self.channels) > 0:
             index = 0
 
-            for chan in channels:
+            for chan in self.channels:
                 if chan.name.lower() == channel.lower():
-                    result = channels[index]
+                    result = self.channels[index]
                     break
                 index += 1
 

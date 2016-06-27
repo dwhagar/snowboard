@@ -34,7 +34,7 @@ class UserChannel:
 
     def checkDenied(self, flag):
         '''Checks with the users flags to see if they are denied.'''
-        return self.flags.checkDenied(self, flag)
+        return self.flags.checkDenied(flag)
 
     def toData(self, data):
         '''Decode a string into the object properties.'''

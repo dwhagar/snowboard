@@ -1,4 +1,1 @@
-Command usage:  init hostmask password
-To use the init command, you only need to specify two things, a hostmask and a password.  Your new username will be taken from your nick.
-hostmask is a wild-card formatted hostmask, such as *!user@*.host.com, see offical documentation for more details
-password is your new password, this is case sensetive to please remember it, and keep it secret
+Usage:  init hostmask password

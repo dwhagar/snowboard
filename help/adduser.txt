@@ -1,7 +1,1 @@
-Usage:  adduser username hostmask[,hostmask] password level [approved[,approved]][:denied[,denied]]
-username is a unique username
-hostmask is a comma seperated list (without spaces) of hostmasks
-password is the user password
-level is a numeric value between 0 and 255 representing the user's access level
-approved is a comma seperated list (without spaces) of approved flags
-denied is the same as the approved list, just preceeded by a ':' character
+Usage:  adduser [channel] username hostmask[,hostmask] password level [approved[,approved]][:denied[,denied]]
