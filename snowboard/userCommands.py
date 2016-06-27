@@ -38,7 +38,7 @@ def msgTriggers(ircMsg):
     elif ircMsg.dataList[0].lower() == "ident":
         commands = __identCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "listusers":
-        commands = __listCmd(ircMsg)
+        commands = __listUsersCmd(ircMsg)
 
     return commands
 
@@ -54,8 +54,8 @@ def __addCmd(ircMsg):
 
     if cmdLen > 1:
         if ircMsg.dataList[1][0] == "#":
-            cmdChannel = ircMsg.dataList[0]
-            dataList = ircMsg.dataList[2:]
+            cmdChannel = ircMsg.dataList[1]
+            dataList.remove(cmdChannel)
 
     if not (cmdLen >= 6 and cmdLen <= 7) and (not cmdChannel is None):
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
@@ -72,7 +72,7 @@ def __addCmd(ircMsg):
                 if not exists:
                     newUser = User()
                     newUser.uid = uid
-                    newUser.name = ircMsg.dataList[1]
+                    newUser.user = dataList[1]
                     newUser.loadHostmasks(dataList[2])
                     newUser.pwHash = passwordTools.passwordHash(dataList[3])
 
@@ -86,43 +86,48 @@ def __addCmd(ircMsg):
                         return commands
 
                     if cmdLen > 5:
-                        newUser.flags.toData(dataList[5:])
+                        newUser.flags.toData(" ".join(dataList[5:]))
 
                     # Load the channel in question to the new user.
                     if not (cmdChannel is None):
-                        # Move permissions from the user global permissions to
-                        # the channel information.
-                        newUChannel = UserChannel()
-                        newUChannel.name = cmdChannel
-                        newUChannel.level = newUser.level
-                        newUChannel.flags.approved = newUser.flags.approved
-                        newUChannel.flags.denied = newUser.flags.denied
-                        newUser.channels.append(newUChannel)
+                        # If the channel isn't known to the bot, don't add
+                        # permissions.
+                        if not (ircMsg.net.findChannel):
+                            commands += basicMessages.noChannel(ircMsg.src, thisCmd, cmdChannel)
+                        else:
+                            # Move permissions from the user global permissions
+                            # to the channel information.
+                            newUChannel = UserChannel()
+                            newUChannel.name = cmdChannel
+                            newUChannel.level = newUser.level
+                            newUChannel.flags.approved = newUser.flags.approved
+                            newUChannel.flags.denied = newUser.flags.denied
+                            newUser.channels.append(newUChannel)
 
-                        # Erase the flags from the global permissions before
-                        # adding the user to the database.
-                        newUser.level = 0
-                        newUser.flags.approve = []
-                        newUser.flags.denied = []
+                            # Erase the flags from the global permissions
+                            # before adding the user to the database.
+                            newUser.level = 0
+                            newUser.flags.approve = []
+                            newUser.flags.denied = []
 
                     # Need to make sure, if a user does not have access to
                     # a flag or level they cannot add it to a new user.
                     block = False
 
-                    for flag in newUser.flags.approved:
-                        if not nick.user.checkApproved(flag):
+                    if not (cmdChannel is None):
+                        for flag in newUser.flags.approved:
+                            if not nick.user.checkApproved(flag):
+                                block = True
+                        if nick.user.level < newUser.level:
                             block = True
-
-                    if nick.user.level < newUser.level:
-                        block = True
-
-                    if cmdChannel is None:
+                    else:
                         channelObject = nick.user.findChannel(cmdChannel)
                         if not (channelObject is None):
                             for flag in newUChannel.flags.approved:
                                 if not channelObject.checkApproved(flag):
                                     block = True
-
+                                if nick.user.checkDenied(flag):
+                                    block = True
                         if channelObject.level < newUChannel.level:
                             block = True
 
@@ -130,23 +135,23 @@ def __addCmd(ircMsg):
                         ircMsg.net.users.addUser(newUser)
                         if cmdChannel is None:
                             debug.message(
-                                "Adding new user " + newUser.name + " to the user database for " + ircMsg.src + ".")
+                                "Adding new user " + newUser.user + " to the user database for " + ircMsg.src + ".")
                             commands.append(
-                                "PRIVMSG " + ircMsg.src + " :Adding " + newUser.name + " to the user database.")
+                                "PRIVMSG " + ircMsg.src + " :Adding " + newUser.user + " to the user database.")
                         else:
                             debug.message(
-                                "Adding new user " + newUser.name + " to the user database of " + newUChannel.name + " for " + ircMsg.src + ".")
+                                "Adding new user " + newUser.user + " to the user database of " + newUChannel.name + " for " + ircMsg.src + ".")
                             commands.append(
-                                "PRIVMSG " + ircMsg.src + " :Adding " + newUser.name + " to the " + newUChannel.name + " user database.")
+                                "PRIVMSG " + ircMsg.src + " :Adding " + newUser.user + " to the " + newUChannel.name + " user database.")
                     else:
                         debug.error(
-                            "Error with 'adduser':  User " + ircMsg.src + " attempted to grant privleges to " + newUser.name + " greater than his/her own access.")
+                            "Error with 'adduser':  User " + ircMsg.src + " attempted to grant privleges to " + newUser.user + " greater than his/her own access.")
                         commands.append(
                             "PRIVMSG " + ircMsg.src + " :Command failed, you cannot add greater privleges than the ones you possess.")
                 else:
-                    debug.error("Error with 'adduser':  User " + ircMsg.datList[1] + " already exists.")
+                    debug.error("Error with 'adduser':  User " + dataList[1] + " already exists.")
                     commands.append(
-                        "PRIVMSG " + ircMsg.src + " :Command failed, user " + ircMsg.datList[1] + " already exists.")
+                        "PRIVMSG " + ircMsg.src + " :Command failed, user " + dataList[1] + " already exists.")
             else:
                 commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
         else:
@@ -178,10 +183,11 @@ def __delCmd(ircMsg):
                         ircMsg.net.users.removeUser(uid)
                         ircMsg.net.removeAccess(uid)
 
-                        debug.message("User " + ircMsg.src + " removed " + user + " from the global user database.")
-                        commands.append("PRIVMSG " + ircMsg.src + " :Removing " + user + " from the global user database.")
+                        debug.message("User " + ircMsg.src + " removed " + user + " from the user database.")
+                        commands.append("PRIVMSG " + ircMsg.src + " :Removing " + user + " from the user database.")
                     else:
-                        debug.message("User " + ircMsg.src + " tried to remove " + user + " from the global database, did not have high enough access.")
+                        debug.message(
+                            "User " + ircMsg.src + " tried to remove " + user + " from the database, did not have high enough access.")
                         commands.append("PRIVMSG " + ircMsg.src + " :You cannot remove " + user + ", your access level is not high enough.")
                 else:
                     commands += basicMessages.noUser(ircMsg.src, thisCmd, user)
@@ -197,24 +203,33 @@ def __delCmd(ircMsg):
 def __formatUserLine(userObject, channel = None):
     '''Formats a single line of user information.'''
     user = userObject.user
+    channels = ""
 
     if channel is None:
         level = str(userObject.level)
         approved = ",".join(userObject.flags.approved)
         denied = ",".join(userObject.flags.denied)
+
+        if len(userObject.channels) > 0:
+            chanList = []
+
+            for chan in userObject.channels:
+                chanList.append(chan.name)
+
+            channels = ",".join(chanList)
     else:
         level = str(channel.level)
         approved = ",".join(channel.flags.approved)
         denied = ",".join(channel.flags.denied)
 
-    if approved == "" and denied == "":
-        message = "User: " + user + "; Level: " + level
-    elif approved == "":
-        message = "User: " + user + "; Level: " + level + "; Denied Flags: " + denied
-    elif denied == "":
-        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved
-    else:
-        message = "User: " + user + "; Level: " + level + "; Approval Flags: " + approved + "; Denied Flags: " + denied
+    message = "User: " + user + "; Level: " + level
+
+    if not approved == "":
+        message += "; Approval Flags: " + approved
+    if not denied == "":
+        message += "; Denied Flags: " + denied
+    if not channels == "":
+        message += "; Channels: " + channels
 
     return message
 
@@ -261,21 +276,26 @@ def __initCmd(ircMsg):
 
     return commands
 
-def __listCmd(ircMsg):
+
+def __listUsersCmd(ircMsg):
     '''Provides a list of users.'''
     commands = []
     thisCmd = "listusers"
 
+    # Make sure the command is long enough.
     if len(ircMsg.dataList) > 1:
         channel = ircMsg.dataList[1]
     else:
         channel = None
 
+    # Grab the information on who sent he command.
     nick = ircMsg.net.findNick(ircMsg.src)
 
+    # Make sure that they are authenticated.
     if nick.authed:
         data = ircMsg.net.users.getUsers()
 
+        # If the command is long enough, then pull the channel information.
         if len(data) > 0:
             if channel is None:
                 commands.append("PRIVMSG " + ircMsg.src + " :Here are the users in my database.")

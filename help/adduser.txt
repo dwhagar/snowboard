@@ -1,1 +1,2 @@
 Usage:  adduser [channel] username hostmask[,hostmask] password level [approved[,approved]][:denied[,denied]]
+Note:  If you are trying to add channel access to an existing user, use the 'addaccess' command.

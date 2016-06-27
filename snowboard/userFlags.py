@@ -56,9 +56,9 @@ class UserFlags:
     def toData(self, flags):
         '''Converts a string of flags into lists for the object.'''
         flagList = flags.split(':')
-
-        self.approved = flagList[0].split(',')
-        self.denied = flagList[1].split(',')
+        if len(flagList) == 2:
+            self.approved = flagList[0].split(',')
+            self.denied = flagList[1].split(',')
 
     def toString(self):
         '''Converts the userflags to a single string.'''

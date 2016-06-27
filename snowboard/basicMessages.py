@@ -18,25 +18,29 @@ Useful functions for standardized messages both in debug and for feedback to
 the user.
 '''
 
+from os.path import isfile
 from . import debug
-
 
 def cmdHelp(src, cmd):
     '''Returns help text for a particular command.'''
     commands = []
     helpFile = "help/" + cmd + ".txt"
 
-    file = open(helpFile.lower())
-    data = file.readlines()
+    if isfile(helpFile):
+        file = open(helpFile.lower())
+        data = file.readlines()
 
-    for message in data:
-        message = message.strip('/r')
-        message = message.strip('/n')
+        for message in data:
+            message = message.strip('/r')
+            message = message.strip('/n')
 
-        if not (message == ""):
-            commands.append("PRIVMSG " + src + " :" + message)
+            if not (message == ""):
+                commands.append("PRIVMSG " + src + " :" + message)
 
-    file.close()
+        file.close()
+    else:
+        debug.error("Help file for command '" + cmd + "' (" + helpFile + ")not found!")
+        commands.append("PRIVMSG " + src + " :I could not find help associated with the '" + cmd + "' command.")
 
     commands.append(
         "PRIVMSG " + src + " :See official documentation at https://github.com/dwhagar/snowboard/wiki for more information.")
@@ -61,7 +65,6 @@ def noAuth(src, cmd):
 
     return commands
 
-
 def noChannel(src, cmd, chan):
     '''Stock message for unable to find a channel.'''
     commands = []
@@ -71,7 +74,6 @@ def noChannel(src, cmd, chan):
 
     return commands
 
-
 def noUser(src, cmd, user):
     '''Stock message for a user that does not exist.'''
     commands = []
@@ -80,7 +82,6 @@ def noUser(src, cmd, user):
     commands.append("PRIVMSG " + src + " :I'm sorry but I could not find " + user + " in the database.")
 
     return commands
-
 
 def paramFail(src, cmd):
     '''Stock message for not enough parameters.'''
