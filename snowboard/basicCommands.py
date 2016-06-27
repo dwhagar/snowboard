@@ -83,7 +83,6 @@ def __authNickServ(ircMsg):
 
     return commands
 
-
 def __deniedNickServ(ircMsg):
     '''Provides handling for NickServ denying the identify commands.'''
     debug.warn(ircMsg.src + " would not accept my password, I cannot identify myself.")
@@ -97,7 +96,7 @@ def __hopServers(ircMsg):
     nick = ircMsg.net.findNick(ircMsg.src)
 
     if nick.authed:
-        if nick.checkApproved("admin"):
+        if nick.user.checkApproved("admin"):
             debug.message("User " + ircMsg.src + " initiated a server hop.")
             commands.append("PRIVMSG " + ircMsg.src + " :Initiatating a server hop.")
             commands.append("QUIT Server hop by order of " + ircMsg.src + ".")
@@ -131,7 +130,7 @@ def __quitCommand(ircMsg):
     nick = ircMsg.net.findNick(ircMsg.src)
 
     if nick.authed:
-        if nick.checkApproved("admin"):
+        if nick.user.checkApproved("admin"):
             # Generally speaking we should not make a habit of invoking the
             # sendCommands function directly, and just return a list.  This is a
             # special case, since once we send the Quit command the connection will

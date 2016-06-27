@@ -99,7 +99,7 @@ def __addCmd(ircMsg):
                     commands.append(
                         "PRIVMSG " + ircMsg.src + " :Command failed, user " + ircMsg.datList[1] + " already exists.")
             else:
-                commands += basicMessages.denyMessages(ircMsg.src, thisCmd)
+                commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
         else:
             commands += basicMessages.noAuth(ircMsg.src, thisCmd)
     else:
@@ -137,7 +137,7 @@ def __delCmd(ircMsg):
                 else:
                     commands += basicMessages.noUser(ircMsg.src, thisCmd, user)
             else:
-                commands += basicMessages.denyMessages(ircMsg.src, thisCmd)
+                commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
         else:
             commands += basicMessages.noAuth(ircMsg.src, thisCmd)
     else:
@@ -145,12 +145,11 @@ def __delCmd(ircMsg):
 
     return commands
 
-
 def __formatUserLine(userObject, channel = None):
     '''Formats a single line of user information.'''
     user = userObject.user
 
-    if channel == None:
+    if channel is None:
         level = str(userObject.level)
         approved = ",".join(userObject.flags.approved)
         denied = ",".join(userObject.flags.denied)
@@ -178,7 +177,7 @@ def __identCmd(ircMsg):
         nick = ircMsg.net.findNick(ircMsg.src)
         commands = nick.auth(ircMsg.dataList[1])
     else:
-        commands = basicMessage.paramFail(ircMsg.src, thisCmd)
+        commands = basicMessages.paramFail(ircMsg.src, thisCmd)
 
     return commands
 
@@ -187,7 +186,7 @@ def __initCmd(ircMsg):
     commands = []
     thisCmd = "init"
 
-    if len(ircMsg.dataList) >= 3:
+    if len(ircMsg.dataList) == 3:
         debug.message("Initialized admin user " + ircMsg.src + " with hostmask " + ircMsg.dataList[1] + ".")
 
         userObject = User()
@@ -206,7 +205,7 @@ def __initCmd(ircMsg):
             ircMsg.net.config.init = 0
             commands.append("PRIVMSG " + ircMsg.src + " :Added user " + userObject.name + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again.")
         else:
-            debug.error("Error with 'init':  User " + user + " already exists.")
+            debug.error("Error with 'init':  User " + userObject.user + " already exists.")
             commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + userObject.name + " already exists.")
     else:
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
@@ -229,7 +228,7 @@ def __listCmd(ircMsg):
         data = ircMsg.net.users.getUsers()
 
         if len(data) > 0:
-            if channel == None:
+            if channel is None:
                 commands.append("PRIVMSG " + ircMsg.src + " :Here are the users in my database.")
 
                 for item in data:
@@ -242,7 +241,7 @@ def __listCmd(ircMsg):
 
                 for item in data:
                     itemChannel = item.findChannel(channel)
-                    if not (itemChannel == None):
+                    if not (itemChannel is None):
                         foundOne = True
                         message = __formatUserLine(item, itemChannel)
                         commands.append("PRIVMSG " + ircMsg.src + " :" + message)
