@@ -1,0 +1,2 @@
+Usage:  addhost hostmask
+Used to add a host to your own profile.

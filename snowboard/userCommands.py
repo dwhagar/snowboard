@@ -36,6 +36,8 @@ def msgTriggers(ircMsg):
         commands = __addHost(ircMsg)
     elif ircMsg.dataList[0].lower() == "adduser":
         commands = __addCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "delhost":
+        commands = __delHost(ircMsg)
     elif ircMsg.dataList[0].lower() == "deluser":
         commands = __delCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "ident":
@@ -178,7 +180,8 @@ def __addHost(ircMsg):
 
     if len(ircMsg.dataList) == 2:
         if nick.auth:
-            nick.user.hostmasks.append(ircMsg.dataList[1])
+            nick.user.hostmasks.append(ircMsg.dataList[1].lower())
+            nick.user.hostmasks = list(set(nick.user.hostmasks))
             ircMsg.net.users.updateUser(nick.user)
             nick.getPrivs()
 
@@ -197,7 +200,7 @@ def __delCmd(ircMsg):
     commands = []
     thisCmd = "deluser"
 
-    if len(ircMsg.dataList) >= 2:
+    if len(ircMsg.dataList) == 2:
         nick = ircMsg.net.findNick(ircMsg.src)
 
         user = ircMsg.dataList[1]
@@ -231,6 +234,35 @@ def __delCmd(ircMsg):
 
     return commands
 
+
+def __delHost(ircMsg):
+    '''Removes a hostname from the users own profile.'''
+    commands = []
+    thisCmd = "delhost"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+    host = ircMsg.dataList[1].lower()
+
+    if len(ircMsg.dataList) == 2:
+        if nick.auth:
+            if len(nick.user.hostmasks) > 1:
+                if host in nick.user.hostmasks:
+                    nick.user.hostmasks.remove(host)
+                ircMsg.net.users.updateUser(nick.user)
+                nick.getPrivs()
+
+                debug.info("User " + ircMsg.src + " added hotmask " + ircMsg.dataList[1] + " to their account.")
+                commands.append("PRIVMSG " + ircMsg.src + " :Successfully added hotmask " + ircMsg.dataList[
+                    1] + " to your account.")
+            else:
+                debug.info("User " + ircMsg.src + " tried to remove all the hostmasks from their account.")
+                commands.append("PRIVMSG " + ircMsg.src + " :You cannot remove all the hostmasks from your account.")
+        else:
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+    else:
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
 
 def __formatUser(dest, userObject):
     '''Takes a User object and formats output for IRC with the info.'''
@@ -423,11 +455,12 @@ def __modCmd(ircMsg):
                                 "User " + ircMsg.src + " used the 'moduser' command to change the level of " + userName + " to " + str(
                                     level) + ".")
                             commands.append(
-                                "PRIVMSG " + ircMsg.src + " :Successfully change user level of " + userName + " to " + str(
+                                "PRIVMSG " + ircMsg.src + " :Successfully changed user level of " + userName + " to " + str(
                                     level) + ".")
                         else:
                             commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
-                    elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags":
+                    elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags" or \
+                                    ircMsg.dataList[2].lower() == "setflags":
                         # Adds  or removes flags of a user.
                         flags = ircMsg.dataList[3].lower()
                         newFlags = UserFlags()
@@ -455,6 +488,11 @@ def __modCmd(ircMsg):
                                 if flag in modUser.flags.denied:
                                     modUser.flags.denied.remove(flag)
                             action = "removed"
+                        elif ircMsg.dataList[2].lower() == "setflags":
+                            # Replaces the flags of a specific user.
+                            modUser.flags.approved = newFlags.approved
+                            modUser.flags.denied = newFlags.denied
+                            action = "set"
 
                         # If there is sufficient access, then make the changes.
                         if not block:
@@ -467,10 +505,39 @@ def __modCmd(ircMsg):
                                 "PRIVMSG " + ircMsg.src + " :Successfully " + action + " flags " + flags + " on account " + userName + ".")
                         else:
                             commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
-                    elif ircMsg.dataList[2].lower() == "addhostmask" or ircMsg.dataList[2].lower() == "delhostmask":
-                        # Add or reomve a hostmask from a user.
-                        # TODO: allow for adding or removing of hostmasks.
-                        pass
+                    elif ircMsg.dataList[2].lower() == "addhost" or ircMsg.dataList[2].lower() == "delhost" or \
+                                    ircMsg.dataList[2].lower() == "sethost":
+                        # Add, reomve, or replace the hostmasks from a user.
+                        hostmasks = ircMsg.dataList[3].lower().split(',')
+                        if ircMsg.dataList[2].lower() == "addhost":
+                            modUser.hostmasks += hostmasks
+                            modUser.hostmsks = list(set(modUser.hostmasks))
+                        elif ircMsg.dataList[2].lower() == "delhost":
+                            for host in hostmasks:
+                                if host in modUser.hostmasks:
+                                    modUser.hostmasks.remove(host)
+                        elif ircMsg.dataList[2].lower() == "sethost":
+                            modUser.hostmasks = hostmasks
+                            modUser.hostmasks = list(set(modUser.hostmasks))
+
+                        # Check for privleges.
+                        if nick.user.level > modUser.level:
+                            if len(modUser.hostmasks) > 0:
+                                ircMsg.net.users.updateUser(modUser)
+                                ircMsg.net.resetPrivs(uid)
+                                debug.message(
+                                    "User " + ircMsg.src + " used the 'moduser' command to hotsmasks of " + userName + " to " + ",".join(
+                                        modUser.hostmasks) + ".")
+                                commands.append(
+                                    "PRIVMSG " + ircMsg.src + " :Successfully changed hostmasks " + userName + " to " + ",".join(
+                                        modUser.hostmasks) + ".")
+                            else:
+                                debug.info(
+                                    "User " + ircMsg.src + " tried to remove all hostmasks from user " + userName + ".")
+                                commands.append(
+                                    "PRIVMSG " + ircMsg.src + " :You cannot remove all hostmasks from a user.")
+                        else:
+                            commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
                     else:
                         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
                 else:
