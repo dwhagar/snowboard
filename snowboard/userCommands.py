@@ -32,6 +32,8 @@ def msgTriggers(ircMsg):
 
     if ircMsg.dataList[0].lower() == "init" and ircMsg.net.config.init > 0:
         commands = __initCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "addhost":
+        commands = __addHost(ircMsg)
     elif ircMsg.dataList[0].lower() == "adduser":
         commands = __addCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "deluser":
@@ -42,6 +44,8 @@ def msgTriggers(ircMsg):
         commands = __listUsersCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "moduser":
         commands = __modCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "userinfo":
+        commands = __userInfo(ircMsg)
 
     return commands
 
@@ -164,6 +168,30 @@ def __addCmd(ircMsg):
 
     return commands
 
+
+def __addHost(ircMsg):
+    '''Adds a hostmask to the users own account.'''
+    commands = []
+    thisCmd = "addhost"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+
+    if len(ircMsg.dataList) == 2:
+        if nick.auth:
+            nick.user.hostmasks.append(ircMsg.dataList[1])
+            ircMsg.net.users.updateUser(nick.user)
+            nick.getPrivs()
+
+            debug.info("User " + ircMsg.src + " added hotmask " + ircMsg.dataList[1] + " to their account.")
+            commands.append(
+                "PRIVMSG " + ircMsg.src + " :Successfully added hotmask " + ircMsg.dataList[1] + " to your account.")
+        else:
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+    else:
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
+
 def __delCmd(ircMsg):
     '''Removes a user from the user database.'''
     commands = []
@@ -200,6 +228,38 @@ def __delCmd(ircMsg):
             commands += basicMessages.noAuth(ircMsg.src, thisCmd)
     else:
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
+
+
+def __formatUser(dest, userObject):
+    '''Takes a User object and formats output for IRC with the info.'''
+    commands = []
+    messageCmd = "PRIVMSG " + dest + " :"
+
+    # Basic information.
+    commands.append(messageCmd + "Username: " + userObject.user)
+    commands.append(messageCmd + "Hostmask(s): " + userObject.saveHostmasks())
+
+    # Add all global flags to the text and user global level.
+    message = messageCmd + "Level: " + str(userObject.level)
+
+    if not (userObject.flags.approved == []):
+        message += "; Approved Flags: " + ",".join(userObject.flags.approved)
+    if not (userObject.flags.approved == []):
+        message += "; Denied Flags: " + ",".join(userObject.flags.denied)
+
+    commands.append(message)
+
+    # Now for the channels.
+    if not (userObject.channels == []):
+        for channel in userObject.channels:
+            message = messageCmd + "Channel:  " + channel.name + "; User Level:  " + str(channel.level)
+
+            if not (channel.flags.approved == []):
+                message += "; Approved Flags:  " + ",".join(channel.flags.approved)
+            if not (channel.flags.denied == []):
+                message += "; Denied Flags:  " + ",".join(channel.flags.denied)
 
     return commands
 
@@ -369,7 +429,7 @@ def __modCmd(ircMsg):
                             commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
                     elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags":
                         # Adds  or removes flags of a user.
-                        flags = ircMsg.dataList[3]
+                        flags = ircMsg.dataList[3].lower()
                         newFlags = UserFlags()
                         newFlags.toData(flags)
 
@@ -407,6 +467,10 @@ def __modCmd(ircMsg):
                                 "PRIVMSG " + ircMsg.src + " :Successfully " + action + " flags " + flags + " on account " + userName + ".")
                         else:
                             commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+                    elif ircMsg.dataList[2].lower() == "addhostmask" or ircMsg.dataList[2].lower() == "delhostmask":
+                        # Add or reomve a hostmask from a user.
+                        # TODO: allow for adding or removing of hostmasks.
+                        pass
                     else:
                         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
                 else:
@@ -417,5 +481,31 @@ def __modCmd(ircMsg):
             commands += basicMessages.noAuth(ircMsg.src, thisCmd)
     else:
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
+
+
+def __userInfo(ircMsg):
+    '''Gets information on a user and displays it.'''
+    commands = []
+    thisCmd = "userinfo"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+
+    if len(ircMsg.dataList) == 2:
+        if nick.authed:
+            userName = ircMsg.dataList[1]
+            uid = ircMsg.net.users.matchUser(userName)
+
+            if not (uid is None):
+                user = ircMsg.net.users.userInformation(uid)
+                debug.info("User " + ircMsg.src + " requested user information on " + userName + ".")
+                commands += __formatUser(ircMsg.src, user)
+            else:
+                basicMessages.noUser(ircMsg.src, thisCmd, userName)
+        else:
+            basicMessages.noAuth(ircMsg.src, thisCmd)
+    else:
+        basicMessages.paramFail(ircMsg.src, thisCmd)
 
     return commands

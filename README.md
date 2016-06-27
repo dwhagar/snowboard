@@ -13,25 +13,41 @@ All we have right now is to-do, as we're just starting, so this is going to be p
  * Leverage use of NickServ on supported networks
  * NickServ or Q/X/Z ID Support for Ops
 * Finish basic user management suite
- * removeuser command
- * modifyuser command
- * searchusers command
+ * searchusers
+ * whoami (to get ones own username)
+ * whois (to get the username of a nick)
+ * ident support for unrecognized host (username/password authe)
 * Basic channel management suite
  * op/deop
  * voice/devoice
  * ban/unban
  * kick
  * invite
+ * topic keeper
+* learn module
+* seen module
 
 See Issues for more to-dos.
 
 ## Version History
+v0.0.2 - Early pre-Alpha
+* Unrelased version.
+* Added addhost command.
+* Added userinfo command.
+
 v0.0.1 - Early pre-Alpha
 * Unreleased version.
 * Still not operational as a full-time bot.
 * User Management under development.
  * adduer command written
+ * ident command written
+ * deluser command written
  * listusers command written
+ * moduser command written
+* New quit command written
+* Sever and CTCP Ping Support
+* Ping request support ('pingme' / 'ping me' command)
 * Connection self-managed.
 * Timer framework in place.
 * Scripting framework in place.
+* Complete rewrite of database architecture

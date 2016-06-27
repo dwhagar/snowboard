@@ -94,7 +94,7 @@ class User:
         else:
             line = ""
 
-        return line
+        return line.lower()
 
     def verify(self, password):
         '''Verifies a password.'''

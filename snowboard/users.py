@@ -121,7 +121,7 @@ class Users:
             uid, masks = row
             maskList = masks.split(',')
             for mask in maskList:
-                if re.search(self.__convertWild(mask), hostmask):
+                if re.search(self.__convertWild(mask), hostmask, flags = re.IGNORECASE):
                     result = uid
                     break
             if not (result is None):
