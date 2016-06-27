@@ -35,6 +35,8 @@ class Nick:
         self.users = users
         self.authed = False
         self.openWHO = False
+        self.pingOut = 0
+        self.pingDest = None
 
     def auth(self, password):
         '''Authenticates a user against the user database.'''
