@@ -1,15 +1,15 @@
 # This file is part of snowboard.
-# 
+#
 # snowboard is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # snowboard is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -37,58 +37,66 @@ def channelScripts(ircMsg):
     '''Executes scripts that should trigger from channel content.'''
     cmds = []
     cmds += basicCommands.channelTriggers(ircMsg)
-    
+
     return cmds
-    
+
+
 def messageScripts(ircMsg):
     '''Executes scripts that should trigger from private message content.'''
     cmds = []
     cmds += basicCommands.msgTriggers(ircMsg)
     cmds += userCommands.msgTriggers(ircMsg)
-    
+
     return cmds
 
 def privActionScripts(ircMsg):
     '''Executes scripts that should be triggered by a private action.'''
     cmds = []
-    
+
     return cmds
-    
+
 
 def privNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a private notice message.'''
     cmds = []
-    
+
     cmds += basicCommands.noticeTriggers(ircMsg)
-    
+
     return cmds
-    
+
+
 def chanActionScripts(ircMsg):
     '''Executes scripts that should be triggered by public action.'''
     cmds = []
-    
+
     return cmds
-    
+
+
 def chanNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a public notice message.'''
     cmds = []
-    
+
     return cmds
-    
+
+
 def ctcpScripts(ircMsg):
     '''Executes scripts that should be triggered by a CTCP message.'''
     cmds = []
-    
+
+    cmds += basicCommands.ctcpTriggers(ircMsg)
+
     return cmds
-    
+
+
 def rawMessages(net, message):
     '''Executes scripts that process raw messages from the server.'''
     cmds = []
-    
+
     return cmds
-    
+
+
 def timers(net, time):
     '''Passes the current time onto a series of timers.'''
     cmds = []
-    
+
     return cmds
