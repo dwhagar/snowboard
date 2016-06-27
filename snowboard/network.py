@@ -24,6 +24,7 @@ import time
 import random
 
 from . import debug
+from . import ctcpGlobals
 from .connection import Connection
 from .channel import Channel
 from .nick import Nick
@@ -613,11 +614,6 @@ class Network:
 
     def sendCommands(self, list):
         '''Sends a list of commands to the server.'''
-        ctcpChar = '\x01'
-        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
-        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
-
-        # Encode any CTCP messages.
         encodedCommands = []
 
         for command in list:
@@ -625,11 +621,13 @@ class Network:
             cmdList = command.split()
 
             if len(cmdList) > 0:
-                if cmdList[0].upper() in ctcpQueries:
-                    command = "PRIVMSG " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
-                elif cmdList[0].upper() in ctcpReplies:
-                    cmdList[0] = ctcpQueries[ctcpReplies.index(cmdList[0]) + 1]
-                    command = "NOTICE " + cmdList[1] + " :" + ctcpChar + cmdList[0].upper() + " " + " ".join(cmdList[2:]).strip(':') + ctcpChar
+                if cmdList[0].upper() in ctcpGlobals.queries:
+                    command = "PRIVMSG " + cmdList[1] + " :" + ctcpGlobals.char + cmdList[0].upper() + " " + " ".join(
+                        cmdList[2:]).strip(':') + ctcpGlobals.char
+                elif cmdList[0].upper() in ctcpGlobals.replies:
+                    cmdList[0] = ctcpGlobals.queries[ctcpGlobals.replies.index(cmdList[0]) + 1]
+                    command = "NOTICE " + cmdList[1] + " :" + ctcpGlobals.char + cmdList[0].upper() + " " + " ".join(
+                        cmdList[2:]).strip(':') + ctcpGlobals.char
                 elif cmdList[0].upper() == "WHO":
                     if command in self.queue:
                         noAppend = True
@@ -673,11 +671,7 @@ class Network:
 
     def __processCTCP(self, data):
         '''Correctly handle CTCP message and responses.'''
-        ctcpChar = '\x01'
-        ctcpQueries = ["ACTION" ,"VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]
-        ctcpReplies = ["VERSIONREPLY", "SOURCEREPLY", "PINGREPLY", "TIMEREPLY", "USERREPLY", "CLIENTREPLY"]
-
-        data = data.replace(ctcpChar, '')
+        data = data.replace(ctcpGlobals.char, '')
         dataList = data.split()
 
         if dataList[1] == "PRIVMSG":
@@ -687,8 +681,8 @@ class Network:
 
         ctcpCmd = dataList[3].strip(':')
 
-        if ctcpReply and ctcpCmd in ctcpQueries:
-            ctcpCmd = ctcpReplies[ctcpQueries.index(ctcpCmd) - 1]
+        if ctcpReply and ctcpCmd in ctcpGlobals.queries:
+            ctcpCmd = ctcpGlobals.replies[ctcpGlobals.queries.index(ctcpCmd) - 1]
 
         if len(dataList) > 4:
             data = dataList[0] + " " + ctcpCmd + " :" + " ".join(dataList[4:])

@@ -26,19 +26,34 @@ from .user import User
 from .userChannel import UserChannel
 
 def msgTriggers(ircMsg):
-    '''Process triggers for basic commands.'''
+    '''Process triggers for user commands.'''
     commands = []
 
     if ircMsg.dataList[0].lower() == "init" and ircMsg.net.config.init > 0:
         commands = __initCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "addaccess":
+        commands = __addAccess(ircMsg)
     elif ircMsg.dataList[0].lower() == "adduser":
         commands = __addCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "delaccess":
+        commands = __delAccess(ircMsg)
     elif ircMsg.dataList[0].lower() == "deluser":
         commands = __delCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "ident":
         commands = __identCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "listusers":
         commands = __listUsersCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "moduser":
+        commands = __modCmd(ircMsg)
+
+    return commands
+
+
+def __addAccess(ircMsg):
+    '''Adds access to a channel for an existing user.'''
+    commands = []
+
+    # TODO: Create function to add user access to a channel.
 
     return commands
 
@@ -161,6 +176,15 @@ def __addCmd(ircMsg):
 
     return commands
 
+
+def __delAccess(ircMsg):
+    '''Removes access to a channel from an existing user.'''
+    commands = []
+
+    # TODO: Create function to remove user access from a channel.
+
+    return commands
+
 def __delCmd(ircMsg):
     '''Removes a user from the user database.'''
     commands = []
@@ -276,7 +300,6 @@ def __initCmd(ircMsg):
 
     return commands
 
-
 def __listUsersCmd(ircMsg):
     '''Provides a list of users.'''
     commands = []
@@ -324,5 +347,14 @@ def __listUsersCmd(ircMsg):
             commands.append("PRIVMSG " + ircMsg.src + " :There are no users on the user list.  I think something went wrong!")
     else:
         commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+
+    return commands
+
+
+def __modCmd(ircMsg):
+    '''Modifies a user already in the database.'''
+    commands = []
+
+    # TODO: Create function to modify a users privleges.
 
     return commands

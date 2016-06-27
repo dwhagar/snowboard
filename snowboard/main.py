@@ -34,6 +34,7 @@ from . import network
 from . import debug
 from . import scripts
 from . import ircMessage
+from . import ctcpGlobals
 
 def __parse_args(argv, cfg):
     """Parse command-line arguments."""
@@ -152,11 +153,11 @@ def __get_commands(raw, net):
         # Additionally, if the hostname changes, then flag the nick as
         # not authenticated.
         if nick.host == "":
-            nick.host == ircMsg.srcHost
+            nick.host = ircMsg.srcHost
             nick.authed = False
             nick.clearPrivs()
-        elif not nick.host == ircMsg.srcHost:
-            nick.host == ircMsg.srcHost
+        elif not (nick.host == ircMsg.srcHost):
+            nick.host = ircMsg.srcHost
             nick.authed = False
             nick.clearPrivs()
 
@@ -168,7 +169,9 @@ def __get_commands(raw, net):
 
     # Send the message to be processed by the scripts.
     commands += scripts.rawMessages(net, raw)
-    commands += scripts.ctcpScripts(ircMsg)
+
+    if ircMsg.command in ctcpGlobals.queries or ircMsg.command in ctcpGlobals.replies:
+        commands += scripts.ctcpScripts(ircMsg)
 
     if toChannel:
         if cmd == "NOTICE":
@@ -186,7 +189,6 @@ def __get_commands(raw, net):
             commands += scripts.privActionScripts(ircMsg)
 
     return commands
-
 
 def main(argv):
     # Get the configuration from the file specified by the command line options.

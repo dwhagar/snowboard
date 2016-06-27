@@ -31,6 +31,17 @@ def channelTriggers(ircMsg):
         data = " ".join(ircMsg.dataList[1:])
         if data.lower() == "who are you?":
             commands = __identifySelf(ircMsg)
+    elif ircMsg.data.lower() == "pingme" or ircMsg.data.lower() == "ping me":
+        commands = __pingMe(ircMsg)
+
+    return commands
+
+def ctcpTriggers(ircMsg):
+    '''Processes triggers for CTCP replies.'''
+    commands = []
+
+    if ircMsg.command == "PINGREPLY":
+        commands = __pingBack(ircMsg)
 
     return commands
 
@@ -120,6 +131,35 @@ def __identifySelf(ircMsg):
         botnick = ircMsg.net.botnick
 
     commands.append("PRIVMSG " + dest + " :I am " + botnick + ", a Snowboard bot.  Project Snowboard can be found at https://github.com/dwhagar/snowboard where my code is under development and documentation can be found.")
+
+    return commands
+
+def __pingBack(ircMsg):
+    '''Processes a return ping, relays the lag back.'''
+    commands = []
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+    if nick.pingOut > 0:
+        lagTime = time.time() - nick.pingOut
+        lagTime = round(lagTime, 4)
+
+        commands.append(
+            "PRIVMSG " + nick.pingDest + " :Your current ping is " + str(lagTime) + " seconds " + ircMsg.src + ".")
+
+        # We got out ping, don't keep looking.
+        nick.pingOut = 0
+        nick.pingDest = None
+
+    return commands
+
+def __pingMe(ircMsg):
+    '''Pings a user and sends them back the results.'''
+    commands = []
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+    nick.pingOut = time.time()
+    nick.pingDest = ircMsg.dest
+    commands.append("PING " + ircMsg.src + " :" + str(time.time()))
 
     return commands
 
