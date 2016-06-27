@@ -1,0 +1,2 @@
+Usage:  moduser user type value
+Type is one of the following:  lavel, addflags, delflags

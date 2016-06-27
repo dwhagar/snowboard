@@ -52,7 +52,8 @@ def denyMessage(src, cmd):
     commands = []
 
     debug.message("Nick " + src + " tried to use the '" + cmd + "' command, but does not have sufficient access.")
-    commands.append("PRIVMSG " + src + " :You cannot access to the '" + cmd + "' command.")
+    commands.append(
+        "PRIVMSG " + src + " :You do not have sufficient access to the '" + cmd + "' command.  This may be due to access restrictions or attempting to set flags or a level higher than your own.")
 
     return commands
 
@@ -91,5 +92,17 @@ def paramFail(src, cmd):
     commands.append("PRIVMSG " + src + " :You did not provide enough parameters for the '" + cmd + "' command.")
     # Automatically add on command help.
     commands += cmdHelp(src, cmd)
+
+    return commands
+
+
+def valError(src, cmd, field, val, required):
+    '''Standard message for a value related error.'''
+
+    debug.info(
+        "Nick " + src + " tried to use the '" + cmd + "' command but specified '" + val + "' for '" + field + "', which is not a " + required + ".")
+    commands = [
+        "PRIVMSG " + src + " :Error:  " + cmd + ":  " + field + " needs to be a " + required + " (was given " + str(
+            val) + ")."]
 
     return commands
