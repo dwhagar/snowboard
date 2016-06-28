@@ -36,6 +36,8 @@ def msgTriggers(ircMsg):
         commands = __addHost(ircMsg)
     elif ircMsg.dataList[0].lower() == "adduser":
         commands = __addCmd(ircMsg)
+    elif ircMsg.dataList[0].lower() == "chpass":
+        commands = __passwordCmd(ircMsg)
     elif ircMsg.dataList[0].lower() == "delhost":
         commands = __delHost(ircMsg)
     elif ircMsg.dataList[0].lower() == "deluser":
@@ -170,7 +172,6 @@ def __addCmd(ircMsg):
 
     return commands
 
-
 def __addHost(ircMsg):
     '''Adds a hostmask to the users own account.'''
     commands = []
@@ -233,7 +234,6 @@ def __delCmd(ircMsg):
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
 
     return commands
-
 
 def __delHost(ircMsg):
     '''Removes a hostname from the users own profile.'''
@@ -538,6 +538,16 @@ def __modCmd(ircMsg):
                                     "PRIVMSG " + ircMsg.src + " :You cannot remove all hostmasks from a user.")
                         else:
                             commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+                    elif ircMsg.dataList[2].lower() == "password":
+                        # Allows someone to reset another users password.
+                        if nick.user.level > modUser.level:
+                            modUser.pwHash = passwordTools.passwordHash(ircMsg.dataList[3])
+                            ircMsg.net.users.updateUser(modUser)
+                            ircMsg.net.resetPrivs(uid)
+                            debug.message("User " + ircMsg.src + " set a new password for " + userName + ".")
+                            commands.append("PRIVMSG " + ircMsg.src + " :Passworf for " + userName + " has been set.")
+                        else:
+                            commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
                     else:
                         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
                 else:
@@ -551,6 +561,27 @@ def __modCmd(ircMsg):
 
     return commands
 
+
+def __passwordCmd(ircMsg):
+    '''Allows a user to change their own password.'''
+    commands = []
+    thisCmd = "chpass"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+
+    if len(ircMsg.dataList) == 2:
+        if nick.authed:
+            newpass = ircMsg.dataList[1]
+            nick.user.pwHash = passwordTools.passwordHash(newpass)
+            ircMsg.net.users.updateUser(nick.user)
+            debug.info("User " + ircMsg.src + " updated their password.")
+            commands.append("PRIVMSG " + ircMsg.src + " :Your password has been updated.")
+        else:
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+    else:
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
 
 def __userInfo(ircMsg):
     '''Gets information on a user and displays it.'''

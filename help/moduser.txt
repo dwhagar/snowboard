@@ -1,3 +1,3 @@
 Usage:  moduser user type value
-Type is one of the following:  lavel, addflags, delflags, setflags, addhost, delhost, sethost
-Modified an existing user account.
+Type is one of the following:  lavel, addflags, delflags, setflags, addhost, delhost, sethost, and password
+Modified the attributes of an existing user account.
