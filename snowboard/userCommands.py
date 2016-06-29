@@ -196,6 +196,104 @@ def __addHost(ircMsg):
 
     return commands
 
+
+def __changeFlags(ircMsg, modUser, nick, thisCmd, nickChannel = None, modChannel = None):
+    '''Add or remove flags from a user profile.'''
+    commands = []
+
+    flags = ircMsg.dataList[3].lower()
+    newFlags = UserFlags()
+    newFlags.toData(flags)
+
+    if ircMsg.dataList[2].lower() == "addflags":
+        # Add the new flags to the user object.
+        if modChannel is None:
+            modUser.flags.approved += newFlags.approved
+            modUser.flags.denied += newFlags.denied
+        else:
+            modChannel.flags.approved += newFlags.approved
+            modChannel.flags.denied += newFlags.approved
+        action = "added"
+    elif ircMsg.dataList[2].lower() == "delflags":
+        # Remove the new flags from the user object.
+        if modChannel is None:
+            for flag in newFlags.approved:
+                if flag in modUser.flags.approved:
+                    modUser.flags.approved.remove(flag)
+            for flag in newFlags.denied:
+                if flag in modUser.flags.denied:
+                    modUser.flags.denied.remove(flag)
+        else:
+            for flag in newFlags.approved:
+                if flag in modChannel.flags.approved:
+                    modChannel.flags.approved.remove(flag)
+            for flag in newFlags.denied:
+                if flag in modChannel.flags.denied:
+                    modChannel.flags.denied.remove(flag)
+        action = "removed"
+    elif ircMsg.dataList[2].lower() == "setflags":
+        # Replaces the flags of a specific user.
+        if modChannel is None:
+            modUser.flags.approved = newFlags.approved
+            modUser.flags.denied = newFlags.denied
+        else:
+            modChannel.flags.approved = newFlags.approved
+            modChannel.flags.denied = newFlags.denied
+        action = "set"
+
+    # Make sure there is sufficient access to modify.
+    blocked = __levelBlock(-1, nick, modUser, nickChannel, modChannel)
+
+    # If there is sufficient access, then make the changes.
+    if not blocked:
+        modUser.flags.cleanFlags()
+        ircMsg.net.users.updateUser(modUser)
+        ircMsg.net.resetPrivs(modUser.uid)
+        debug.message(
+            "User " + ircMsg.src + " used the 'moduser' command to " + action + " flags on account " + modUser.name + ".")
+        commands.append(
+            "PRIVMSG " + ircMsg.src + " :Successfully " + action + " flags " + flags + " on account " + modUser.name + ".")
+    else:
+        commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+
+    return commands
+
+
+def __changeHosts(ircMsg, modUser, nick, thisCmd):
+    '''Changes the hosts associated with a user profile.'''
+    commands = []
+
+    hostmasks = ircMsg.dataList[3].lower().split(',')
+    if ircMsg.dataList[2].lower() == "addhost":
+        modUser.hostmasks += hostmasks
+        modUser.hostmasks = list(set(modUser.hostmasks))
+    elif ircMsg.dataList[2].lower() == "delhost":
+        for host in hostmasks:
+            if host in modUser.hostmasks:
+                modUser.hostmasks.remove(host)
+    elif ircMsg.dataList[2].lower() == "sethost":
+        modUser.hostmasks = hostmasks
+        modUser.hostmasks = list(set(modUser.hostmasks))
+
+    # Check for privileges.
+    if nick.user.level > modUser.level:
+        if len(modUser.hostmasks) > 0:
+            ircMsg.net.users.updateUser(modUser)
+            ircMsg.net.resetPrivs(modUser.uid)
+            debug.message(
+                "User " + ircMsg.src + " used the 'moduser' command to hostmasks of " + modUser.name + " to " + ",".join(
+                    modUser.hostmasks) + ".")
+            commands.append(
+                "PRIVMSG " + ircMsg.src + " :Successfully changed hostmasks " + modUser.name + " to " + ",".join(
+                    modUser.hostmasks) + ".")
+        else:
+            debug.info("User " + ircMsg.src + " tried to remove all hostmasks from user " + modUser.name + ".")
+            commands.append("PRIVMSG " + ircMsg.src + " :You cannot remove all hostmasks from a user.")
+    else:
+        commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+
+    return commands
+
 def __delCmd(ircMsg):
     '''Removes a user from the user database.'''
     commands = []
@@ -263,6 +361,22 @@ def __delHost(ircMsg):
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
 
     return commands
+
+
+def __flagBlock(flag, nick, nickChannel = None):
+    '''Determines if flags should block a user from access to a command.'''
+    if not (nickChannel is None):
+        chanApproved = nickChannel.checkApproved(flag)
+        chanDenied = nickChannel.checkDenied(flag)
+    else:
+        chanApproved = False
+        chanDenied = False
+
+    globalApproved = nick.user.checkApproved(flag)
+
+    blocked = (not (chanApproved or globalApproved)) or chanDenied
+
+    return blocked
 
 def __formatUser(dest, userObject):
     '''Takes a User object and formats output for IRC with the info.'''
@@ -371,6 +485,22 @@ def __initCmd(ircMsg):
 
     return commands
 
+
+def __levelBlock(level, nick, modUser, nickChannel = None, modChannel = None):
+    '''Determines if level should block a user from access to a command.'''
+    # When not looking to change someone's level, use -1 for level to disable
+    # that check.
+    if modChannel is None:
+        blocked = (nick.user.level <= modUser.level) or (nick.user.level <= level)
+    else:
+        if nickChannel is None:
+            blocked = (nick.user.level <= modChannel.level) or (nick.user.level <= level)
+        else:
+            blocked = ((nickChannel.level <= modChannel.level) or (nickChannel.level <= level)) and (
+            nickChannel.level > 0)
+
+    return blocked
+
 def __listUsersCmd(ircMsg):
     '''Provides a list of users.'''
     commands = []
@@ -440,104 +570,13 @@ def __modCmd(ircMsg):
                     # ModUser Commands
                     if ircMsg.dataList[2].lower() == "level":
                         # Adjusts the level of a user.
-                        try:
-                            level = int(ircMsg.dataList[3])
-                        except ValueError:
-                            commands += basicMessages.valError(ircMsg.src, thisCmd, "level", ircMsg.dataList[3],
-                                                               "number between 0 and 255")
-                            return commands
-
-                        if nick.user.level > level:
-                            modUser.level = level
-                            ircMsg.net.users.updateUser(modUser)
-                            ircMsg.net.resetPrivs(uid)
-                            debug.message(
-                                "User " + ircMsg.src + " used the 'moduser' command to change the level of " + userName + " to " + str(
-                                    level) + ".")
-                            commands.append(
-                                "PRIVMSG " + ircMsg.src + " :Successfully changed user level of " + userName + " to " + str(
-                                    level) + ".")
-                        else:
-                            commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+                        commands += __setLevel(ircMsg, nick, modUser, thisCmd)
                     elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags" or \
                                     ircMsg.dataList[2].lower() == "setflags":
-                        # Adds  or removes flags of a user.
-                        flags = ircMsg.dataList[3].lower()
-                        newFlags = UserFlags()
-                        newFlags.toData(flags)
-
-                        # Make sure there is sufficient access to modify.
-                        block = False
-                        for flag in newFlags.approved:
-                            if not nick.user.checkApproved(flag):
-                                block = True
-                        if nick.user.level <= modUser.level:
-                            block = True
-
-                        if ircMsg.dataList[2].lower() == "addflags":
-                            # Add the new flags to the user object.
-                            modUser.flags.approved += newFlags.approved
-                            modUser.flags.denied += newFlags.denied
-                            action = "added"
-                        elif ircMsg.dataList[2].lower() == "delflags":
-                            # Remove the new flags from the user object.
-                            for flag in newFlags.approved:
-                                if flag in modUser.flags.approved:
-                                    modUser.flags.approved.remove(flag)
-                            for flag in newFlags.denied:
-                                if flag in modUser.flags.denied:
-                                    modUser.flags.denied.remove(flag)
-                            action = "removed"
-                        elif ircMsg.dataList[2].lower() == "setflags":
-                            # Replaces the flags of a specific user.
-                            modUser.flags.approved = newFlags.approved
-                            modUser.flags.denied = newFlags.denied
-                            action = "set"
-
-                        # If there is sufficient access, then make the changes.
-                        if not block:
-                            modUser.flags.cleanFlags()
-                            ircMsg.net.users.updateUser(modUser)
-                            ircMsg.net.resetPrivs(uid)
-                            debug.message(
-                                "User " + ircMsg.src + " used the 'moduser' commnad to " + action + " flags on account " + userName + ".")
-                            commands.append(
-                                "PRIVMSG " + ircMsg.src + " :Successfully " + action + " flags " + flags + " on account " + userName + ".")
-                        else:
-                            commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+                        commands += __changeFlags(ircMsg, nick, modUser, thisCmd)
                     elif ircMsg.dataList[2].lower() == "addhost" or ircMsg.dataList[2].lower() == "delhost" or \
                                     ircMsg.dataList[2].lower() == "sethost":
-                        # Add, reomve, or replace the hostmasks from a user.
-                        hostmasks = ircMsg.dataList[3].lower().split(',')
-                        if ircMsg.dataList[2].lower() == "addhost":
-                            modUser.hostmasks += hostmasks
-                            modUser.hostmsks = list(set(modUser.hostmasks))
-                        elif ircMsg.dataList[2].lower() == "delhost":
-                            for host in hostmasks:
-                                if host in modUser.hostmasks:
-                                    modUser.hostmasks.remove(host)
-                        elif ircMsg.dataList[2].lower() == "sethost":
-                            modUser.hostmasks = hostmasks
-                            modUser.hostmasks = list(set(modUser.hostmasks))
-
-                        # Check for privleges.
-                        if nick.user.level > modUser.level:
-                            if len(modUser.hostmasks) > 0:
-                                ircMsg.net.users.updateUser(modUser)
-                                ircMsg.net.resetPrivs(uid)
-                                debug.message(
-                                    "User " + ircMsg.src + " used the 'moduser' command to hotsmasks of " + userName + " to " + ",".join(
-                                        modUser.hostmasks) + ".")
-                                commands.append(
-                                    "PRIVMSG " + ircMsg.src + " :Successfully changed hostmasks " + userName + " to " + ",".join(
-                                        modUser.hostmasks) + ".")
-                            else:
-                                debug.info(
-                                    "User " + ircMsg.src + " tried to remove all hostmasks from user " + userName + ".")
-                                commands.append(
-                                    "PRIVMSG " + ircMsg.src + " :You cannot remove all hostmasks from a user.")
-                        else:
-                            commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+                        commands += __changeHosts(ircMsg, nick, modUser, thisCmd)
                     elif ircMsg.dataList[2].lower() == "password":
                         # Allows someone to reset another users password.
                         if nick.user.level > modUser.level:
@@ -545,7 +584,7 @@ def __modCmd(ircMsg):
                             ircMsg.net.users.updateUser(modUser)
                             ircMsg.net.resetPrivs(uid)
                             debug.message("User " + ircMsg.src + " set a new password for " + userName + ".")
-                            commands.append("PRIVMSG " + ircMsg.src + " :Passworf for " + userName + " has been set.")
+                            commands.append("PRIVMSG " + ircMsg.src + " :Password for " + userName + " has been set.")
                         else:
                             commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
                     else:
@@ -556,11 +595,55 @@ def __modCmd(ircMsg):
                 commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
         else:
             commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+    elif len(ircMsg.dataList) == 5:
+        if nick.authed:
+            channelName = ircMsg.dataList[4]
+            ircChannel = ircMsg.net.findChannel(channelName)
+
+            if not (ircChannel is None):
+                nickChannel = nick.user.findChannel(channelName)
+
+                blocked = __flagBlock("usermanager", nick, nickChannel)
+
+                if not blocked:
+                    # First we have to get the user for which we want to modify.
+                    userName = ircMsg.dataList[1].lower()
+                    uid = ircMsg.net.users.matchUser(userName)
+                    modUser = ircMsg.net.users.userInformation(uid)
+
+                    modChannel = modUser.findChannel(channelName)
+
+                    if not (uid is None):
+                        if modChannel is None:
+                            # Rather than error out, we will add the channel
+                            # to the user if it doesn't already exist.
+                            modChannel = UserChannel()
+                            modChannel.name = channelName
+                            modUser.channels.append(modChannel)
+
+                        # ModUser Channel Commands
+                        if ircMsg.dataList[2].lower() == "level":
+                            # Adjusts the level of a user on a channel.
+                            commands += __setLevel(ircMsg, nick, modUser, thisCmd, nickChannel, modChannel)
+                        elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags" or \
+                                        ircMsg.dataList[2].lower() == "setflags":
+                            # Adjusts the flags of a user on a channel.
+                            commands += __changeFlags(ircMsg, nick, modUser, thisCmd, nickChannel, modChannel)
+                        else:
+                            commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+                    else:
+                        commands += basicMessages.noUser(ircMsg.src, thisCmd, userName)
+                else:
+                    commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+            else:
+                commands += basicMessages.noChannel(ircMsg.src, thisCmd, channelName)
+        else:
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+
     else:
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
 
     return commands
-
 
 def __passwordCmd(ircMsg):
     '''Allows a user to change their own password.'''
@@ -580,6 +663,39 @@ def __passwordCmd(ircMsg):
             commands += basicMessages.noAuth(ircMsg.src, thisCmd)
     else:
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
+
+
+def __setLevel(ircMsg, nick, modUser, thisCmd, nickChannel = None, modChannel = None):
+    '''Adjusts a user level.'''
+    commands = []
+
+    level = ircMsg.dataList[3]
+
+    try:
+        level = int(level)
+    except ValueError:
+        commands += basicMessages.valError(nick.name, thisCmd, "level", level, "number between 0 and 255")
+        return commands
+
+    blocked = __levelBlock(level, nick, modUser, nickChannel, modChannel)
+
+    if not blocked:
+        if modChannel is None:
+            modUser.level = level
+        else:
+            modChannel.level = level
+
+        ircMsg.net.users.updateUser(modUser)
+        ircMsg.net.resetPrivs(modUser.uid)
+        debug.message(
+            "User " + ircMsg.src + " used the 'moduser' command to change the level of " + modUser.user + " to " + str(
+                level) + ".")
+        commands.append("PRIVMSG " + ircMsg.src + " :Successfully changed user level of " + modUser.user + " to " + str(
+            level) + ".")
+    else:
+        commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
 
     return commands
 

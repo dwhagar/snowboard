@@ -42,7 +42,7 @@ class UserChannel:
 
         self.name = properties[0].lower()
         self.level = int(properties[1])
-        self.flags.toData(data[2].lower())
+        self.flags.toData(properties[2].lower())
 
     def toString(self):
         '''Encodes the object properties to a string.'''
