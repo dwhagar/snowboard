@@ -378,6 +378,22 @@ def __flagBlock(flag, nick, nickChannel = None):
 
     return blocked
 
+
+def __formatChannels(dest, channels):
+    '''Takes a list of UserChannel objects and formats them for output.'''
+    commands = []
+    messageCmd = "PRIVMSG " + dest + " :"
+
+    for channel in channels:
+        message = "Channel: " + channel.name + "; Level: " + str(channel.level)
+        if len(channel.flags.approved) > 0:
+            message += "; Approved Flags: " + ",".join(channel.flags.approved)
+        if len(channel.flags.denied) > 0:
+            message += "; Denied Flags: " + ",".join(channel.flags.denied)
+        commands.append(messageCmd + message)
+
+    return commands
+
 def __formatUser(dest, userObject):
     '''Takes a User object and formats output for IRC with the info.'''
     commands = []
@@ -398,14 +414,8 @@ def __formatUser(dest, userObject):
     commands.append(message)
 
     # Now for the channels.
-    if not (userObject.channels == []):
-        for channel in userObject.channels:
-            message = messageCmd + "Channel:  " + channel.name + "; User Level:  " + str(channel.level)
-
-            if not (channel.flags.approved == []):
-                message += "; Approved Flags:  " + ",".join(channel.flags.approved)
-            if not (channel.flags.denied == []):
-                message += "; Denied Flags:  " + ",".join(channel.flags.denied)
+    if len(userObject.channels) > 0:
+        commands += __formatChannels(dest, userObject.channels)
 
     return commands
 
@@ -587,6 +597,25 @@ def __modCmd(ircMsg):
                             commands.append("PRIVMSG " + ircMsg.src + " :Password for " + userName + " has been set.")
                         else:
                             commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+                    elif ircMsg.dataList[2].lower() == "rmchan":
+                        # Allows a channel to be removed from a user profile.
+                        channelName = ircMsg.dataList[3].lower()
+                        modChannel = modUser.findChannel(channelName)
+
+                        if not (modChannel is None):
+                            modUser.channels.remove(modChannel)
+                            # Save the new user information.
+                            ircMsg.net.users.updateUser(modUser)
+                            ircMsg.net.resetPrivs(uid)
+                            debug.message(
+                                "User " + ircMsg.src + " removed channel " + channelName + " from " + userName + ".")
+                            commands.append(
+                                "PRIVMSG " + ircMsg.src + " :Channel " + channelName + " removed from " + userName + ".")
+                        else:
+                            debug.message(
+                                "User " + ircMsg.src + " attempted to remove " + channelName + " from " + userName + " but no special privileges were found.")
+                            commands.append(
+                                "PRVIMSG " + ircMsg.src + " :User " + userName + " does not have special privileges on channel " + channelName + ".")
                     else:
                         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
                 else:
@@ -595,6 +624,8 @@ def __modCmd(ircMsg):
                 commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
         else:
             commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+
+    # Handle channel related commands which will have username and channel.
     elif len(ircMsg.dataList) == 5:
         if nick.authed:
             channelName = ircMsg.dataList[4]
@@ -665,7 +696,6 @@ def __passwordCmd(ircMsg):
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
 
     return commands
-
 
 def __setLevel(ircMsg, nick, modUser, thisCmd, nickChannel = None, modChannel = None):
     '''Adjusts a user level.'''
