@@ -9,9 +9,9 @@ We are writing this in Python because it allows everyone to make their own edits
 ## Current To Do
 All we have right now is to-do, as we're just starting, so this is going to be pretty simple and not sound like a good bot until we get the basics in place and can really start expanding into different features.
 
-* Self-Identify to NickServ on supported networks
- * Leverage use of NickServ on supported networks
- * NickServ or Q/X/Z ID Support for Ops
+* Leverage use of NickServ on supported networks
+ * Try to use ChanServ/NickServ to help identify users (not sure how this would work)
+* Auto-Request Ops from ChanServ or Q/X/Z
 * Finish basic user management suite
  * searchusers
  * whoami (to get ones own username)
@@ -27,13 +27,20 @@ All we have right now is to-do, as we're just starting, so this is going to be p
 * learn module
 * seen module
 
-See Issues for more to-dos.
-
 ## Version History
 v0.0.2 - Early pre-Alpha
 * Unrelased version.
-* Added addhost command.
-* Added userinfo command.
+* Identifies self to NickServ.
+* Finished moduser commands.
+ * level
+  * Can be used with channel permissions.
+ * password
+ * addhosts / delhosts / sethosts
+ * addflags / delflags / setflags
+  * Can be used with channel permissions.
+ * rmchan
+* userinfo supports channels
+* listusers supports channels
 
 v0.0.1 - Early pre-Alpha
 * Unreleased version.

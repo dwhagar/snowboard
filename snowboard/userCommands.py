@@ -584,8 +584,8 @@ def __modCmd(ircMsg):
                     elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags" or \
                                     ircMsg.dataList[2].lower() == "setflags":
                         commands += __changeFlags(ircMsg, nick, modUser, thisCmd)
-                    elif ircMsg.dataList[2].lower() == "addhost" or ircMsg.dataList[2].lower() == "delhost" or \
-                                    ircMsg.dataList[2].lower() == "sethost":
+                    elif ircMsg.dataList[2].lower() == "addhosts" or ircMsg.dataList[2].lower() == "delhosts" or \
+                                    ircMsg.dataList[2].lower() == "sethosts":
                         commands += __changeHosts(ircMsg, nick, modUser, thisCmd)
                     elif ircMsg.dataList[2].lower() == "password":
                         # Allows someone to reset another users password.
