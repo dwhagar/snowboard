@@ -1,0 +1,2 @@
+Usage:  delhost hostmask
+Removes a hostmask from a users own account.

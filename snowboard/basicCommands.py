@@ -36,7 +36,6 @@ def channelTriggers(ircMsg):
 
     return commands
 
-
 def ctcpTriggers(ircMsg):
     '''Processes triggers for CTCP replies.'''
     commands = []
@@ -135,7 +134,6 @@ def __identifySelf(ircMsg):
 
     return commands
 
-
 def __pingBack(ircMsg):
     '''Processes a return ping, relays the lag back.'''
     commands = []
@@ -153,7 +151,6 @@ def __pingBack(ircMsg):
         nick.pingDest = None
 
     return commands
-
 
 def __pingMe(ircMsg):
     '''Pings a user and sends them back the results.'''

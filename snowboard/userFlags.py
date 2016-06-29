@@ -53,15 +53,42 @@ class UserFlags:
 
         return valid
 
+    def cleanFlags(self):
+        '''Cleans the list of flags of abnormalities.'''
+        # Clean any blank strings from the lists, and there is no white space.
+        for flag in self.approved:
+            flag = flag.strip()
+            if flag == "":
+                self.approved.remove(flag)
+        for flag in self.denied:
+            flag = flag.strip()
+            if flag == "":
+                self.denied.remove(flag)
+
+        # Make sure there are no duplicates.
+        self.approved = list(set(self.approved))
+        self.denied = list(set(self.denied))
+
     def toData(self, flags):
         '''Converts a string of flags into lists for the object.'''
         flagList = flags.split(':')
-        if len(flagList) == 2:
+        if len(flagList) == 1:
+            self.approved = flagList[0].split(',')
+            self.denied = []
+        elif len(flagList) == 2:
             self.approved = flagList[0].split(',')
             self.denied = flagList[1].split(',')
+        else:
+            self.approved = []
+            self.approved = []
+
+        self.cleanFlags()
+
 
     def toString(self):
         '''Converts the userflags to a single string.'''
+        self.cleanFlags()
+
         approvedString = ",".join(self.approved).lower().replace(':','')
         deniedString = ",".join(self.denied).lower().replace(':','')
 

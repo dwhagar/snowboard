@@ -47,13 +47,10 @@ class User:
         result = None
 
         if len(self.channels) > 0:
-            index = 0
-
             for chan in self.channels:
                 if chan.name.lower() == channel.lower():
-                    result = self.channels[index]
+                    result = chan
                     break
-                index += 1
 
         return result
 
@@ -94,7 +91,7 @@ class User:
         else:
             line = ""
 
-        return line
+        return line.lower()
 
     def verify(self, password):
         '''Verifies a password.'''

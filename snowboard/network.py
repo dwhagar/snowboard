@@ -49,6 +49,7 @@ class Network:
         self.pingSent = 0
         self.pongReceived = 0
         self.queue = []
+        self.quitting = False
         self.reconnect = True
         self.sendBlock = 6
         self.server = None
@@ -539,7 +540,9 @@ class Network:
 
         # If that nick exists, remove it.
         if not nickObject is None:
-            if nickObject.name == self.config.botnick:
+            # Had to alter this so that the bot didn't think it was supposed
+            # to change nicks when it was quitting IRC, mostly cosmetic.
+            if nickObject.name == self.config.botnick and (not self.botnick.lower() == self.config.botnick.lower()):
                 self.sendCommands("NICK " + self.config.botnick)
                 debug.message("My default nick is no longer in use, changing nicks.")
 
@@ -563,6 +566,7 @@ class Network:
     def quit(self):
         '''Properly quit from the server.'''
         self.reconnect = False
+        self.quitting = True
         self.sendCommands(["QUIT :" + self.config.quitmsg])
 
     def ready(self):
@@ -582,6 +586,12 @@ class Network:
         if not existing is None:
             if existing.joined:
                 self.sendCommands(existing.part())
+
+    def resetPrivs(self, uid):
+        '''Resets the privileges of a user once they have changed.'''
+        for nick in self.nicks:
+            if nick.user.uid == uid:
+                nick.getPrivs()
 
     def send(self):
         '''Actually send a certain number of commands from the queue.'''

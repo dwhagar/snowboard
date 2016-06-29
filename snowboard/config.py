@@ -1,15 +1,15 @@
 # This file is part of snowboard.
-# 
+#
 # snowboard is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # snowboard is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -31,7 +31,7 @@ class Config:
         # Set Defaults.
         self.versionNumber = 0
         self.revisionNUmber = 0
-        self.buildNumber = 1
+        self.buildNumber = 2
         self.releaseStage = "pre-Alpha"
         self.version = str(self.versionNumber) + "." + str(self.revisionNUmber) + "." + str(self.buildNumber) + "-" + self.releaseStage
         self.botnick = "Snowboard"
@@ -50,16 +50,15 @@ class Config:
         self.maxLag = 90
         self.nickPass = None
 
-        
         # Read configuration.
         self.file = configFile
-    
+
     def read(self):
-        '''Reads configuration data from the perscribed file.'''
+        '''Reads configuration data from the config file.'''
         # Get everything out of the configuration file.
         config = configparser.ConfigParser()
         config.read(self.file)
-        
+
         # Load all sections to parse
         # Network, server, and channel information is required
         # Parse Servers into a List, grab the network name.
@@ -73,11 +72,11 @@ class Config:
                 ssl = True
                 line[1] = line[1][1:]
             else:
-                ssl = False           
-            
+                ssl = False
+
             newServer = server.Server(line[0], int(line[1]), ssl)
             self.servers.append(newServer)
-        
+
         # Parse Channels into a List
         channels = config['Network']['channels']
         channels = channels.replace(' ','')
@@ -85,7 +84,7 @@ class Config:
         for chan in channelList:
             newChannel = channel.Channel(chan, self.network)
             self.channels.append(newChannel)
-            
+
         # These sections all have reasonable defaults, so it checks to see if
         # the keys are there, if they are not defaults are used.
         for section in config.sections():

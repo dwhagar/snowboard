@@ -104,7 +104,7 @@ def __process_responses(net, raw):
         net.checkLag()
 
     cmds = __get_commands(raw, net)
-    if cmds == None:
+    if cmds is None:
         cmds = []
 
     return cmds
@@ -228,7 +228,7 @@ def main(argv):
             net.send()
             # Is there data?
             data = net.checkMessages()
-            if not data == None:
+            if not data is None:
                 # If anything needs to be sent to the server, we'll get a list
                 # of commands from the response processor.
                 cmds = __process_responses(net, data)
@@ -240,14 +240,15 @@ def main(argv):
             # timers were last run.
             cmds = []
 
-            currentTime = time.time()
-            if (lastTimer + 1) < currentTime:
-                cmds += net.pingTimer(currentTime)
-                cmds += net.cleanTimer(currentTime)
-                cmds += scripts.timers(net, currentTime)
-                lastTimer = currentTime
-                if len(cmds) > 0:
-                    net.sendCommands(cmds)
+            if not net.quitting:
+                currentTime = time.time()
+                if (lastTimer + 1) < currentTime:
+                    cmds += net.pingTimer(currentTime)
+                    cmds += net.cleanTimer(currentTime)
+                    cmds += scripts.timers(net, currentTime)
+                    lastTimer = currentTime
+                    if len(cmds) > 0:
+                        net.sendCommands(cmds)
 
             # Make sure we don't amp up the CPU to max.
             global idleTime

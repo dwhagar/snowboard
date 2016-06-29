@@ -1,0 +1,2 @@
+Usage:  userinfo user
+Gets information on a specific user.

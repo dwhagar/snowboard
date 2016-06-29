@@ -46,7 +46,7 @@ class Users:
         elif user.level < 0:
             user.level = 0
 
-        if not password == None:
+        if not password is None:
             user.pwHash = passwordTools.passwordHash(password)
 
         self.__openDB()
@@ -121,10 +121,10 @@ class Users:
             uid, masks = row
             maskList = masks.split(',')
             for mask in maskList:
-                if re.search(self.__convertWild(mask), hostmask):
+                if re.search(self.__convertWild(mask), hostmask, flags = re.IGNORECASE):
                     result = uid
                     break
-            if not (result == None):
+            if not (result is None):
                 break
 
         self.__closeDB()
@@ -138,11 +138,11 @@ class Users:
 
         userName = self.__cleanInput(userName)
 
-        query = "SELECT uid FROM users WHERE user IS '?'"
-        self.db.execute(query, userName)
+        query = "SELECT uid FROM users WHERE user IS '" + userName + "'"
+        self.db.execute(query)
         data = self.db.fetchone()
 
-        if not data == None:
+        if not data is None:
             result = data[0]
 
         self.__closeDB()
@@ -166,7 +166,7 @@ class Users:
         self.db.execute(query)
         data = self.db.fetchone()
 
-        if data == None:
+        if data is None:
             result = False
         else:
             result = True
@@ -194,7 +194,7 @@ class Users:
         elif user.level < 0:
             user.level = 0
 
-        if not password == None:
+        if not password is None:
             user.pwHash = passwordTools.passwordHash(password)
 
         self.__openDB()
@@ -236,7 +236,7 @@ class Users:
         data = self.db.fetchone()
 
         # Process the data.
-        if data == None:
+        if data is None:
             result = None
         else:
             result = User()
