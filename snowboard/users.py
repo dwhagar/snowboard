@@ -288,9 +288,9 @@ class Users:
 
     def __convertWild(self, search):
         '''Converts a simple wildcard search into a regular expression.'''
-        new = search.replace('.', "\.")
-        new = new.replace('?',".?")
-        new = new.replace('*',".*")
+        new = search.replace('.', r"\.")
+        new = new.replace('?', ".?")
+        new = new.replace('*', ".*")
         return new
 
     def __initDB(self):

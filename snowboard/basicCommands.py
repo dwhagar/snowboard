@@ -19,7 +19,7 @@ Processes basic IRC commands.
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 import time
-
+import re
 from . import debug
 from . import basicMessages
 
@@ -27,11 +27,12 @@ def channelTriggers(ircMsg):
     '''Process triggers for basic commands.'''
     commands = []
 
-    if ircMsg.dataList[0][:len(ircMsg.net.botnick)].lower() == ircMsg.net.botnick.lower():
-        data = " ".join(ircMsg.dataList[1:])
-        if data.lower() == "who are you?":
-            commands = __identifySelf(ircMsg)
-    elif ircMsg.data.lower() == "pingme" or ircMsg.data.lower() == "ping me":
+    whoAreRE = r"\b(" + ircMsg.net.botnick + r"){0,1}(, | ){0,1}\b(Who are you)\?{0,1}"
+    pingRE = r"\b(pingme|ping)(\s| )*(me|please)*\?*"
+
+    if re.search(whoAreRE, ircMsg.data, flags = re.IGNORECASE):
+        commands = __identifySelf(ircMsg)
+    elif re.search(pingRE, ircMsg.data, flags = re.IGNORECASE):
         commands = __pingMe(ircMsg)
 
     return commands
