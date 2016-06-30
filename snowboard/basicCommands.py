@@ -27,8 +27,8 @@ def channelTriggers(ircMsg):
     '''Process triggers for basic commands.'''
     commands = []
 
-    whoAreRE = r"\b(" + ircMsg.net.botnick + r"){0,1}(, | ){0,1}\b(Who are you)\?{0,1}"
-    pingRE = r"\b(pingme|ping)(\s| )*(me|please)*\?*"
+    whoAreRE = r"^\b(" + ircMsg.net.botnick + r")(, | |: ){0,1}\b(Who are you)\?{0,1}$"
+    pingRE = r"^\b(ping)[ ]{0,1}(me){0,1}[ ]{0,1}\b(please){0,1}\?{0,1}$"
 
     if re.search(whoAreRE, ircMsg.data, flags = re.IGNORECASE):
         commands = __identifySelf(ircMsg)
