@@ -543,7 +543,7 @@ class Network:
             # Had to alter this so that the bot didn't think it was supposed
             # to change nicks when it was quitting IRC, mostly cosmetic.
             if nickObject.name == self.config.botnick and (not self.botnick.lower() == self.config.botnick.lower()):
-                self.sendCommands("NICK " + self.config.botnick)
+                self.sendCommands(["NICK " + self.config.botnick])
                 debug.message("My default nick is no longer in use, changing nicks.")
 
             # Remove the nick from all channel lists first.

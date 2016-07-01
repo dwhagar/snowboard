@@ -22,7 +22,6 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 import sqlite3
 import time
 
-
 class Seen:
     '''Connection to the database where seen data will be stored.'''
 
@@ -49,12 +48,12 @@ class Seen:
             for nick in nicks:
                 hosts += self.loadHosts(nick)
 
-            hosts = list(set(hosts))
+            hosts = list(set(hosts)).sort()
 
             for host in hosts:
                 nicks += self.loadNicks(host)
 
-            nicks = list(set(nicks))
+            nicks = list(set(nicks)).sort()
 
             if (prevNicks == nicks) and (prevHosts == hosts):
                 done = True
@@ -80,19 +79,19 @@ class Seen:
             for host in hosts:
                 nicks += self.loadNicks(host)
 
-            nicks = list(set(nicks))
+            nicks = self.__removeDupes(nicks)
 
             for nick in nicks:
                 hosts += self.loadHosts(nick)
 
-            hosts = list(set(hosts))
+            hosts = self.__removeDupes(hosts)
 
             if (prevNicks == nicks) and (prevHosts == hosts):
                 done = True
                 result = (nicks, hosts)
             else:
-                prevNicks = nicks
-                prevHosts = hosts
+                prevNicks = nicks[:]
+                prevHosts = hosts[:]
 
         return result
 
@@ -188,18 +187,16 @@ class Seen:
         '''Saves the nick and host to the database.'''
         hosts = self.loadHosts(nick)
 
-        if hosts is None:
-            hosts = []
-
-        hosts.append(host)
-
         self.__openDB()
 
         if hosts is None:
-            data = [nick, ",".join(hosts), 0, ""]
+            hosts = [host]
+            data = [nick.lower(), ",".join(hosts), 0, ""]
             query = "INSERT INTO hosts VALUES (?, ?, ?, ?)"
         else:
-            data = [nick, ",".join(hosts)]
+            if not (host.lower() in map(str.lower, hosts)):
+                hosts.append(host)
+            data = [nick.lower(), ",".join(hosts)]
             query = "UPDATE hosts SET nick = ?, hosts = ? WHERE nick IS '" + nick.lower() + "'"
 
         self.db.execute(query, data)
@@ -210,19 +207,17 @@ class Seen:
         '''Saves the nick and host to the database.'''
         nicks = self.loadNicks(host)
 
-        if nicks is None:
-            nicks = []
-
-        nicks.append(nick)
-
         self.__openDB()
 
         if nicks is None:
-            data = [host, ",".join(nicks), 0, ""]
+            nicks = [nick]
+            data = [host.lower(), ",".join(nicks), 0, ""]
             query = "INSERT INTO nicks VALUES (?, ?, ?, ?)"
         else:
-            data = [host, ",".join(nicks)]
-            query = "UPDATE nicks SET host = ?, nicks = ? WHERE nick IS '" + host.lower() + "'"
+            if not (nick.lower() in map(str.lower, nicks)):
+                nicks.append(nick)
+            data = [host.lower(), ",".join(nicks)]
+            query = "UPDATE nicks SET host = ?, nicks = ? WHERE host IS '" + host.lower() + "'"
 
         self.db.execute(query, data)
 
@@ -240,17 +235,27 @@ class Seen:
             act, t = self.loadNickAction(nick)
             if t > maxTime:
                 maxTime = t
-                resultNick = nick
+                lastNick = nick
                 lastAct = act
 
         for host in hosts:
             act, t = self.loadHostAction(host)
             if t >= maxTime:
                 maxTime = t
-                resultHost = host
+                lastHost = host
                 lastAct = act
 
         result = (maxTime, lastNick, lastHost, lastAct)
+
+        return result
+
+    def __removeDupes(self, lst):
+        '''Takes a list and removes the duplicates, case insenetive.'''
+        result = []
+
+        for item in lst:
+            if not (item.lower() in map(str.lower, result)):
+                result.append(item)
 
         return result
 

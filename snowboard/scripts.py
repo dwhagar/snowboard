@@ -29,17 +29,16 @@ Where scriptname imports "scriptname.py".
 Once the module is imported it can then be used like any other.
 '''
 
-from . import debug
 from . import basicCommands
 from . import userCommands
+from . import seenCommands
 
 def channelScripts(ircMsg):
     '''Executes scripts that should trigger from channel content.'''
     cmds = []
     cmds += basicCommands.channelTriggers(ircMsg)
-
+    cmds += seenCommands.chanTriggers(ircMsg)
     return cmds
-
 
 def messageScripts(ircMsg):
     '''Executes scripts that should trigger from private message content.'''
@@ -91,6 +90,8 @@ def ctcpScripts(ircMsg):
 def rawMessages(net, message):
     '''Executes scripts that process raw messages from the server.'''
     cmds = []
+
+    seenCommands.rawTriggers(net, message)
 
     return cmds
 
