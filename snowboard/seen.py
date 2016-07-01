@@ -123,7 +123,7 @@ class Seen:
         data = self.db.fetchone()
 
         if not data is None:
-            result = data[0].lower().split(",")
+            result = data[0].split(",")
 
         self.__closeDB()
 
@@ -157,7 +157,7 @@ class Seen:
         data = self.db.fetchone()
 
         if not data is None:
-            result = data[0].lower().split(",")
+            result = data[0].split(",")
 
         self.__closeDB()
 
@@ -190,12 +190,12 @@ class Seen:
         self.__openDB()
 
         if hosts is None:
-            hosts = [host]
+            hosts = [host.lower()]
             data = [nick.lower(), ",".join(hosts), 0, ""]
             query = "INSERT INTO hosts VALUES (?, ?, ?, ?)"
         else:
             if not (host.lower() in map(str.lower, hosts)):
-                hosts.append(host)
+                hosts.append(host.lower())
             data = [nick.lower(), ",".join(hosts)]
             query = "UPDATE hosts SET nick = ?, hosts = ? WHERE nick IS '" + nick.lower() + "'"
 

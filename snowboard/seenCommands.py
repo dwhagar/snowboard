@@ -98,34 +98,41 @@ def __seenQuery(ircMsg):
     '''Query the seen database.'''
     commands = []
 
-    seen = Seen(ircMsg.net.name)
+    if not (ircMsg.src == ircMsg.net.botnick):
+        seen = Seen(ircMsg.net.name)
 
-    nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
-    lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
+        nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
+        lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
 
-    timeDiff = round(time.time()) - round(lastTime)
-    delta = datetime.timedelta(seconds = timeDiff)
+        timeDiff = round(time.time()) - round(lastTime)
+        delta = datetime.timedelta(seconds = timeDiff)
 
-    if (delta.days == 0) and (delta.seconds < 1):
-        ago = "less than a second"
-    else:
-        ago = str(delta)
-
-    isHere = ircMsg.net.findNick(lastNick)
-
-    if isHere is None:
-        if lastNick.lower() == ircMsg.dataList[1].lower():
-            commands.append(
-                "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+        if (delta.days == 0) and (delta.seconds < 1):
+            ago = "less than a second"
         else:
-            commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
-    else:
-        if lastNick.lower() == ircMsg.dataList[1].lower():
-            commands.append(
-                "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here.")
+            ago = str(delta)
+
+        isHere = ircMsg.net.findNick(lastNick)
+
+        if isHere is None:
+            if lastNick.lower() == ircMsg.dataList[1].lower():
+                commands.append(
+                    "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+            else:
+                commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
+                    1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
         else:
-            commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
+            if lastNick.lower() == ircMsg.dataList[1].lower():
+                commands.append(
+                    "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here.")
+            else:
+                commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
+                    1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
+    elif ircMsg.src.lower() == ircMsg.net.botnick.lower():
+        commands.append("PRIVMSG " + ircMsg.dest + " :I am right here.")
+    elif ircMsg.src.lower() == ircMsg.dataList[1].lower():
+        commands.append("PRIVMSG " + ircMsg.dest + " :Wherever you go, there you are.")
+    else:
+        commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
 
     return commands
