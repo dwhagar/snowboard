@@ -648,6 +648,37 @@ class Network:
         # After encoding any CTCP messages, add them to the queue.
         self.queue += encodedCommands
 
+    def splitMessage(self, message):
+        '''Splits message text into multiple lines for transmission to IRC.'''
+        lineList = [message]
+        done = False
+
+        while not done:
+            for line in lineList:
+                newList = []
+                done = True
+                if len(line) < 350:
+                    newList.append(line)
+                else:
+                    limit = len(line) / 2
+                    currLen = 0
+                    newLine = ""
+
+                    lineList = line.split()
+                    for word in lineList:
+                        if currLen <= limit:
+                            newLine += word
+                        elif currLen > limit:
+                            newList.append(newLine)
+                            newLine = word
+                        currLen = len(newLine)
+
+                    done = False
+
+            lineList = newList
+
+        return lineList
+
     def __authwait(self):
         '''
         Some servers require that clients receive data before it can auth

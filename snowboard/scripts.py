@@ -45,7 +45,6 @@ def messageScripts(ircMsg):
     cmds = []
     cmds += basicCommands.msgTriggers(ircMsg)
     cmds += userCommands.msgTriggers(ircMsg)
-
     return cmds
 
 def privActionScripts(ircMsg):
@@ -58,9 +57,7 @@ def privActionScripts(ircMsg):
 def privNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a private notice message.'''
     cmds = []
-
     cmds += basicCommands.noticeTriggers(ircMsg)
-
     return cmds
 
 
@@ -81,18 +78,14 @@ def chanNoticeScripts(ircMsg):
 def ctcpScripts(ircMsg):
     '''Executes scripts that should be triggered by a CTCP message.'''
     cmds = []
-
     cmds += basicCommands.ctcpTriggers(ircMsg)
-
     return cmds
 
 
 def rawMessages(net, message):
     '''Executes scripts that process raw messages from the server.'''
     cmds = []
-
     seenCommands.rawTriggers(net, message)
-
     return cmds
 
 

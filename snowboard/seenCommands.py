@@ -22,16 +22,16 @@ import datetime
 import time
 from .seen import Seen
 
-
 def chanTriggers(ircMsg):
     '''Processes channel queries for the seen module.'''
     commands = []
 
     if ircMsg.dataList[0].lower() == "!seen":
         commands = __seenQuery(ircMsg)
+    if ircMsg.dataList[0].lower() == "!trace" and ircMsg.dataList[1].lower() == "nick":
+        commands = __traceNick(ircMsg)
 
     return commands
-
 
 def rawTriggers(net, message):
     '''Processes raw message triggers.'''
@@ -94,11 +94,22 @@ def rawTriggers(net, message):
     return
 
 
+def __removeItem(list, text):
+    '''Removes an string from a list, not paying attention to case.'''
+    index = 0
+    for item in list:
+        if text.lower() in map(str.lower, list):
+            list.pop(index)
+        index += 1
+
+    return list
+
 def __seenQuery(ircMsg):
     '''Query the seen database.'''
     commands = []
 
-    if not (ircMsg.src == ircMsg.net.botnick):
+    if not ((ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower()) or (
+        ircMsg.src.lower() == ircMsg.dataList[1].lower())):
         seen = Seen(ircMsg.net.name)
 
         nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
@@ -128,10 +139,58 @@ def __seenQuery(ircMsg):
             else:
                 commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
                     1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
-    elif ircMsg.src.lower() == ircMsg.net.botnick.lower():
+    elif ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower():
         commands.append("PRIVMSG " + ircMsg.dest + " :I am right here.")
     elif ircMsg.src.lower() == ircMsg.dataList[1].lower():
         commands.append("PRIVMSG " + ircMsg.dest + " :Wherever you go, there you are.")
+    else:
+        commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
+
+    return commands
+
+
+def __traceNick(ircMsg):
+    '''
+    Query the seen database, for all nicks and hosts used common to one nick,
+    used to find out what other nicks/hosts a person has used in a channel.
+    '''
+    commands = []
+
+    if not ((ircMsg.dataList[2].lower() == ircMsg.net.botnick.lower()) or (
+        ircMsg.src.lower() == ircMsg.dataList[2].lower())):
+        seen = Seen(ircMsg.net.name)
+
+        nicks, hosts = seen.nickSearch(ircMsg.dataList[2])
+
+        if len(nicks) > 0 and len(hosts) > 0:
+
+            nicks = __removeItem(nicks, ircMsg.dataList[2])
+            hostText = ", ".join(hosts)
+
+            if hostText > 1:
+                noun = "hosts"
+            else:
+                noun = "host"
+
+            if len(nicks) > 0:
+                nickText = ", ".join(nicks)
+                message = "I have seen " + ircMsg.dataList[
+                    2] + " as " + nickText + " connecting from " + noun + " " + hostText + "."
+            else:
+                message = "I have seen " + ircMsg.dataList[2] + " connecting from " + noun + " " + hostText + "."
+
+            msgList = ircMsg.net.splitMessage(message)
+
+            for msg in msgList:
+                commands.append("PRIVMSG " + ircMsg.dest + " :" + msg)
+        else:
+            commands.append(
+                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.dataList[2] + " in my database.")
+
+    elif ircMsg.dataList[2].lower() == ircMsg.net.botnick.lower():
+        commands.append("PRIVMSG " + ircMsg.dest + " :I usually have the same nick.")
+    elif ircMsg.src.lower() == ircMsg.dataList[2].lower():
+        commands.append("PRIVMSG " + ircMsg.dest + " :Don't you know who you are?")
     else:
         commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
 
