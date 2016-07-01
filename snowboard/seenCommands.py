@@ -93,7 +93,6 @@ def rawTriggers(net, message):
             seen.save(nick, host, act)
     return
 
-
 def __removeItem(list, text):
     '''Removes an string from a list, not paying attention to case.'''
     index = 0
@@ -113,41 +112,48 @@ def __seenQuery(ircMsg):
         seen = Seen(ircMsg.net.name)
 
         nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
-        lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
 
-        timeDiff = round(time.time()) - round(lastTime)
-        delta = datetime.timedelta(seconds = timeDiff)
+        if (not (nicks is None)) and (not (hosts is None)):
+            lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
 
-        if (delta.days == 0) and (delta.seconds < 1):
-            ago = "less than a second"
-        else:
-            ago = str(delta)
+            timeDiff = round(time.time()) - round(lastTime)
+            delta = datetime.timedelta(seconds = timeDiff)
 
-        isHere = ircMsg.net.findNick(lastNick)
-
-        if isHere is None:
-            if lastNick.lower() == ircMsg.dataList[1].lower():
-                commands.append(
-                    "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+            if (delta.days == 0) and (delta.seconds < 1):
+                ago = "less than a second"
             else:
-                commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                    1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
-        else:
-            if lastNick.lower() == ircMsg.dataList[1].lower():
-                commands.append(
-                    "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here.")
+                ago = str(delta)
+
+            for nick in nicks:
+                isHere = ircMsg.net.findNick(nick)
+                if not (isHere is None):
+                    break
+
+            if isHere is None:
+                if lastNick.lower() == ircMsg.dataList[1].lower():
+                    commands.append(
+                        "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+                else:
+                    commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
+                        1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
             else:
-                commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                    1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
-    elif ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower():
-        commands.append("PRIVMSG " + ircMsg.dest + " :I am right here.")
-    elif ircMsg.src.lower() == ircMsg.dataList[1].lower():
-        commands.append("PRIVMSG " + ircMsg.dest + " :Wherever you go, there you are.")
+                if lastNick.lower() == isHere.name.lower():
+                    commands.append(
+                        "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here.")
+                else:
+                    commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
+                        1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
+        elif ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower():
+            commands.append("PRIVMSG " + ircMsg.dest + " :I am right here.")
+        elif ircMsg.src.lower() == ircMsg.dataList[1].lower():
+            commands.append("PRIVMSG " + ircMsg.dest + " :Wherever you go, there you are.")
+        else:
+            commands.append(
+                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.datalist[1] + " in my database.")
     else:
         commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
 
     return commands
-
 
 def __traceNick(ircMsg):
     '''
@@ -162,18 +168,25 @@ def __traceNick(ircMsg):
 
         nicks, hosts = seen.nickSearch(ircMsg.dataList[2])
 
-        if len(nicks) > 0 and len(hosts) > 0:
-
+        if (not (nicks is None)) and (not (hosts is None)):
             nicks = __removeItem(nicks, ircMsg.dataList[2])
-            hostText = ", ".join(hosts)
 
-            if hostText > 1:
+            if len(hosts) > 1:
                 noun = "hosts"
             else:
                 noun = "host"
 
+            if len(hosts) == 2:
+                hostText = " and ".join(hosts)
+            else:
+                hostText = ", and ".join([", ".join(hosts[:-1])] + hosts[-1:])
+
             if len(nicks) > 0:
-                nickText = ", ".join(nicks)
+                if len(nicks) == 2:
+                    nickText = " and ".join(nicks)
+                else:
+                    nickText = ", and ".join([", ".join(nicks[:-1])] + nicks[-1:])
+
                 message = "I have seen " + ircMsg.dataList[
                     2] + " as " + nickText + " connecting from " + noun + " " + hostText + "."
             else:
@@ -185,8 +198,7 @@ def __traceNick(ircMsg):
                 commands.append("PRIVMSG " + ircMsg.dest + " :" + msg)
         else:
             commands.append(
-                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.dataList[2] + " in my database.")
-
+                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.datalist[1] + " in my database.")
     elif ircMsg.dataList[2].lower() == ircMsg.net.botnick.lower():
         commands.append("PRIVMSG " + ircMsg.dest + " :I usually have the same nick.")
     elif ircMsg.src.lower() == ircMsg.dataList[2].lower():

@@ -66,7 +66,7 @@ class Seen:
 
     def nickSearch(self, nick):
         '''Finds all hosts associated with a nick.'''
-        result = None
+        result = (None, None)
         done = False
 
         prevNicks = []
@@ -75,23 +75,24 @@ class Seen:
         nicks = [nick]
         hosts = self.loadHosts(nick)
 
-        while not done:
-            for host in hosts:
-                nicks += self.loadNicks(host)
+        if not (hosts is None):
+            while not done:
+                for host in hosts:
+                    nicks += self.loadNicks(host)
 
-            nicks = self.__removeDupes(nicks)
+                nicks = self.__removeDupes(nicks)
 
-            for nick in nicks:
-                hosts += self.loadHosts(nick)
+                for nick in nicks:
+                    hosts += self.loadHosts(nick)
 
-            hosts = self.__removeDupes(hosts)
+                hosts = self.__removeDupes(hosts)
 
-            if (prevNicks == nicks) and (prevHosts == hosts):
-                done = True
-                result = (nicks, hosts)
-            else:
-                prevNicks = nicks[:]
-                prevHosts = hosts[:]
+                if (prevNicks == nicks) and (prevHosts == hosts):
+                    done = True
+                    result = (nicks, hosts)
+                else:
+                    prevNicks = nicks[:]
+                    prevHosts = hosts[:]
 
         return result
 

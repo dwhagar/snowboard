@@ -596,7 +596,7 @@ class Network:
     def send(self):
         '''Actually send a certain number of commands from the queue.'''
         if len(self.queue):
-            if time.time():
+            if time.time() > self.nextSend:
                 # Send a couple of lines, then wait.
                 for cmd in self.queue[:self.sendBlock]:
                     self.__connection.write(cmd)
@@ -608,8 +608,8 @@ class Network:
                 self.nextSend = time.time() + self.delay
 
                 # Once those lines are sent, delay longer before the next.
-                if self.delay > 2:
-                    self.delay = 2
+                if self.delay > 1.5:
+                    self.delay = 1.5
 
                 if self.sendBlock < 1:
                     self.sendBlock = 1
