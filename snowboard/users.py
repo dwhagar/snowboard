@@ -32,7 +32,7 @@ from .user import User
 class Users:
     def __init__(self, network):
         self.network = network
-        self.database = network.lower() + "-users.db"
+        self.database = network.lower()
         self.conn = None
         self.db = None
 

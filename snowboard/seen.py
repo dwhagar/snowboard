@@ -27,7 +27,7 @@ class Seen:
 
     def __init__(self, network):
         self.network = network
-        self.database = network.lower() + "-seen.db"
+        self.database = network.lower()
         self.conn = None
         self.db = None
 
