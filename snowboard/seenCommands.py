@@ -176,13 +176,19 @@ def __traceNick(ircMsg):
             else:
                 noun = "host"
 
-            if len(hosts) == 2:
+            hostsLen = len(hosts)
+            if hostsLen == 1:
+                hostText = hosts[0]
+            elif hostsLen == 2:
                 hostText = " and ".join(hosts)
             else:
                 hostText = ", and ".join([", ".join(hosts[:-1])] + hosts[-1:])
 
-            if len(nicks) > 0:
-                if len(nicks) == 2:
+            nicksLen = len(nicks)
+            if nicksLen > 0:
+                if nicksLen == 1:
+                    nickText = nicks[0]
+                elif nicksLen == 2:
                     nickText = " and ".join(nicks)
                 else:
                     nickText = ", and ".join([", ".join(nicks[:-1])] + nicks[-1:])
@@ -197,8 +203,23 @@ def __traceNick(ircMsg):
             for msg in msgList:
                 commands.append("PRIVMSG " + ircMsg.dest + " :" + msg)
         else:
-            commands.append(
-                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.datalist[1] + " in my database.")
+            possibleNicks = seen.searchNicks(ircMsg.dataList[2])
+            message = "I have no information on '" + ircMsg.dataList[2] + "' in my database."
+
+            possibleNicksLen = len(possibleNicks)
+            if possibleNicksLen == 1:
+                message += "  Did you mean " + possibleNicks[0] + "?"
+            elif possibleNicksLen == 2:
+                message += "  Did you mean " + " or ".join(possibleNicks) + "?"
+            elif possibleNicksLen > 2:
+                nicksList = ", or ".join([", ".join(possibleNicks[:-1])] + possibleNicks[-1:])
+                message += "  Did you mean " + nicksList + "?"
+
+            msgList = ircMsg.net.splitMessage(message)
+
+            for msg in msgList:
+                commands.append("PRIVMSG " + ircMsg.dest + " :" + msg)
+
     elif ircMsg.dataList[2].lower() == ircMsg.net.botnick.lower():
         commands.append("PRIVMSG " + ircMsg.dest + " :I usually have the same nick.")
     elif ircMsg.src.lower() == ircMsg.dataList[2].lower():

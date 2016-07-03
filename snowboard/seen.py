@@ -224,6 +224,26 @@ class Seen:
 
         self.__closeDB()
 
+    def searchNicks(self, nick):
+        '''Search through the nicks in the DB'''
+        result = []
+        self.__openDB()
+
+        query = "SELECT nicks FROM nicks"
+
+        self.db.execute(query)
+        data = self.db.fetchall()
+
+        for row in data:
+            nickList = row[0].split(',')
+            for item in nickList:
+                if item.lower().find(nick.lower()) > -1:
+                    result.append(item)
+
+        result = self.__removeDupes(result)
+
+        return result
+
     def timeSearch(self, nicks, hosts):
         '''Searching through nicks and hosts, find the most recent thing.'''
         # Store the resulting variables.
