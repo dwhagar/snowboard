@@ -75,6 +75,16 @@ def noChannel(src, cmd, chan):
 
     return commands
 
+
+def noOps(src, cmd, nick):
+    '''Strock message for if the bot does not have ops.'''
+    commands = []
+
+    debug.message("Nick " + nick + " tried to use the '" + cmd + "' on " + src + " but I do not have ops.")
+    commands.append("PRIVMSG " + src + " :I'm sorry, but I don't have operator privileges here.")
+
+    return commands
+
 def noUser(src, cmd, user):
     '''Stock message for a user that does not exist.'''
     commands = []
@@ -94,7 +104,6 @@ def paramFail(src, cmd):
     commands += cmdHelp(src, cmd)
 
     return commands
-
 
 def valError(src, cmd, field, val, required):
     '''Standard message for a value related error.'''

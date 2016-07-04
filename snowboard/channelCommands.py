@@ -25,17 +25,23 @@ def channelTriggers(ircMsg):
 
     return commands
 
-
 def __opmeCommand(ircMsg):
     '''Allows a person to gain ops in a channel when allowed.'''
     commands = []
+    thisCmd = "!opme"
 
     nick = ircMsg.net.findNick(ircMsg.src)
+    chan = ircMsg.net.findChannel(ircMsg.dest)
 
-    if nick.authed:
-        # TODO: Write function to determine flags for both channel privileges and global.
-        pass
+    if chan.opped:
+        if nick.authed:
+            if nick.user.checkApproved("channelmanager", ircMsg.dest) or nick.user.checkApproved("ops", ircMsg.dest):
+                commands.append("MODE " + ircMsg.dest + " +o " + ircM.src)
+            else:
+                commands += basicMessages.denyMessage(ircMsg.dest, thisCmd)
+        else:
+            commands += basicMessages.noAuth(ircMsg.dest, thisCmd)
     else:
-        commands += basicMessages.noAuth()
+        commands += basicMessages.noOps(ircMsg.dest, thisCmd, ircMsg.src)
 
     return commands
