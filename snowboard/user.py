@@ -34,13 +34,36 @@ class User:
         self.flags = UserFlags()
         self.channels = []
 
-    def checkApproved(self, flag):
+    def checkApproved(self, flag, channel = None):
         '''Checks with the users flags to see if they are approved.'''
-        return self.flags.checkApproved(flag, self.level)
+        globalApproved = self.flags.checkApproved(flag, self.level)
 
-    def checkDenied(self, flag):
+        if not (channel is None):
+            chan = self.findChannel(channel)
+
+            if not (chan is None):
+                if chan.level > 0:
+                    channelApproved = chan.checkApproved(flag)
+                    return channelApproved
+                else:
+                    channelDenied = chan.checkDenied(flag)
+                    if channelDenied:
+                        return False
+
+        return globalApproved
+
+    def checkDenied(self, flag, channel = None):
         '''Checks with the users flags to see if they are denied.'''
-        return self.flags.checkDenied(flag)
+        globalDenied = self.flags.checkDenied(flag)
+        channelDenied = False
+
+        if not (channel is None):
+            chan = self.findChannel(channel)
+
+            if not (chan is None):
+                channelDenied = chan.checkDenied(flag)
+
+        return globalDenied or channelDenied
 
     def findChannel(self, channel):
         '''Finds a channel, if one exists, in the list of privleges.'''
