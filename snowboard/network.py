@@ -527,6 +527,20 @@ class Network:
 
         debug.info("Processed a nick change from " + nickName + " to " + response[2] + ".")
 
+    def processTopic(self, response):
+        '''Process channel topics.'''
+        chan = self.findChannel(response[2])
+
+        if not chan is None:
+            if response[3][0] == ":":
+                chan.topic = response[3][1:]
+            else:
+                chan.topic = response[3]
+
+            debug.message("Processed channel topic for " + chan.name + ".")
+        else:
+            debug.message("Received a topic for unknown channel, " + response[2] + ".")
+
     def processQuit(self, response):
         '''
         Processes a quit message from the server to remove said user from

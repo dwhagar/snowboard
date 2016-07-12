@@ -32,12 +32,14 @@ Once the module is imported it can then be used like any other.
 from . import basicCommands
 from . import userCommands
 from . import seenCommands
+from . import channelCommands
 
 def channelScripts(ircMsg):
     '''Executes scripts that should trigger from channel content.'''
     cmds = []
     cmds += basicCommands.channelTriggers(ircMsg)
     cmds += seenCommands.chanTriggers(ircMsg)
+    cmds += channelCommands.channelTriggers(ircMsg)
     return cmds
 
 def messageScripts(ircMsg):
@@ -45,6 +47,7 @@ def messageScripts(ircMsg):
     cmds = []
     cmds += basicCommands.msgTriggers(ircMsg)
     cmds += userCommands.msgTriggers(ircMsg)
+    cmds += channelCommands.msgTriggers(ircMsg)
     return cmds
 
 def privActionScripts(ircMsg):

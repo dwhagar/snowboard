@@ -32,7 +32,7 @@ from .user import User
 class Users:
     def __init__(self, network):
         self.network = network
-        self.database = network.lower()
+        self.database = network.lower() + ".db"
         self.conn = None
         self.db = None
 
@@ -79,8 +79,6 @@ class Users:
 
     def getUsers(self):
         '''Gets a list of all users.'''
-        result = None
-
         self.__openDB()
 
         query = "SELECT uid, user, password, hostmasks, level, flags, channels FROM users"

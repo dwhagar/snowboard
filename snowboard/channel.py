@@ -28,20 +28,25 @@ class Channel:
     def __init__(self, name, network, members = []):
         self.botnick = None
         self.db = ChannelDB(network, name)
-        self.flags = self.db.loadFlags()
+        self.defaultTopic = ""
+        self.desc = ""
+        self.flags = []
         self.joined = False
         self.name = name
         self.members = members  # A list of lists, storing Nick and ChanPriv
         self.network = network
+        self.topic = ""
         self.opped = False
         self.voiced = False
+
+        self.loadData()
 
     def addFlag(self, flag):
         '''Adds a flag to the channel and saves it.'''
         if not (flag.lower() in map(str.lower, self.flags)):
             self.flags.append(flag)
 
-        self.db.saveFlags(self.flags)
+        self.saveData()
 
     def addNick(self, nick, priv):
         '''Add a nick to the list.'''
@@ -82,6 +87,10 @@ class Channel:
         if not self.joined:
             return ["JOIN " + self.name]
 
+    def loadData(self):
+        '''Loads data into the object from the database.'''
+        self.flags, self.defaultTopic, self.desc = self.db.loadData()
+
     def part(self):
         '''Leaves a channel.'''
         if self.joined:
@@ -99,6 +108,10 @@ class Channel:
         existing = self.findNick(nick)
         if not existing is None:
             self.members.remove(existing)
+
+    def saveData(self):
+        '''Saves channel data to the database.'''
+        self.db.saveData(self.flags, self.defaultTopic, self.desc)
 
     def updateSelf(self):
         '''Update the bots knowledge of its own privleges.'''

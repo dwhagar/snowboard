@@ -98,8 +98,8 @@ def paramFail(src, cmd):
     '''Stock message for not enough parameters.'''
     commands = []
 
-    debug.info("Nick " + src + " tried to use the '" + cmd + "' command, but did not provide enough parameters.")
-    commands.append("PRIVMSG " + src + " :You did not provide enough parameters for the '" + cmd + "' command.")
+    debug.info("Nick " + src + " tried to use the '" + cmd + "' command, but did not provide the correct parameters.")
+    commands.append("PRIVMSG " + src + " :You did not provide the correct parameters for the '" + cmd + "' command.")
     # Automatically add on command help.
     commands += cmdHelp(src, cmd)
 

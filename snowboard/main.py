@@ -81,6 +81,9 @@ def __process_responses(net, raw):
     # Process NAMES responses to get all names for channels joined.
     elif response[1] == "353":
         net.processNames(response)
+    # Process a channel topic message when joining.
+    elif response[1] == "332" or response[1] == "TOPIC":
+        net.processTopic(response)
     # Process the server closing the link (per RFC 2812)
     elif " ".join(response[1:3]).strip(':').lower() == "closing link":
         net.disconnect()

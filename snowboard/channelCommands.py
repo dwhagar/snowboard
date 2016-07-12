@@ -17,13 +17,27 @@ from . import basicMessages
 
 
 def channelTriggers(ircMsg):
-    '''Processes channel triggers.'''
+    '''Processes channel triggers for channel fucntions.'''
     commands = []
 
     if ircMsg.dataList[0] == "!opme":
         commands = __opmeCommand(ircMsg)
 
     return commands
+
+
+def msgTriggers(ircMsg):
+    '''Processes message triggers for channel functions.'''
+    commands = []
+
+    if ircMsg.dataList[0] == "modchannel":
+        commands = __modChannel(ircMsg)
+
+    return commands
+
+
+def __modChannel(ircMsg):
+    '''Commands to change channel properties.'''
 
 def __opmeCommand(ircMsg):
     '''Allows a person to gain ops in a channel when allowed.'''
@@ -36,7 +50,7 @@ def __opmeCommand(ircMsg):
     if chan.opped:
         if nick.authed:
             if nick.user.checkApproved("channelmanager", ircMsg.dest) or nick.user.checkApproved("ops", ircMsg.dest):
-                commands.append("MODE " + ircMsg.dest + " +o " + ircM.src)
+                commands.append("MODE " + ircMsg.dest + " +o " + ircMsg.src)
             else:
                 commands += basicMessages.denyMessage(ircMsg.dest, thisCmd)
         else:

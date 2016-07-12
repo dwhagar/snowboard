@@ -22,7 +22,7 @@ class ChannelDB:
     def __init__(self, network, channel):
         self.channel = channel.lower()
         self.network = network
-        self.database = network.lower()
+        self.database = network.lower() + ".db"
         self.conn = None
         self.db = None
 
@@ -45,24 +45,28 @@ class ChannelDB:
 
         return result
 
-    def loadFlags(self):
+    def loadData(self):
         '''Determines if the channel already exists in the database.'''
         self.__openDB()
 
-        query = "SELECT flags FROM channels WHERE channel IS '" + self.channel + "'"
+        query = "SELECT flags, topic, desc FROM channels WHERE channel IS '" + self.channel + "'"
         self.db.execute(query)
         data = self.db.fetchone()
 
         if data is None:
             flags = []
+            topic = ""
+            desc = ""
         else:
             flags = data[0].split(',')
+            topic = data[1]
+            desc = data[2]
 
         self.__closeDB()
 
-        return flags
+        return flags, topic, desc
 
-    def saveFlags(self, flags):
+    def saveData(self, flags, topic, desc):
         '''Saves a list of flags to the database.'''
         if len(flags) > 0:
             flagsText = ",".join(flags).lower()
@@ -71,12 +75,12 @@ class ChannelDB:
 
         self.__openDB()
 
-        data = [flagsText]
+        data = [flagsText, topic, desc]
 
         if self.channelExists():
-            query = "UPDATE channels SET flags = ? WHERE uid IS '" + self.channel + "'"
+            query = "UPDATE channels SET flags = ?, topic = ?, desc = ? WHERE channel IS '" + self.channel + "'"
         else:
-            query = "INSERT INTO channels VALUES (?)"
+            query = "INSERT INTO channels VALUES (?, ?, ?)"
 
         self.db.execute(query, data)
 
@@ -92,7 +96,7 @@ class ChannelDB:
         '''Intended to initialize a database that doesn't yet exist.'''
         self.__openDB()
 
-        initCmd = "CREATE TABLE IF NOT EXISTS channels (channel TEXT PRIMARY KEY, flags TEXT)"
+        initCmd = "CREATE TABLE IF NOT EXISTS channels (channel TEXT PRIMARY KEY, flags TEXT, topic TEXT, desc TEXT)"
 
         self.db.execute(initCmd)
 
