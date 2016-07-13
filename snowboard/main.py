@@ -183,6 +183,10 @@ def __get_commands(raw, net):
             commands += scripts.channelScripts(ircMsg)
         elif cmd == "ACTION":
             commands += scripts.chanActionScripts(ircMsg)
+        elif cmd == "JOIN":
+            commands += scripts.joinScripts(ircMsg)
+        elif cmd == "PART":
+            commands += scripts.partScripts(ircMsg)
     else:
         if cmd == "NOTICE":
             commands += scripts.privNoticeScripts(ircMsg)

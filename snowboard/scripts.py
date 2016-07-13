@@ -85,6 +85,19 @@ def ctcpScripts(ircMsg):
     return cmds
 
 
+def joinScripts(ircMsg):
+    '''Processes script triggers based on channel joins.'''
+    cmds = []
+
+    return cmds
+
+
+def partSCripts(ircMsg):
+    '''Processes script triggers based on channel parts.'''
+    cmds = []
+
+    return cmds
+
 def rawMessages(net, message):
     '''Executes scripts that process raw messages from the server.'''
     cmds = []
@@ -95,5 +108,9 @@ def rawMessages(net, message):
 def timers(net, time):
     '''Passes the current time onto a series of timers.'''
     cmds = []
+
+    # 5 Minute Timer
+    if (round(time) % 300) == 0:
+        cmds += channelCommands.resetTopics(net)
 
     return cmds

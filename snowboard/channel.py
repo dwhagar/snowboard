@@ -44,7 +44,8 @@ class Channel:
     def addFlag(self, flag):
         '''Adds a flag to the channel and saves it.'''
         if not (flag.lower() in map(str.lower, self.flags)):
-            self.flags.append(flag)
+            if not flag == "":
+                self.flags.append(flag)
 
         self.saveData()
 

@@ -22,9 +22,12 @@ def channelTriggers(ircMsg):
 
     if ircMsg.dataList[0] == "^opme":
         commands = __opmeCommand(ircMsg)
+    elif ircMsg.dataList[0] == "^reset":
+        commands = __resetTopic(ircMsg)
+    elif ircMsg.dataList[0] == "^desc":
+        commands = __showDesc(ircMsg)
 
     return commands
-
 
 def msgTriggers(ircMsg):
     '''Processes message triggers for channel functions.'''
@@ -35,6 +38,17 @@ def msgTriggers(ircMsg):
 
     return commands
 
+
+def resetTopics(net):
+    '''Resets all channel topics to default.'''
+    commands = []
+
+    for chan in net.channels:
+        if (not chan.defaultTopic == "") and chan.opped:
+            if (not chan.topic == chan.defaultTopic) and chan.checkFlag("keeptopic"):
+                commands.append("TOPIC " + chan.name + " :" + chan.defaultTopic)
+
+    return commands
 
 def __modChannel(ircMsg):
     '''Commands to change channel properties.'''
@@ -118,7 +132,7 @@ def __modChannel(ircMsg):
 def __opmeCommand(ircMsg):
     '''Allows a person to gain ops in a channel when allowed.'''
     commands = []
-    thisCmd = "!opme"
+    thisCmd = "^opme"
 
     nick = ircMsg.net.findNick(ircMsg.src)
     chan = ircMsg.net.findChannel(ircMsg.dest)
@@ -127,11 +141,51 @@ def __opmeCommand(ircMsg):
         if nick.authed:
             if nick.user.checkApproved("channelmanager", ircMsg.dest) or nick.user.checkApproved("ops", ircMsg.dest):
                 commands.append("MODE " + ircMsg.dest + " +o " + ircMsg.src)
+            elif nick.user.checkApproved("voice", ircMsg.dest):
+                commands.append("MODE " + ircMsg.dest + " +v " + ircMsg.src)
             else:
                 commands += basicMessages.denyMessage(ircMsg.dest, thisCmd)
         else:
             commands += basicMessages.noAuth(ircMsg.dest, thisCmd)
     else:
         commands += basicMessages.noOps(ircMsg.dest, thisCmd, ircMsg.src)
+
+    return commands
+
+
+def __resetTopic(ircMsg):
+    '''Resets a given channels topic to default.'''
+    commands = []
+    thisCmd = "^reset"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+
+    if chan.opped:
+        if nick.authed:
+            if nick.user.checkApproved("channelmanager", ircMsg.dest):
+                commands.append("TOPIC " + chan.name + " :" + chan.defaultTopic)
+            else:
+                commands += basicMessages.denyMessage(ircMsg.dest, thisCmd)
+        else:
+            commands += basicMessages.noAuth(ircMsg.dest, thisCmd)
+    else:
+        commands += basicMessages.noOps(ircMsg.dest, thisCmd, ircMsg.src)
+
+    return commands
+
+
+def __showDesc(ircMsg):
+    '''Sends a channel description to a user.'''
+    commands = []
+
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+
+    if chan.desc == "":
+        commands.append("NOTICE " + ircMsg.src + " :There is no description for this channel.")
+    else:
+        commands.append("NOTICE " + ircMsg.src + " :" + chan.desc)
+
+    debug.info("Nick " + ircMsg.src + " requested the channel description for " + chan.name + ".")
 
     return commands
