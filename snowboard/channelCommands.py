@@ -20,7 +20,7 @@ def channelTriggers(ircMsg):
     '''Processes channel triggers for channel fucntions.'''
     commands = []
 
-    if ircMsg.dataList[0] == "!opme":
+    if ircMsg.dataList[0] == "^opme":
         commands = __opmeCommand(ircMsg)
 
     return commands
@@ -88,12 +88,12 @@ def __modChannel(ircMsg):
                 elif cmd == "settopic":
                     chan.defaultTopic = data
                     chan.saveData()
-                    commands.append("PRIVMSG " + ircMsg.src + " :Flags for " + chan.name + " have been set.")
+                    commands.append("PRIVMSG " + ircMsg.src + " :Default topic for " + chan.name + " has been set.")
                     debug.message("Default topic for " + chan.name + " was set by " + ircMsg.src + ".")
                 elif cmd == "setdesc":
                     chan.desc = data
                     chan.saveData()
-                    commands.append("PRIVMSG " + ircMsg.src + " :Flags for " + chan.name + " have been set.")
+                    commands.append("PRIVMSG " + ircMsg.src + " :Description for " + chan.name + " has been set.")
                     debug.message("Channel description for " + chan.name + " was set by " + ircMsg.src + ".")
                 elif cmd == "setflags":
                     data.replace(" ", "")

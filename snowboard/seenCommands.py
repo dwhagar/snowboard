@@ -26,9 +26,9 @@ def chanTriggers(ircMsg):
     '''Processes channel queries for the seen module.'''
     commands = []
 
-    if ircMsg.dataList[0].lower() == "!seen":
+    if ircMsg.dataList[0].lower() == "^seen":
         commands = __seenQuery(ircMsg)
-    if ircMsg.dataList[0].lower() == "!trace" and ircMsg.dataList[1].lower() == "nick":
+    if ircMsg.dataList[0].lower() == "^trace" and ircMsg.dataList[1].lower() == "nick":
         commands = __traceNick(ircMsg)
 
     return commands

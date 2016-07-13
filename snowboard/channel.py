@@ -114,10 +114,10 @@ class Channel:
         self.db.saveData(self.flags, self.defaultTopic, self.desc)
 
     def updateSelf(self):
-        '''Update the bots knowledge of its own privleges.'''
+        '''Update the bots knowledge of its own privileges.'''
         me = self.findNick(self.botnick)
 
         self.opped = me[1].op
         self.voiced = me[1].voice
 
-        self.flags = self.db.loadFlags()
+        self.loadData()

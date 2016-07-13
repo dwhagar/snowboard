@@ -69,21 +69,19 @@ class ChannelDB:
     def saveData(self, flags, topic, desc):
         '''Saves a list of flags to the database.'''
         if len(flags) > 0:
-            flagsText = ",".join(flags).lower()
+            flagsText = ",".join(flags)
         else:
             flagsText = ""
 
-        self.__openDB()
-
-        data = [flagsText, topic, desc]
-
         if self.channelExists():
+            data = [flagsText.lower(), topic, desc]
             query = "UPDATE channels SET flags = ?, topic = ?, desc = ? WHERE channel IS '" + self.channel + "'"
         else:
-            query = "INSERT INTO channels VALUES (?, ?, ?)"
+            data = [self.channel.lower(), flagsText.lower(), topic, desc]
+            query = "INSERT INTO channels VALUES (?, ?, ?, ?)"
 
+        self.__openDB()
         self.db.execute(query, data)
-
         self.__closeDB()
 
     def __closeDB(self):

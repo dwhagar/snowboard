@@ -529,13 +529,18 @@ class Network:
 
     def processTopic(self, response):
         '''Process channel topics.'''
-        chan = self.findChannel(response[2])
+        if response[1] == "332":
+            chan = self.findChannel(response[3])
+            data = response[4:]
+        else:
+            chan = self.findChannel(response[2])
+            data = response[3:]
 
         if not chan is None:
-            if response[3][0] == ":":
-                chan.topic = response[3][1:]
+            if data[0][0] == ":":
+                chan.topic = " ".join(data[0:])[1:]
             else:
-                chan.topic = response[3]
+                chan.topic = " ".join(data[0:])
 
             debug.message("Processed channel topic for " + chan.name + ".")
         else:
