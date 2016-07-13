@@ -663,6 +663,11 @@ class Network:
                         noAppend = True
 
             if not noAppend:
+                command = command.replace("::B::", "\x02")
+                command = command.replace("::I::", "\x1D")
+                command = command.replace("::U::", "\x1F")
+                command = command.replace("::R::", "\x16")
+                command = command.replace("::P::", "\x0F")
                 encodedCommands.append(command)
 
         # After encoding any CTCP messages, add them to the queue.

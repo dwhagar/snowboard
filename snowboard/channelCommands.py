@@ -18,8 +18,12 @@ Commands relating to channel management.  Channel flags of use here
 are:
 
 keeptopic
+noweather
+norules
+nochans
 '''
 
+import pyowm
 from . import basicMessages
 from . import debug
 
@@ -35,6 +39,10 @@ def channelTriggers(ircMsg):
         commands = __showDesc(ircMsg)
     elif ircMsg.dataList[0] == "^rules":
         __showRules(ircMsg)
+    elif ircMsg.dataList[0] == "^chans":
+        __showChans(ircMsg)
+    elif ircMsg.dataList[0] == "^w":
+        commands = __showWeather(ircMsg)
 
     return commands
 
@@ -181,6 +189,14 @@ def __resetTopic(ircMsg):
 
     return commands
 
+
+def __showChans(ircMsg):
+    '''Shows rules from the rules.txt help file.'''
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+
+    if not chan.checkFlag("nochans"):
+        ircMsg.net.sendFile("help/chans.txt", "NOTICE", ircMsg.src)
+
 def __showDesc(ircMsg):
     '''Sends a channel description to a user.'''
     commands = []
@@ -196,7 +212,32 @@ def __showDesc(ircMsg):
 
     return commands
 
-
 def __showRules(ircMsg):
     '''Shows rules from the rules.txt help file.'''
-    ircMsg.net.sendFile("help/rules.txt", "NOTICE", ircMsg.src)
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+
+    if not chan.checkFlag("norules"):
+        ircMsg.net.sendFile("help/rules.txt", "NOTICE", ircMsg.src)
+
+
+def __showWeather(ircMsg):
+    '''Shows the current weather by city.'''
+    commands = []
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+
+    if not chan.checkFlag("noweather") and len(ircMsg.dataList) > 0:
+        weather = pyowm.OWM("337b19f7282e26f73f44973a7ce90472")
+        city = " ".join(ircMsg.dataList[1:])
+        current = weather.weather_at_place(city)
+        location = current.get_location()
+        locationText = location.get_name()
+        data = current.get_weather()
+        tempData = data.get_temperature('fahrenheit')
+        conditions = data.get_detailed_status()
+        high = str(tempData['temp_max'])
+        low = str(tempData['temp_min'])
+        now = str(tempData['temp'])
+        weatherText = "Current conditions for " + locationText + " are " + conditions + " and " + now + "F with a high of " + high + "F and a low of " + low + "F."
+        commands.append("PRIVMSG " + ircMsg.dest + " :" + weatherText)
+
+    return commands

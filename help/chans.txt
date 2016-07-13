@@ -1,0 +1,8 @@
+Channels associated with #BlazingUmbra for different settings and places.
+::B::#BlazingUmbra::B:: - Main in character room.
+::B::#BlazingUmbra-OOC::B:: - Out of character chat room.
+::B::#BlazingUmbra-Derelict::B:: - RP That takes place on or around the Derelict.
+::B::#BlazingUmbra-SS.Minthe::B:: - SS Minthe setting, takes place on board or around the SS Minthe.
+::B::#BlazingUmbra-Vertigo::B:: - Vertigo setting, takes place on or around the Vertigo.
+::B::#BlazingUmbra-Random::B:: - A catch-all for anything that doesn't really fit with anything else.
+To ask about gaining a bot-driven channel, contact the owner Cyclops.

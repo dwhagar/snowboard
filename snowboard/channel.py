@@ -15,7 +15,7 @@
 
 '''
 These two classes server to store information on a person in a channel and
-what that person's privleges are within the channel.
+what that person's privliges are within the channel.
 
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
@@ -28,12 +28,14 @@ class Channel:
     def __init__(self, name, network, members = []):
         self.botnick = None
         self.db = ChannelDB(network, name)
+        self.defaultModes = ""
         self.defaultTopic = ""
         self.desc = ""
         self.flags = []
         self.joined = False
         self.name = name
         self.members = members  # A list of lists, storing Nick and ChanPriv
+        self.modes = ""
         self.network = network
         self.topic = ""
         self.opped = False
@@ -90,7 +92,7 @@ class Channel:
 
     def loadData(self):
         '''Loads data into the object from the database.'''
-        self.flags, self.defaultTopic, self.desc = self.db.loadData()
+        self.flags, self.defaultTopic, self.desc, self.defaultModes = self.db.loadData()
 
     def part(self):
         '''Leaves a channel.'''
@@ -112,7 +114,7 @@ class Channel:
 
     def saveData(self):
         '''Saves channel data to the database.'''
-        self.db.saveData(self.flags, self.defaultTopic, self.desc)
+        self.db.saveData(self.flags, self.defaultTopic, self.desc, self.defaultModes)
 
     def updateSelf(self):
         '''Update the bots knowledge of its own privileges.'''

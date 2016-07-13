@@ -93,7 +93,7 @@ def joinScripts(ircMsg):
     return cmds
 
 
-def partSCripts(ircMsg):
+def partScripts(ircMsg):
     '''Processes script triggers based on channel parts.'''
     cmds = []
 
