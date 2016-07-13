@@ -22,6 +22,7 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 
 import time
 import random
+from os.path import isfile
 
 from . import debug
 from . import ctcpGlobals
@@ -667,14 +668,42 @@ class Network:
         # After encoding any CTCP messages, add them to the queue.
         self.queue += encodedCommands
 
+    def sendFile(self, fileName, method, dest):
+        '''Sends a file to a destination using a particular method.'''
+        commands = []
+
+        # The only valid values for method are PRIVMSG, ACTION, and NOTICE.
+        msgPrefix = method.upper() + " " + dest + " :"
+
+        if isfile(fileName):
+            file = open(fileName)
+            data = file.readlines()
+
+            for message in data:
+                message = message.strip('/r')
+                message = message.strip('/n')
+
+                if not (message == ""):
+                    lines = self.splitMessage(message)
+                    for line in lines:
+                        commands.append(msgPrefix + line)
+
+            file.close()
+
+            if len(commands) > 0:
+                self.sendCommands(commands)
+        else:
+            debug.error("Could not send file " + fileName + ", the file was not found.")
+            self.sendCommands([msgPrefix + "That information could not be located.  Please contact the bot admin."])
+
     def splitMessage(self, message):
         '''Splits message text into multiple lines for transmission to IRC.'''
         lineList = [message]
         done = False
 
         while not done:
+            newList = []
             for line in lineList:
-                newList = []
                 done = True
                 if len(line) < 350:
                     newList.append(line)
@@ -686,11 +715,13 @@ class Network:
                     lineList = line.split()
                     for word in lineList:
                         if currLen <= limit:
-                            newLine += word
+                            newLine += word + " "
                         elif currLen > limit:
-                            newList.append(newLine)
-                            newLine = word
+                            newList.append(newLine[:-1])
+                            newLine = word + " "
                         currLen = len(newLine)
+
+                    newList.append(newLine[:-1])
 
                     done = False
 

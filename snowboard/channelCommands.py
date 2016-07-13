@@ -13,6 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+Commands relating to channel management.  Channel flags of use here
+are:
+
+keeptopic
+'''
+
 from . import basicMessages
 from . import debug
 
@@ -26,6 +33,8 @@ def channelTriggers(ircMsg):
         commands = __resetTopic(ircMsg)
     elif ircMsg.dataList[0] == "^desc":
         commands = __showDesc(ircMsg)
+    elif ircMsg.dataList[0] == "^rules":
+        __showRules(ircMsg)
 
     return commands
 
@@ -37,7 +46,6 @@ def msgTriggers(ircMsg):
         commands = __modChannel(ircMsg)
 
     return commands
-
 
 def resetTopics(net):
     '''Resets all channel topics to default.'''
@@ -144,14 +152,13 @@ def __opmeCommand(ircMsg):
             elif nick.user.checkApproved("voice", ircMsg.dest):
                 commands.append("MODE " + ircMsg.dest + " +v " + ircMsg.src)
             else:
-                commands += basicMessages.denyMessage(ircMsg.dest, thisCmd)
+                commands += basicMessages.denyMessage(ircMsg.src, thisCmd, ircMsg.dest)
         else:
-            commands += basicMessages.noAuth(ircMsg.dest, thisCmd)
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd, ircMsg.dest)
     else:
-        commands += basicMessages.noOps(ircMsg.dest, thisCmd, ircMsg.src)
+        commands += basicMessages.noOps(ircMsg.src, thisCmd, chan.name, ircMsg.dest)
 
     return commands
-
 
 def __resetTopic(ircMsg):
     '''Resets a given channels topic to default.'''
@@ -166,14 +173,13 @@ def __resetTopic(ircMsg):
             if nick.user.checkApproved("channelmanager", ircMsg.dest):
                 commands.append("TOPIC " + chan.name + " :" + chan.defaultTopic)
             else:
-                commands += basicMessages.denyMessage(ircMsg.dest, thisCmd)
+                commands += basicMessages.denyMessage(ircMsg.src, thisCmd, ircMsg.dest)
         else:
-            commands += basicMessages.noAuth(ircMsg.dest, thisCmd)
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd, ircMsg.dest)
     else:
-        commands += basicMessages.noOps(ircMsg.dest, thisCmd, ircMsg.src)
+        commands += basicMessages.noOps(ircMsg.src, thisCmd, chan.name, ircMsg.dest)
 
     return commands
-
 
 def __showDesc(ircMsg):
     '''Sends a channel description to a user.'''
@@ -189,3 +195,8 @@ def __showDesc(ircMsg):
     debug.info("Nick " + ircMsg.src + " requested the channel description for " + chan.name + ".")
 
     return commands
+
+
+def __showRules(ircMsg):
+    '''Shows rules from the rules.txt help file.'''
+    ircMsg.net.sendFile("help/rules.txt", "NOTICE", ircMsg.src)

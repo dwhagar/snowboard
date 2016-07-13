@@ -33,6 +33,7 @@ from . import basicCommands
 from . import userCommands
 from . import seenCommands
 from . import channelCommands
+from . import RPCommands
 
 def channelScripts(ircMsg):
     '''Executes scripts that should trigger from channel content.'''
@@ -88,7 +89,7 @@ def ctcpScripts(ircMsg):
 def joinScripts(ircMsg):
     '''Processes script triggers based on channel joins.'''
     cmds = []
-
+    RPCommands.joinTriggers(ircMsg)
     return cmds
 
 

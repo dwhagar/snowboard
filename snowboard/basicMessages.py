@@ -21,10 +21,16 @@ the user.
 from os.path import isfile
 from . import debug
 
-def cmdHelp(src, cmd):
+
+def cmdHelp(src, cmd, dest = None):
     '''Returns help text for a particular command.'''
     commands = []
     helpFile = "help/" + cmd + ".txt"
+
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
 
     if isfile(helpFile):
         file = open(helpFile.lower())
@@ -35,83 +41,123 @@ def cmdHelp(src, cmd):
             message = message.strip('/n')
 
             if not (message == ""):
-                commands.append("PRIVMSG " + src + " :" + message)
+                commands.append(msgPrefix + message)
 
         file.close()
     else:
         debug.error("Help file for command '" + cmd + "' (" + helpFile + ")not found!")
-        commands.append("PRIVMSG " + src + " :I could not find help associated with the '" + cmd + "' command.")
+        commands.append(msgPrefix + "I could not find help associated with the '" + cmd + "' command.")
 
     commands.append(
-        "PRIVMSG " + src + " :See official documentation at https://github.com/dwhagar/snowboard/wiki for more information.")
+        msgPrefix + "See official documentation at https://github.com/dwhagar/snowboard/wiki for more information.")
 
     return commands
 
-def denyMessage(src, cmd):
+
+def denyMessage(src, cmd, dest = None):
     '''Stock deny messages for debug and to send back to the server.'''
     commands = []
 
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
+
     debug.message("Nick " + src + " tried to use the '" + cmd + "' command, but does not have sufficient access.")
     commands.append(
-        "PRIVMSG " + src + " :You do not have sufficient access to the '" + cmd + "' command.  This may be due to access restrictions or attempting to set flags or a level higher than your own.")
+        msgPrefix + "You do not have sufficient access to the '" + cmd + "' command.  This may be due to access restrictions or attempting to set flags or a level higher than your own.")
 
     return commands
 
-def noAuth(src, cmd):
+
+def noAuth(src, cmd, dest = None):
     '''Stock not authenticated messages for debug and the server.'''
     commands = []
 
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
+
     debug.message("Nick " + src + " tried to use the '" + cmd + "' command, but has not been authenticated.")
-    commands.append("PRIVMSG " + src + " :You are not identified.")
+    commands.append(msgPrefix + "You are not identified.")
 
     return commands
 
-def noChannel(src, cmd, chan):
+
+def noChannel(src, cmd, chan, dest = None):
     '''Stock message for unable to find a channel.'''
     commands = []
 
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
+
     debug.message("Nick " + src + " tried to use the '" + cmd + "' command, but I was unable to find channel '" + chan + "' in the database.")
-    commands.append("PRIVMSG " + src + " :I'm sorry but I could not find " + chan + " in the database.")
+    commands.append(msgPrefix + "I'm sorry but I could not find " + chan + " in the database.")
 
     return commands
 
 
-def noOps(src, cmd, nick):
+def noOps(src, cmd, chan, dest = None):
     '''Strock message for if the bot does not have ops.'''
     commands = []
 
-    debug.message("Nick " + nick + " tried to use the '" + cmd + "' on " + src + " but I do not have ops.")
-    commands.append("PRIVMSG " + src + " :I'm sorry, but I don't have operator privileges here.")
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
+
+    debug.message("Nick " + src + " tried to use the '" + cmd + "' on " + chan + " but I do not have ops.")
+    commands.append(msgPrefix + "I'm sorry, but I don't have operator privileges here.")
 
     return commands
 
-def noUser(src, cmd, user):
+
+def noUser(src, cmd, user, dest = None):
     '''Stock message for a user that does not exist.'''
     commands = []
 
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
+
     debug.message("Nick " + src + " tried to use the '" + cmd + "' command, but " + user + " could not be found in the database.")
-    commands.append("PRIVMSG " + src + " :I'm sorry but I could not find " + user + " in the database.")
+    commands.append(msgPrefix + "I'm sorry but I could not find " + user + " in the database.")
 
     return commands
 
-def paramFail(src, cmd):
+
+def paramFail(src, cmd, dest = None):
     '''Stock message for not enough parameters.'''
     commands = []
 
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
+
     debug.info("Nick " + src + " tried to use the '" + cmd + "' command, but did not provide the correct parameters.")
-    commands.append("PRIVMSG " + src + " :You did not provide the correct parameters for the '" + cmd + "' command.")
+    commands.append(msgPrefix + "You did not provide the correct parameters for the '" + cmd + "' command.")
     # Automatically add on command help.
-    commands += cmdHelp(src, cmd)
+    commands += cmdHelp(src, cmd, dest)
 
     return commands
 
-def valError(src, cmd, field, val, required):
+
+def valError(src, cmd, field, val, required, dest = None):
     '''Standard message for a value related error.'''
+
+    if not dest is None:
+        msgPrefix = "PRIVMSG " + dest + " :"
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
 
     debug.info(
         "Nick " + src + " tried to use the '" + cmd + "' command but specified '" + val + "' for '" + field + "', which is not a " + required + ".")
-    commands = [
-        "PRIVMSG " + src + " :Error:  " + cmd + ":  " + field + " needs to be a " + required + " (was given " + str(
+    commands = [msgPrefix + "Error:  " + cmd + ":  " + field + " needs to be a " + required + " (was given " + str(
             val) + ")."]
 
     return commands
