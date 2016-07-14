@@ -89,7 +89,7 @@ def ctcpScripts(ircMsg):
 def joinScripts(ircMsg):
     '''Processes script triggers based on channel joins.'''
     cmds = []
-    RPCommands.joinTriggers(ircMsg)
+    cmds = RPCommands.joinTriggers(ircMsg)
     return cmds
 
 

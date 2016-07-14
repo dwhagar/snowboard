@@ -24,6 +24,8 @@ nochans
 '''
 
 import pyowm
+import random
+from os.path import isfile
 from . import basicMessages
 from . import debug
 
@@ -43,6 +45,8 @@ def channelTriggers(ircMsg):
         __showChans(ircMsg)
     elif ircMsg.dataList[0] == "^w":
         commands = __showWeather(ircMsg)
+    elif ircMsg.dataList[0] == "^button":
+        commands = __buttonPress(ircMsg)
 
     return commands
 
@@ -64,6 +68,60 @@ def resetTopics(net):
             if (not chan.topic == chan.defaultTopic) and chan.checkFlag("keeptopic"):
                 commands.append("TOPIC " + chan.name + " :" + chan.defaultTopic)
 
+    return commands
+
+
+def __buttonPress(ircMsg):
+    '''The infamous button script.'''
+    commands = []
+    thisCmd = "^button"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+    chanNick = chan.findNick(nick)
+
+    if (len(ircMsg.dataList) > 0) and (not chan.checkFlag("ic")):
+        if ircMsg.dataList[1].lower() == "on":
+            if chanNick[1].op:
+                chan.removeFlag("nobutton")
+            else:
+                commands.append("PRIVMSG " + ircMsg.dest + " :You do not have ops in this channel.")
+        elif ircMsg.dataList[1].lower() == "off":
+            if chanNick[1].op:
+                chan.addFlag("nobutton")
+            else:
+                commands.append("PRIVMSG " + ircMsg.dest + " :You do not have ops in this channel.")
+        elif not chan.checkFlag("nobutton"):
+            target = " ".join(ircMsg.dataList[1:])
+            source = ircMsg.src
+            fileName = "button.txt"
+            lines = []
+
+            if (not target.lower() == source.lower()) and (not target.lower() == ircMsg.net.botnick.lower()):
+                if isfile(fileName):
+                    file = open(fileName)
+                    data = file.readlines()
+
+                    for message in data:
+                        message = message.strip('/r')
+                        message = message.strip('/n')
+
+                        if not (message == ""):
+                            lines.append(message)
+
+                    file.close()
+
+                    random.seed()
+                    choice = random.choice(lines)
+
+                    choice.replace("::source::", source)
+                    choice.replace("::target::", target)
+                else:
+                    debug.error("Could not send file " + fileName + ", the file was not found.")
+                    commands.append(
+                        "PRIVMSG " + ircMsg.dest + " :That information could not be located.  Please contact the bot admin.")
+            else:
+                commands.append("PRIVMSG " + ircMsg.dest + " :Don't ask me to do that, it's just not right.")
     return commands
 
 def __modChannel(ircMsg):
