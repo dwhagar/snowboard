@@ -94,11 +94,11 @@ class Connection:
         '''Disconnect from the server.'''
         debug.message("Disconnected from " + self.host + ":" + str(self.port) + ".")
         if ssl:
-            if not self.__ssl == None:
+            if not self.__ssl is None:
                 self.__ssl.close()
                 self.__ssl = None
         else:
-            if not self.__socket == None:
+            if not self.__socket is None:
                 self.__socket.close()
         self.__socket = None
         self.__connected = False
@@ -141,7 +141,7 @@ class Connection:
             received = None
 
         # Remove the trailing carriage return character (cr/lf pair)
-        if not received == None:
+        if not received is None:
             received = received.strip('\r')
             if len(received) > 0:
                 if received[0] == ':':

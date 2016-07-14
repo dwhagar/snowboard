@@ -25,6 +25,7 @@ nochans
 
 import urllib.parse
 import urllib.request
+import urllib.error
 import json
 import random
 from os.path import isfile
@@ -292,11 +293,16 @@ def __showWeather(ircMsg):
     if not chan.checkFlag("noweather") and len(ircMsg.dataList) > 0:
         city = " ".join(ircMsg.dataList[1:])
         yahooURL = "https://query.yahooapis.com/v1/public/yql?"
-        yahooQuery = [('q',
-                       'SELECT * FROM weather.forecast WHERE woeid IN (SELECT woeid FROM geo.places(1) WHERE TEXT="' + city + '")'),
-                      ('format', 'json')]
-        url = yahooURL + urllib.parse.urlencode(yahooQuery)
-        response = urllib.request.urlopen(url)
+        yql = "select * from weather.forecast where woeid in (select woeid from geo.places(1) where text='{0}')".format(
+            city)
+        query = [('q', yql), ('format', 'json')]
+        url = yahooURL + urllib.parse.urlencode(query)
+        debug.message(yql)
+        debug.message(url)
+        try:
+            response = urllib.request.urlopen(url)
+        except urllib.error.HTTPError as err:
+            response = err
 
         if response.code == 200:
             data = json.loads(response.read().decode('utf-8'))
@@ -312,14 +318,14 @@ def __showWeather(ircMsg):
                     current) + "::I:: with a high of ::I::" + __tempString(
                     high) + "::I::, a low of ::I::" + __tempString(low) + "::I::, and " + humidity + "% humidity"
                 locationText = locationData['city'] + "," + locationData['region'] + ", " + locationData['country']
-                text = "In ::B::" + locationText + "::B:: the time is " + date + " and " + conditionText + "."
+                text = "In ::B::" + locationText + "::B:: the time is " + date + ".  Current conditions are:  " + conditionText + "."
                 commands.append("PRIVMSG " + ircMsg.dest + " :" + text)
             else:
                 commands.append("PRIVMSG " + ircMsg.dest + " :I could not find any information on that location.")
         else:
+            errorCode = str(response.code)
             commands.append(
-                "PRIVMSG " + ircMsg.dest + " :There was an problem getting information on that location, error code is '" + str(
-                    response.code)) + "'."
+                "PRIVMSG " + ircMsg.dest + " :There was an problem getting information on that location, error code is '" + errorCode + "'.")
 
     return commands
 
