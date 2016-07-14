@@ -23,7 +23,9 @@ norules
 nochans
 '''
 
-import pyowm
+import urllib.parse
+import urllib.request
+import json
 import random
 from os.path import isfile
 from . import basicMessages
@@ -282,31 +284,51 @@ def __showRules(ircMsg):
     if not chan.checkFlag("norules"):
         ircMsg.net.sendFile("help/rules.txt", "NOTICE", ircMsg.src)
 
-
 def __showWeather(ircMsg):
     '''Shows the current weather by city.'''
     commands = []
     chan = ircMsg.net.findChannel(ircMsg.dest)
 
     if not chan.checkFlag("noweather") and len(ircMsg.dataList) > 0:
-        weather = pyowm.OWM("337b19f7282e26f73f44973a7ce90472")
         city = " ".join(ircMsg.dataList[1:])
-        current = weather.weather_at_place(city)
+        yahooURL = "https://query.yahooapis.com/v1/public/yql?"
+        yahooQuery = [('q',
+                       'SELECT * FROM weather.forecast WHERE woeid IN (SELECT woeid FROM geo.places(1) WHERE TEXT="' + city + '")'),
+                      ('format', 'json')]
+        url = yahooURL + urllib.parse.urlencode(yahooQuery)
+        response = urllib.request.urlopen(url)
 
-        if not current is None:
-            location = current.get_location()
-            locationText = location.get_name()
-            data = current.get_weather()
-            tempDataF = data.get_temperature('fahrenheit')
-            tempDataC = data.get_temperature('celsius')
-            conditions = data.get_detailed_status().title()
-            tempHigh = "::I::" + str(round(tempDataF['temp_max'])) + "F/" + str(round(tempDataC['temp_max'])) + "C::I::"
-            tempLow = "::I::" + str(round(tempDataF['temp_min'])) + "F/" + str(round(tempDataC['temp_min'])) + "C::I::"
-            tempNow = "::I::" + str(round(tempDataF['temp'])) + "F/" + str(round(tempDataC['temp'])) + "C::I::"
-
-            weatherText = "Current conditions for ::B::" + locationText + "::B:::  ::I::" + conditions + "::I:: and " + tempNow + " with a high of " + tempHigh + " and a low of " + tempLow + "."
-            commands.append("PRIVMSG " + ircMsg.dest + " :" + weatherText)
+        if response.code == 200:
+            data = json.loads(response.read().decode('utf-8'))
+            if not data['query']['results'] is None:
+                locationData = data['query']['results']['channel']['location']
+                conditionData = data['query']['results']['channel']['item']['condition']
+                high = int(data['query']['results']['channel']['item']['forecast'][0]['high'])
+                low = int(data['query']['results']['channel']['item']['forecast'][0]['low'])
+                current = int(conditionData['temp'])
+                date = data['query']['results']['channel']['lastBuildDate']
+                humidity = data['query']['results']['channel']['atmosphere']['humidity']
+                conditionText = "::B::" + conditionData['text'] + "::B:: and ::I::" + __tempString(
+                    current) + "::I:: with a high of ::I::" + __tempString(
+                    high) + "::I::, a low of ::I::" + __tempString(low) + "::I::, and " + humidity + "% humidity"
+                locationText = locationData['city'] + "," + locationData['region'] + ", " + locationData['country']
+                text = "In ::B::" + locationText + "::B:: the time is " + date + " and " + conditionText + "."
+                commands.append("PRIVMSG " + ircMsg.dest + " :" + text)
+            else:
+                commands.append("PRIVMSG " + ircMsg.dest + " :I could not find any information on that location.")
         else:
-            commands.append("PRIVMSG " + ircMsg.dest + " :I could not find weather data for that location.")
+            commands.append(
+                "PRIVMSG " + ircMsg.dest + " :There was an problem getting information on that location, error code is '" + str(
+                    response.code)) + "'."
 
     return commands
+
+
+def __tempString(temp):
+    '''Returns a formatted temperature string given temp in F'''
+    f = temp
+    c = round((f - 32) * 5 / 9)
+
+    text = str(f) + "F/" + str(c) + "C"
+
+    return text
