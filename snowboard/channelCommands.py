@@ -74,21 +74,22 @@ def resetTopics(net):
 def __buttonPress(ircMsg):
     '''The infamous button script.'''
     commands = []
-    thisCmd = "^button"
 
     nick = ircMsg.net.findNick(ircMsg.src)
     chan = ircMsg.net.findChannel(ircMsg.dest)
     chanNick = chan.findNick(nick)
 
-    if (len(ircMsg.dataList) > 0) and (not chan.checkFlag("ic")):
+    if (len(ircMsg.dataList) > 1) and (not chan.checkFlag("ic")):
         if ircMsg.dataList[1].lower() == "on":
             if chanNick[1].op:
                 chan.removeFlag("nobutton")
+                commands.append("PRIVMSG " + ircMsg.dest + " :The button is now turned on.")
             else:
                 commands.append("PRIVMSG " + ircMsg.dest + " :You do not have ops in this channel.")
         elif ircMsg.dataList[1].lower() == "off":
             if chanNick[1].op:
                 chan.addFlag("nobutton")
+                commands.append("PRIVMSG " + ircMsg.dest + " :The button is now turned off.")
             else:
                 commands.append("PRIVMSG " + ircMsg.dest + " :You do not have ops in this channel.")
         elif not chan.checkFlag("nobutton"):
@@ -114,14 +115,18 @@ def __buttonPress(ircMsg):
                     random.seed()
                     choice = random.choice(lines)
 
-                    choice.replace("::source::", source)
-                    choice.replace("::target::", target)
+                    choice = choice.replace("::source::", source)
+                    choice = choice.replace("::target::", target)
+
+                    commands.append("PRIVMSG " + ircMsg.dest + " :" + choice)
                 else:
                     debug.error("Could not send file " + fileName + ", the file was not found.")
                     commands.append(
                         "PRIVMSG " + ircMsg.dest + " :That information could not be located.  Please contact the bot admin.")
             else:
                 commands.append("PRIVMSG " + ircMsg.dest + " :Don't ask me to do that, it's just not right.")
+    else:
+        commands.append("PRIVMSG " + ircMsg.dest + " :You should really tell me whose button you want me to push.")
     return commands
 
 def __modChannel(ircMsg):
@@ -287,15 +292,21 @@ def __showWeather(ircMsg):
         weather = pyowm.OWM("337b19f7282e26f73f44973a7ce90472")
         city = " ".join(ircMsg.dataList[1:])
         current = weather.weather_at_place(city)
-        location = current.get_location()
-        locationText = location.get_name()
-        data = current.get_weather()
-        tempData = data.get_temperature('fahrenheit')
-        conditions = data.get_detailed_status()
-        high = str(tempData['temp_max'])
-        low = str(tempData['temp_min'])
-        now = str(tempData['temp'])
-        weatherText = "Current conditions for " + locationText + " are " + conditions + " and " + now + "F with a high of " + high + "F and a low of " + low + "F."
-        commands.append("PRIVMSG " + ircMsg.dest + " :" + weatherText)
+
+        if not current is None:
+            location = current.get_location()
+            locationText = location.get_name()
+            data = current.get_weather()
+            tempDataF = data.get_temperature('fahrenheit')
+            tempDataC = data.get_temperature('celsius')
+            conditions = data.get_detailed_status().title()
+            tempHigh = "::I::" + str(round(tempDataF['temp_max'])) + "F/" + str(round(tempDataC['temp_max'])) + "C::I::"
+            tempLow = "::I::" + str(round(tempDataF['temp_min'])) + "F/" + str(round(tempDataC['temp_min'])) + "C::I::"
+            tempNow = "::I::" + str(round(tempDataF['temp'])) + "F/" + str(round(tempDataC['temp'])) + "C::I::"
+
+            weatherText = "Current conditions for ::B::" + locationText + "::B:::  ::I::" + conditions + "::I:: and " + tempNow + " with a high of " + tempHigh + " and a low of " + tempLow + "."
+            commands.append("PRIVMSG " + ircMsg.dest + " :" + weatherText)
+        else:
+            commands.append("PRIVMSG " + ircMsg.dest + " :I could not find weather data for that location.")
 
     return commands
