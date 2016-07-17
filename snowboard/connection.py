@@ -83,6 +83,8 @@ class Connection:
                 debug.error("Connection to " + self.host + " timed out.")
             except socket.gaierror:
                 debug.error("Failed to resolve " + self.host + ".")
+            except OSError as err:
+                debug.error("Failed to connect '" + err.errno + "' " + err.strerror + ".")
 
             attempt += 1
 

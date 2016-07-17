@@ -38,10 +38,12 @@ def rawTriggers(net, message):
     dbTriggerA = r"^(.*)!(.*@.*) (PRIVMSG|PART) (#.*) :(.*)$"
     dbTriggerB = r"^(.*)!(.*@.*) (QUIT) :(.*)$"
     dbTriggerC = r"^(.*)!(.*@.*) (JOIN|PART) (#.*)$"
+    dbTriggerD = r"^(.*)!(.*@.*) (NICK) :(.*)$"
 
     searchA = re.compile(dbTriggerA, re.IGNORECASE)
     searchB = re.compile(dbTriggerB, re.IGNORECASE)
     searchC = re.compile(dbTriggerC, re.IGNORECASE)
+    searchD = re.compile(dbTriggerD, re.IGNORECASE)
 
     seen = Seen(net.name)
 
@@ -82,6 +84,17 @@ def rawTriggers(net, message):
             act = "joining " + dest
         elif data[3] == "PART":
             act = "leaving " + dest
+
+        seen.save(nick, host, act)
+    elif searchD.match(message):
+        # Process quit messages.
+        data = searchD.split(message)
+
+        nick = data[1]
+        host = data[2]
+        msg = data[4]
+
+        act = "changing nick to '" + msg + "'"
 
         seen.save(nick, host, act)
     else:
@@ -149,7 +162,7 @@ def __seenQuery(ircMsg):
             commands.append("PRIVMSG " + ircMsg.dest + " :Wherever you go, there you are.")
         else:
             commands.append(
-                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.datalist[1] + " in my database.")
+                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.dataList[1] + " in my database.")
     else:
         commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
 

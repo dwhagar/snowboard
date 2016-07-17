@@ -318,7 +318,7 @@ def __showWeather(ircMsg):
                     current) + "::I:: with a high of ::I::" + __tempString(
                     high) + "::I::, a low of ::I::" + __tempString(low) + "::I::, and " + humidity + "% humidity"
                 locationText = locationData['city'] + "," + locationData['region'] + ", " + locationData['country']
-                text = "In ::B::" + locationText + "::B:: the time is " + date + ".  Current conditions are:  " + conditionText + "."
+                text = "In ::B::" + locationText + "::B:: the time is " + date + ".  Current conditions are " + conditionText + "."
                 commands.append("PRIVMSG " + ircMsg.dest + " :" + text)
             else:
                 commands.append("PRIVMSG " + ircMsg.dest + " :I could not find any information on that location.")
