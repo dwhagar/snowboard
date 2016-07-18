@@ -120,51 +120,55 @@ def __seenQuery(ircMsg):
     '''Query the seen database.'''
     commands = []
 
-    if not ((ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower()) or (
-        ircMsg.src.lower() == ircMsg.dataList[1].lower())):
-        seen = Seen(ircMsg.net.name)
+    if len(ircMsg.dataList) == 2:
+        if not ((ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower()) or (
+                    ircMsg.src.lower() == ircMsg.dataList[1].lower())):
+            seen = Seen(ircMsg.net.name)
 
-        nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
+            nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
 
-        if (not (nicks is None)) and (not (hosts is None)):
-            lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
+            if (not (nicks is None)) and (not (hosts is None)):
+                lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
 
-            timeDiff = round(time.time()) - round(lastTime)
-            delta = datetime.timedelta(seconds = timeDiff)
+                timeDiff = round(time.time()) - round(lastTime)
+                delta = datetime.timedelta(seconds = timeDiff)
 
-            if (delta.days == 0) and (delta.seconds < 1):
-                ago = "less than a second"
-            else:
-                ago = str(delta)
-
-            for nick in nicks:
-                isHere = ircMsg.net.findNick(nick)
-                if not (isHere is None):
-                    break
-
-            if isHere is None:
-                if lastNick.lower() == ircMsg.dataList[1].lower():
-                    commands.append(
-                        "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+                if (delta.days == 0) and (delta.seconds < 1):
+                    ago = "less than a second"
                 else:
-                    commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                        1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
-            else:
-                if lastNick.lower() == isHere.name.lower():
-                    commands.append(
-                        "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here.")
+                    ago = str(delta)
+
+                for nick in nicks:
+                    isHere = ircMsg.net.findNick(nick)
+                    if not (isHere is None):
+                        break
+
+                if isHere is None:
+                    if lastNick.lower() == ircMsg.dataList[1].lower():
+                        commands.append(
+                            "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+                    else:
+                        commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
+                            1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
                 else:
-                    commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                        1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
-        elif ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower():
-            commands.append("PRIVMSG " + ircMsg.dest + " :I am right here.")
-        elif ircMsg.src.lower() == ircMsg.dataList[1].lower():
-            commands.append("PRIVMSG " + ircMsg.dest + " :Wherever you go, there you are.")
+                    if lastNick.lower() == isHere.name.lower():
+                        commands.append(
+                            "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here.")
+                    else:
+                        commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
+                            1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
+            elif ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower():
+                commands.append("PRIVMSG " + ircMsg.dest + " :I am right here.")
+            elif ircMsg.src.lower() == ircMsg.dataList[1].lower():
+                commands.append("PRIVMSG " + ircMsg.dest + " :Wherever you go, there you are.")
+            else:
+                commands.append(
+                    "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.dataList[1] + " in my database.")
         else:
-            commands.append(
-                "PRIVMSG " + ircMsg.dest + " :I have no information on " + ircMsg.dataList[1] + " in my database.")
+            commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
     else:
-        commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
+        commands.append(
+            "PRIVMSG " + ircMsg.dest + " :Where you looking for someone?  You need to tell me who you are looking for, and I'll check.  Only give me one name a time.")
 
     return commands
 
@@ -213,8 +217,15 @@ def __traceNick(ircMsg):
 
             msgList = ircMsg.net.splitMessage(message)
 
+            if len(message) < 350:
+                sendCmd = "PRIVMSG " + ircMsg.dest + " :"
+            else:
+                commands.append(
+                    "PRIVMSG " + ircMsg.dest + " :There is a lot of information here, I will send it to you in private.")
+                sendCmd = "NOTICE " + ircMsg.src + " :"
+
             for msg in msgList:
-                commands.append("PRIVMSG " + ircMsg.dest + " :" + msg)
+                commands.append(sendCmd + msg)
         else:
             possibleNicks = seen.searchNicks(ircMsg.dataList[2])
             message = "I have no information on '" + ircMsg.dataList[2] + "' in my database."
