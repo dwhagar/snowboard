@@ -28,7 +28,7 @@ def channelTriggers(ircMsg):
     commands = []
 
     whoAreRE = r"^\b(" + ircMsg.net.botnick + r")(, | |: ){0,1}\b(Who are you)\?{0,1}$"
-    pingRE = r"^\b(ping)[ ]{0,1}(me){0,1}[ ]{0,1}\b(please){0,1}\?{0,1}$"
+    pingRE = r"^(ping)[ ]{0,1}(me){0,1}[,]{0,1}[ ]{0,1}(please){0,1}[?!.]{0,1}$"
 
     if re.search(whoAreRE, ircMsg.data, flags = re.IGNORECASE):
         commands = __identifySelf(ircMsg)
@@ -43,6 +43,38 @@ def ctcpTriggers(ircMsg):
 
     if ircMsg.command == "PINGREPLY":
         commands = __pingBack(ircMsg)
+
+    return commands
+
+
+def joinTrigger(ircMsg):
+    commands = []
+
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+    nick = ircMsg.net.findNick(ircMsg.src)
+    voiceNick = False
+    opNick = False
+
+    if not chan is None:
+        if chan.checkFlag("voiceall"):
+            if nick is None:
+                voiceNick = True
+            elif nick.user.checkDenied("voice") or nick.user.checkDenied("autovoice"):
+                voiceNick = False
+            else:
+                voiceNick = True
+
+        if not nick is None:
+            if nick.user.checkApproved("autoops"):
+                opNick = True
+            if nick.user.checkApproved("autovoice"):
+                voiceNick = True
+
+        if chan.opped:
+            if opNick:
+                commands.append("MODE " + ircMsg.dest + " +o " + ircMsg.src)
+            elif voiceNick:
+                commands.append("MODE " + ircMsg.dest + " +v " + ircMsg.src)
 
     return commands
 
@@ -87,7 +119,7 @@ def __authNickServ(ircMsg):
     '''Sends authorization to NickServ'''
     commands = []
 
-    if ircMsg.net.config.nickPass == None:
+    if ircMsg.net.config.nickPass is None:
         debug.warn(ircMsg.src + " is requesting that I identify myself, but I have no password configured.")
     else:
         debug.message(ircMsg.src + " is requesting that I identify myself, attempting to do so.")
@@ -113,7 +145,7 @@ def __hopServers(ircMsg):
             commands.append("PRIVMSG " + ircMsg.src + " :Initiatating a server hop.")
             commands.append("QUIT Server hop by order of " + ircMsg.src + ".")
         else:
-            commands += basicMessages.denyMessages(ircMsg.src, "hop")
+            commands += basicMessages.denyMessage(ircMsg.src, "hop")
     else:
         commands += basicMessages.noAuth(ircMsg.src, "hop")
 

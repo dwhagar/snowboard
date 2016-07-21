@@ -36,14 +36,12 @@ def chanTriggers(ircMsg):
 def rawTriggers(net, message):
     '''Processes raw message triggers.'''
     dbTriggerA = r"^(.*)!(.*@.*) (PRIVMSG|PART) (#.*) :(.*)$"
-    dbTriggerB = r"^(.*)!(.*@.*) (QUIT) :(.*)$"
+    dbTriggerB = r"^(.*)!(.*@.*) (QUIT|NICK) :(.*)$"
     dbTriggerC = r"^(.*)!(.*@.*) (JOIN|PART) (#.*)$"
-    dbTriggerD = r"^(.*)!(.*@.*) (NICK) :(.*)$"
 
     searchA = re.compile(dbTriggerA, re.IGNORECASE)
     searchB = re.compile(dbTriggerB, re.IGNORECASE)
     searchC = re.compile(dbTriggerC, re.IGNORECASE)
-    searchD = re.compile(dbTriggerD, re.IGNORECASE)
 
     seen = Seen(net.name)
 
@@ -63,16 +61,22 @@ def rawTriggers(net, message):
 
         seen.save(nick, host, act)
     elif searchB.match(message):
-        # Process quit messages.
+        # Process quit and nick messages.
         data = searchB.split(message)
 
         nick = data[1]
         host = data[2]
         msg = data[4]
 
-        act = "leaving IRC with message '" + msg + "'"
+        if msg == "QUIT":
+            act = "leaving IRC with message '" + msg + "'"
+            seen.save(nick, host, act)
+        elif msg == "NICK":
+            act = "changing nick to '" + msg + "'"
+            seen.save(nick, host, act)
+            act = "changing nick from '" + nick + "'"
+            seen.save(msg, host, act)
 
-        seen.save(nick, host, act)
     elif searchC.match(message):
         data = searchC.split(message)
 
@@ -84,17 +88,6 @@ def rawTriggers(net, message):
             act = "joining " + dest
         elif data[3] == "PART":
             act = "leaving " + dest
-
-        seen.save(nick, host, act)
-    elif searchD.match(message):
-        # Process quit messages.
-        data = searchD.split(message)
-
-        nick = data[1]
-        host = data[2]
-        msg = data[4]
-
-        act = "changing nick to '" + msg + "'"
 
         seen.save(nick, host, act)
     else:

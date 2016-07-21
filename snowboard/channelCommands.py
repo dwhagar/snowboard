@@ -73,7 +73,6 @@ def resetTopics(net):
 
     return commands
 
-
 def __buttonPress(ircMsg):
     '''The infamous button script.'''
     commands = []
@@ -255,7 +254,6 @@ def __resetTopic(ircMsg):
 
     return commands
 
-
 def __showChans(ircMsg):
     '''Shows rules from the rules.txt help file.'''
     chan = ircMsg.net.findChannel(ircMsg.dest)
@@ -328,7 +326,6 @@ def __showWeather(ircMsg):
                 "PRIVMSG " + ircMsg.dest + " :There was an problem getting information on that location, error code is '" + errorCode + "'.")
 
     return commands
-
 
 def __tempString(temp):
     '''Returns a formatted temperature string given temp in F'''

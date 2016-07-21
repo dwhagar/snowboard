@@ -30,6 +30,7 @@ def joinTriggers(ircMsg):
 
     if not ircMsg.src == ircMsg.net.botnick:
         chan = ircMsg.net.findChannel(ircMsg.dest)
+
         if not chan is None:
             if chan.checkFlag("ic"):
                 commands.append(
