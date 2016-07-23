@@ -49,6 +49,7 @@ class Config:
         self.checkInterval = 300
         self.maxLag = 90
         self.nickPass = None
+        self.logLevel = 0
 
         # Read configuration.
         self.file = configFile
@@ -80,10 +81,7 @@ class Config:
         # Parse Channels into a List
         channels = config['Network']['channels']
         channels = channels.replace(' ','')
-        channelList = channels.split(',')
-        for chan in channelList:
-            newChannel = channel.Channel(chan, self.network)
-            self.channels.append(newChannel)
+        self.channels = channels.split(',')
 
         # These sections all have reasonable defaults, so it checks to see if
         # the keys are there, if they are not defaults are used.

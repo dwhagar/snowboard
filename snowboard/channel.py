@@ -33,6 +33,7 @@ class Channel:
         self.desc = ""
         self.flags = []
         self.joined = False
+        self.joinSent = False
         self.name = name
         self.members = members  # A list of lists, storing Nick and ChanPriv
         self.modes = ""
@@ -88,6 +89,7 @@ class Channel:
     def join(self):
         '''Join a channel.'''
         if not self.joined:
+            self.joinSent = True
             return ["JOIN " + self.name]
 
     def loadData(self):
@@ -97,6 +99,7 @@ class Channel:
     def part(self):
         '''Leaves a channel.'''
         if self.joined:
+            self.joinSent = False
             return ["PART " + self.name]
 
     def removeFlag(self, flag):

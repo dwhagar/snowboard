@@ -16,7 +16,7 @@
 '''
 Provides a method for the bot to log information to individual files.
 '''
-
+import time
 from . import ctcpGlobals
 from . import debug
 from .logFile import LogFile
@@ -26,11 +26,13 @@ nonMessages = ["MODE", "JOIN", "PART", "QUIT", "NICK"]
 
 
 class Logs:
-    def __init__(self, network):
+    def __init__(self, network, nick):
         self.channels = []
         self.messages = []
         self.network = network
         self.server = []
+        self.nick = nick
+        self.cycled = False
 
     def addChannel(self, channel):
         return self.__addList(self.channels, channel, True)
@@ -40,6 +42,15 @@ class Logs:
 
     def addServer(self, kind):
         return self.__addList(self.server, kind)
+
+    def clearAll(self):
+        self.channels = []
+        self.messages = []
+        self.server = []
+
+    def cycle(self):
+        self.clearAll()
+        self.cycled = True
 
     def delChannel(self, channel):
         self.__delList(self.channels, channel)
@@ -59,17 +70,34 @@ class Logs:
     def findServer(self, kind):
         return self.__findList(self.messages, kind)
 
-    def writeLog(self, message):
+    def write(self, logData, name = "status", channel = False, private = False):
+        if channel:
+            log = self.addChannel(name)
+        elif private:
+            log = self.addMessage(name)
+        else:
+            log = self.addServer(name)
+
+        t = time.time()
+        s = time.localtime(t)
+        ms = format(t - int(t), '1.3f')[1:]
+        timePrefix = "[" + time.strftime("%y/%m/%d %H:%M:%S", s) + ms + "] "
+
+        log.writeLog(timePrefix + logData)
+
+    def writeRecv(self, message):
         global messages
         global nonMessages
 
         msgList = message.split()
         msgListLen = len(msgList)
 
+        name = "status"
         channel = False
         private = False
+        logData = ""
 
-        if msgList[0].find("!") > 0:
+        if msgList[0].find("!") >= 0:
             source = msgList[0].split("!")[0]
         else:
             source = msgList[0]
@@ -80,6 +108,7 @@ class Logs:
         if msgListLen > 2:
             if msgList[2][0] == "#":
                 channel = True
+                name = msgList[2]
 
             if msgList[1] in messages:
                 messageData = " ".join(msgList[3:])
@@ -88,10 +117,14 @@ class Logs:
 
                 if not channel:
                     private = True
+                    name = source
 
                 if msgList[1] == "PRIVMSG":
                     logData = "<" + source + "> " + messageData
                 elif msgList[1] == "NOTICE":
+                    if msgList[0].find("!") < 0:
+                        name = "status"
+                        private = False
                     logData = "[NOTICE from " + source + "] " + messageData
                 elif msgList[1] == "ACTION":
                     logData = " * " + source + " " + messageData
@@ -115,31 +148,69 @@ class Logs:
                     if msgListLen > 3:
                         quitMsg = " ".join(msgList[3:])
                         logData += " with message '" + quitMsg + "'"
+            else:
+                if msgList[1] == "375" or msgList[1] == "372" or msgList[1] == "376":
+                    name = "motd"
+                if message[0] == ":":
+                    message = message[1:]
+
+                logData = message
+
         elif msgListLen == 2:
-            source = msgList[0]
-
-            if source[0] == ":":
-                source = source[1:]
-            if msgList[1][0] == ":":
-                msgList[1] = msgList[1][1:]
-
-            logData = source + ": " + msgList[1]
+            logData = message
 
         elif msgListLen == 1:
             debug.warn("I got a strange message from the server, not sure what it means: " + message)
             return
 
-        if channel:
-            log = self.addChannel(msgList[2])
-        elif private:
-            log = self.addMessage(source)
-        else:
-            log = self.addServer("status")
+        if len(logData) > 0:
+            self.write(logData, name, channel, private)
 
-        log.writeLog(logData)
+    def writeSent(self, message):
+        global messages
+        global nonMessages
+
+        msgList = message.split()
+        msgListLen = len(msgList)
+        prefix = ">> "
+        logData = ""
+        dest = "status"
+        channel = False
+        private = False
+
+        if msgListLen > 2:
+            if msgList[1][0] == "#":
+                channel = True
+                dest = msgList[1]
+
+            data = " ".join(msgList[2:])
+            if data[0] == ":":
+                data = data[1:]
+
+            if msgList[0].upper() in messages:
+                if not channel:
+                    private = True
+                    dest = msgList[1]
+
+                if msgList[0].upper() == "PRIVMSG":
+                    logData = prefix + "<" + self.nick + "> " + data
+                elif msgList[0].upper() == "ACTION":
+                    logData = prefix + "* " + self.nick + " " + data
+                elif msgList[0].upper() == "NOTICE":
+                    logData = prefix + "[NOTICE to" + dest + "] " + data
+                elif msgList[0].upper() in ctcpGlobals.queries or msgList[0].upper() in ctcpGlobals.replies:
+                    logData = prefix + "[" + msgList[0].upper() + " to " + dest + "] " + data
+            else:
+                logData = prefix + message
+
+        elif msgListLen > 0:
+            logData = prefix + message
+
+        if len(logData) > 0:
+            self.write(logData, dest, channel, private)
 
     def __addList(self, lst, item, channel = False, message = False):
-        found = self.__findList(item)
+        found = self.__findList(lst, item)
 
         if found is None:
             newLog = LogFile(self.network, item, channel, message)

@@ -20,6 +20,9 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 verbosity = 0
+logLevel = 0
+logStd = None
+logErr = None
 
 import sys
 import time
@@ -49,9 +52,24 @@ def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, lev
         `verbosity` must be at least `level` for any output.
     """
     global verbosity
+    global logLevel
+    global logStd
+
+    t = time.time()
+    s = time.localtime(t)
+    ms = format(t - int(t), '1.3f')[1:]
+    timePrefix = "[" + time.strftime("%y/%m/%d %H:%M:%S", s) + ms + "] "
+
     if level <= verbosity:
-        print("[" + time.strftime("%y/%m/%d %H:%M:%S") + "] ", sep = "", end = "", file = sys.stdout, flush = False)
+        print(timePrefix, sep = "", end = "", file = sys.stdout, flush = False)
         print(*objects, sep=sep, end=end, file=file, flush=flush)
+
+    if level <= logLevel:
+        logStd.open()
+        print(timePrefix, sep = "", end = "", file = logStd.file, flush = False)
+        print(*objects, sep = sep, end = end, file = logStd.file, flush = flush)
+        logStd.close()
+
 
 def debug_message(*objects, sep=" ", end="\n", type="DEBUG", level=3):
     """Writes an error message if the level is high enough.
@@ -77,10 +95,26 @@ def debug_message(*objects, sep=" ", end="\n", type="DEBUG", level=3):
     level : int
         `verbosity` must be at least `level` for any output.
     """
+    global verbosity
+    global logLevel
+    global logErr
+
+    t = time.time()
+    s = time.localtime(t)
+    ms = format(t - int(t), '1.3f')[1:]
+    timePrefix = "[" + time.strftime("%y/%m/%d %H:%M:%S", s) + ms + "] "
+
     if level <= verbosity:
-        print("[" + time.strftime("%y/%m/%d %H:%M:%S") + "] [", type, "]: ", sep = "", end = "", file = sys.stderr,
+        print(timePrefix + "[", type, "]: ", sep = "", end = "", file = sys.stderr,
               flush = False)
         print(*objects, sep=sep, end=end, file=sys.stderr, flush=True)
+
+    if level <= logLevel:
+        logErr.open()
+        print(timePrefix + "[", type, "]: ", sep = "", end = "", file = logErr.file, flush = False)
+        print(*objects, sep = sep, end = end, file = logErr.file, flush = True)
+        logErr.close()
+
 
 def message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     """Writes a message if `verbosity` is at least 1.

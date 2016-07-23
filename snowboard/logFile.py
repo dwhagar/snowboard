@@ -17,9 +17,9 @@
 Object to handle logging output to a single log file.
 '''
 
+import time
 from os import makedirs
 from os.path import isdir, abspath
-
 
 class LogFile:
     def __init__(self, network, name, channel = False, pm = False):
@@ -34,20 +34,27 @@ class LogFile:
         elif self.pm:
             self.path += "messages/"
 
+        if not name == "motd":
+            self.path += name
+            self.name = time.strftime("%Y-%m-%d")
+
         if not isdir(self.path):
             makedirs(self.path, exist_ok = True)
 
         self.path = abspath(self.path)
-        self.fileName = self.path + self.name + ".log"
+        self.fileName = self.path + "/" + self.name + ".log"
 
     def writeLog(self, message):
         message += "\r\n"
-        self.__open()
+        self.open()
         self.file.write(message)
-        self.__close()
+        self.close()
 
-    def __close(self):
+    def close(self):
         self.file.close()
 
-    def __open(self):
-        self.file = open(self.fileName, "a")
+    def open(self):
+        if self.name == "motd":
+            self.file = open(self.fileName, "w")
+        else:
+            self.file = open(self.fileName, "a")

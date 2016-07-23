@@ -148,7 +148,6 @@ class Connection:
             if len(received) > 0:
                 if received[0] == ':':
                     received = received[1:]
-            debug.trace(received)
 
         # Bug fix for Issue #18, do not return blank lines.
         if received == "":
@@ -159,7 +158,6 @@ class Connection:
     def write(self, data):
         '''Sends data to the server.'''
         # Encode the data for the server.
-        debug.trace(data)
         data += '\n'
         data = data.encode('utf-8')
 

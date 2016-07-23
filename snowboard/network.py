@@ -31,17 +31,19 @@ from .channel import Channel
 from .nick import Nick
 from .users import Users
 from .channelPriv import ChannelPriv
+from .logs import Logs
 
 class Network:
     def __init__(self, cfg):
         self.config = cfg
 
         self.botnick = self.config.botnick[:] # Copied, not just a reference
-        self.channels = cfg.channels
+        self.channels = []
         self.checkNext = 0
         self.delay = 0.25
         self.lastActivity = 0
         self.missedPings = 0
+        self.motdDone = False
         self.name = self.config.network
         self.nextSend = 0
         self.nicks = []
@@ -60,16 +62,26 @@ class Network:
         self.__connection = None
         self.__lastServer = 0  # The index of the last server connected
 
+        self.logs = Logs(self.name, self.botnick)
+
     def addChannel(self, chan):
         '''Add a channel to the network.'''
-        existing = self.__checkChannels(chan.name)
+        if type(chan) is str:
+            name = chan
+        else:
+            name = chan.name
+
+        existing = self.__checkChannels(name)
+
         if existing is None:
-            newChannel = Channel(chan, self.name)
+            newChannel = Channel(name, self.name)
             self.channels.append(newChannel)
             self.sendCommands(newChannel.join())
+            debug.info("Attempting to join '" + newChannel.name + "'.")
         else:
             if not existing.joined:
                 self.sendCommands(existing.join())
+                debug.info("Attempting to join '" + existing.name + "'.")
 
     def addNick(self, nickName):
         '''Add a nick to the master list.'''
@@ -80,41 +92,6 @@ class Network:
             return newNick
         else:
             return existing
-
-    def auth(self):
-        '''Authenticate with the network.'''
-        debug.message("Attempting to authenticate.")
-        stage = 0 # What stage of authentication are we in?
-
-        # Wait for the server to signal that authentication is complete.
-        while (not self.__authenticated) and (self.__connection.connected()):
-            if stage == 1: # Choose a nick to go by.
-                # Begin authentication process.
-                self.__connection.write("NICK " + self.botnick)
-            elif stage == 2: # Send user information
-                # Send user information.
-                self.__connection.write("USER " + self.botnick.lower() + " 0 * :" + self.config.realname)
-
-            stage += 1
-
-            data = self.__connection.read()
-            if not data is None:
-                line = data.split()
-                if line[1] == "001":
-                    debug.message("Authentication successful.")
-                    self.server = line[0]
-                    self.__suppressMOTD() # Not really required
-                    self.__authenticated = True
-                    self.lastActivity = time.time()
-                elif line[1] == "433":
-                    # The nick we wanted was in use, must choose another one.
-                    debug.message("Primary nick was taken, choosing a replacement.")
-                    stage = 1
-                    random.seed()
-                    addition = str(random.randrange(10000,20000))
-                    self.botnick += addition
-                else:
-                    self.__pingpong(data)
 
     def checkLag(self):
         '''Checks to see how much server lag there is.'''
@@ -133,6 +110,9 @@ class Network:
             if '\x01' in data:
                 data = self.__processCTCP(data)
             self.lastActivity = time.time()
+
+            if self.config.logLevel > 0:
+                self.logs.writeRecv(data)
 
         return data
 
@@ -217,6 +197,7 @@ class Network:
             for server in servers:
                 # Create the connection object, load settings from config
                 self.__connection = Connection(server)
+                self.__connection.logs = self.logs
                 self.__connection.retries = self.config.retries
                 self.__connection.delay = self.config.delay
                 self.__connection.sslVerify = self.config.sslVerify
@@ -251,6 +232,10 @@ class Network:
 
         # Return the object to a disconnected state.
         self.__authenticated = False
+        self.motdDone = False
+
+        # Reset loging system.
+        self.logs.clearAll()
 
         # There are no nicks to keep track of when disconnected.
         self.nicks = []
@@ -339,6 +324,21 @@ class Network:
                 self.pingNext = time + self.config.pingInterval
 
         return commands
+
+    def processAuth(self, response):
+        '''Process a successful authentication.'''
+        debug.message("Authentication successful.")
+        self.server = response[0]
+        self.__authenticated = True
+        self.lastActivity = time.time()
+
+    def processBadNick(self):
+        '''Process a required change of nicks.'''
+        debug.message("Primary nick was taken, choosing a replacement.")
+        random.seed()
+        addition = str(random.randrange(10000, 20000))
+        self.botnick += addition
+        self.sendCommands(["NICK " + self.botnick])
 
     def processJoinPart(self, response):
         '''Process a join or part message from the server.'''
@@ -591,7 +591,7 @@ class Network:
 
     def ready(self):
         '''Let the outside world see if the connection is ready.'''
-        return self.__authenticated
+        return self.__authenticated and self.motdDone
 
     def removeAccess(self, uid):
         '''Removes access for a uid across all nicks.'''
@@ -620,6 +620,8 @@ class Network:
                 # Send a couple of lines, then wait.
                 for cmd in self.queue[:self.sendBlock]:
                     self.__connection.write(cmd)
+                    if self.config.logLevel > 1:
+                        self.logs.writeSent(cmd)
                 self.queue = self.queue[self.sendBlock:]
 
                 # Set up the next time the Queue will be processed.
@@ -734,19 +736,6 @@ class Network:
 
         return lineList
 
-    def __authwait(self):
-        '''
-        Some servers require that clients receive data before it can auth
-        with the server.  Some even require a ping be responded to before
-        authenticating.  This takes care of that by waiting for the server
-        to send something back, and responding to any pings that get sent.
-        '''
-        time.sleep(0.25) # Give the sever a chance to say something.
-        data = self.__connection.read()
-        while not data is None:
-            self.__pingpong(data)
-            data = self.__connection.read()
-
     def __checkChannels(self, channel):
         '''See if a channel already exists.'''
         result = None
@@ -763,7 +752,8 @@ class Network:
         '''Respond to a ping request.'''
         line = message.split()
         if line[0] == "PING":
-            self.__connection.write("PONG " + line[1])
+            message = "PONG " + line[1]
+            self.sendCommands([message])
 
     def __processCTCP(self, data):
         '''Correctly handle CTCP message and responses.'''
@@ -781,9 +771,9 @@ class Network:
             ctcpCmd = ctcpGlobals.replies[ctcpGlobals.queries.index(ctcpCmd) - 1]
 
         if len(dataList) > 4:
-            data = dataList[0] + " " + ctcpCmd + " :" + " ".join(dataList[4:])
+            data = dataList[0] + " " + ctcpCmd + " " + dataList[2] + " :" + " ".join(dataList[4:])
         else:
-            data = dataList[0] + " " + ctcpCmd
+            data = dataList[0] + " " + ctcpCmd + " " + dataList[2]
 
         return data
 
@@ -794,15 +784,3 @@ class Network:
         if len(hostmask) < 2:
             hostmask.append("")
         return (hostmask[0], hostmask[1])
-
-    def __suppressMOTD(self):
-        '''Waits until the MOTD is done before going further.'''
-        stillMOTD = True
-
-        while stillMOTD:
-            data = self.__connection.read()
-            if not data is None:
-                dataList = data.split()
-                if len(dataList) > 1:
-                    if dataList[1] == "376":
-                        stillMOTD = False
