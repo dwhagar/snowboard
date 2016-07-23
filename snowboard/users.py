@@ -32,7 +32,7 @@ from .user import User
 class Users:
     def __init__(self, network):
         self.network = network
-        self.database = network.lower() + "-users.db"
+        self.database = network.lower() + ".db"
         self.conn = None
         self.db = None
 
@@ -79,8 +79,6 @@ class Users:
 
     def getUsers(self):
         '''Gets a list of all users.'''
-        result = None
-
         self.__openDB()
 
         query = "SELECT uid, user, password, hostmasks, level, flags, channels FROM users"
@@ -288,9 +286,9 @@ class Users:
 
     def __convertWild(self, search):
         '''Converts a simple wildcard search into a regular expression.'''
-        new = search.replace('.', "\.")
-        new = new.replace('?',".?")
-        new = new.replace('*',".*")
+        new = search.replace('.', r"\.")
+        new = new.replace('?', ".?")
+        new = new.replace('*', ".*")
         return new
 
     def __initDB(self):

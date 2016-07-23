@@ -19,7 +19,7 @@ Processes basic IRC commands.
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 import time
-
+import re
 from . import debug
 from . import basicMessages
 
@@ -27,11 +27,12 @@ def channelTriggers(ircMsg):
     '''Process triggers for basic commands.'''
     commands = []
 
-    if ircMsg.dataList[0][:len(ircMsg.net.botnick)].lower() == ircMsg.net.botnick.lower():
-        data = " ".join(ircMsg.dataList[1:])
-        if data.lower() == "who are you?":
-            commands = __identifySelf(ircMsg)
-    elif ircMsg.data.lower() == "pingme" or ircMsg.data.lower() == "ping me":
+    whoAreRE = r"^\b(" + ircMsg.net.botnick + r")(, | |: ){0,1}\b(Who are you)\?{0,1}$"
+    pingRE = r"^(ping)[ ]{0,1}(me){0,1}[,]{0,1}[ ]{0,1}(please){0,1}[?!.]{0,1}$"
+
+    if re.search(whoAreRE, ircMsg.data, flags = re.IGNORECASE):
+        commands = __identifySelf(ircMsg)
+    elif re.search(pingRE, ircMsg.data, flags = re.IGNORECASE):
         commands = __pingMe(ircMsg)
 
     return commands
@@ -42,6 +43,38 @@ def ctcpTriggers(ircMsg):
 
     if ircMsg.command == "PINGREPLY":
         commands = __pingBack(ircMsg)
+
+    return commands
+
+
+def joinTrigger(ircMsg):
+    commands = []
+
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+    nick = ircMsg.net.findNick(ircMsg.src)
+    voiceNick = False
+    opNick = False
+
+    if not chan is None:
+        if chan.checkFlag("voiceall"):
+            if nick is None:
+                voiceNick = True
+            elif nick.user.checkDenied("voice") or nick.user.checkDenied("autovoice"):
+                voiceNick = False
+            else:
+                voiceNick = True
+
+        if not nick is None:
+            if nick.user.checkApproved("autoops"):
+                opNick = True
+            if nick.user.checkApproved("autovoice"):
+                voiceNick = True
+
+        if chan.opped:
+            if opNick:
+                commands.append("MODE " + ircMsg.dest + " +o " + ircMsg.src)
+            elif voiceNick:
+                commands.append("MODE " + ircMsg.dest + " +v " + ircMsg.src)
 
     return commands
 
@@ -86,7 +119,7 @@ def __authNickServ(ircMsg):
     '''Sends authorization to NickServ'''
     commands = []
 
-    if ircMsg.net.config.nickPass == None:
+    if ircMsg.net.config.nickPass is None:
         debug.warn(ircMsg.src + " is requesting that I identify myself, but I have no password configured.")
     else:
         debug.message(ircMsg.src + " is requesting that I identify myself, attempting to do so.")
@@ -112,7 +145,7 @@ def __hopServers(ircMsg):
             commands.append("PRIVMSG " + ircMsg.src + " :Initiatating a server hop.")
             commands.append("QUIT Server hop by order of " + ircMsg.src + ".")
         else:
-            commands += basicMessages.denyMessages(ircMsg.src, "hop")
+            commands += basicMessages.denyMessage(ircMsg.src, "hop")
     else:
         commands += basicMessages.noAuth(ircMsg.src, "hop")
 
@@ -130,7 +163,8 @@ def __identifySelf(ircMsg):
         dest = ircMsg.src
         botnick = ircMsg.net.botnick
 
-    commands.append("PRIVMSG " + dest + " :I am " + botnick + ", a Snowboard bot.  Project Snowboard can be found at https://github.com/dwhagar/snowboard where my code is under development and documentation can be found.")
+    commands.append(
+        "PRIVMSG " + dest + " :I am " + botnick + ", a Snowboard bot running software version " + ircMsg.net.config.version + ".  Project Snowboard can be found at https://github.com/dwhagar/snowboard.")
 
     return commands
 

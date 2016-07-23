@@ -480,16 +480,17 @@ def __initCmd(ircMsg):
         if not exists:
             userObject.hostmasks = [ircMsg.dataList[1]]
             userObject.pwHash = passwordTools.passwordHash(ircMsg.dataList[2])
-            userObject.name = ircMsg.src
+            userObject.user = ircMsg.src
             userObject.uid = ircMsg.net.users.uidHash(ircMsg.src)
             userObject.level = 255
 
             ircMsg.net.users.addUser(userObject)
             ircMsg.net.config.init = 0
-            commands.append("PRIVMSG " + ircMsg.src + " :Added user " + userObject.name + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again.")
+            commands.append(
+                "PRIVMSG " + ircMsg.src + " :Added user " + userObject.user + " to the master database, as admin.  Disabling 'init' command.  For security, please do not start the bot with the -i / --init options again.")
         else:
             debug.error("Error with 'init':  User " + userObject.user + " already exists.")
-            commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + userObject.name + " already exists.")
+            commands.append("PRIVMSG " + ircMsg.src + " :Command failed, user " + userObject.user + " already exists.")
     else:
         commands += basicMessages.paramFail(ircMsg.src, thisCmd)
 

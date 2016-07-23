@@ -1,15 +1,15 @@
 # This file is part of snowboard.
-# 
+#
 # snowboard is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # snowboard is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -20,18 +20,22 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 verbosity = 0
+logLevel = 0
+logStd = None
+logErr = None
 
 import sys
+import time
 
 def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, level=1):
     """Writes a message if the level is high enough.
-    
+
     Works just like the standard print function, if and only if `level`
     is at least `verbosity`. Otherwise it does nothing.
-    
+
     Its primary purpose is as the underlying implementation for all the
     normal output functions in the debug module.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects
@@ -48,20 +52,36 @@ def print_message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False, lev
         `verbosity` must be at least `level` for any output.
     """
     global verbosity
+    global logLevel
+    global logStd
+
+    t = time.time()
+    s = time.localtime(t)
+    ms = format(t - int(t), '1.3f')[1:]
+    timePrefix = "[" + time.strftime("%y/%m/%d %H:%M:%S", s) + ms + "] "
+
     if level <= verbosity:
+        print(timePrefix, sep = "", end = "", file = sys.stdout, flush = False)
         print(*objects, sep=sep, end=end, file=file, flush=flush)
+
+    if level <= logLevel:
+        logStd.open()
+        print(timePrefix, sep = "", end = "", file = logStd.file, flush = False)
+        print(*objects, sep = sep, end = end, file = logStd.file, flush = flush)
+        logStd.close()
+
 
 def debug_message(*objects, sep=" ", end="\n", type="DEBUG", level=3):
     """Writes an error message if the level is high enough.
-    
+
     If `level` is at least `verbosity`, basically equivalent to:
-        print("[" + type + "]: ", *objects, sep=sep, end=end, 
+        print("[" + type + "]: ", *objects, sep=sep, end=end,
             file=sys.stderr, flush=True)
     Otherwise it does nothing.
-    
+
     Its primary purpose is as the underlying implementation for all the
     error output functions in the debug module.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects
@@ -75,13 +95,30 @@ def debug_message(*objects, sep=" ", end="\n", type="DEBUG", level=3):
     level : int
         `verbosity` must be at least `level` for any output.
     """
+    global verbosity
+    global logLevel
+    global logErr
+
+    t = time.time()
+    s = time.localtime(t)
+    ms = format(t - int(t), '1.3f')[1:]
+    timePrefix = "[" + time.strftime("%y/%m/%d %H:%M:%S", s) + ms + "] "
+
     if level <= verbosity:
-        print("[", type, "]: ", sep="", end="", file=sys.stderr, flush=False)
+        print(timePrefix + "[", type, "]: ", sep = "", end = "", file = sys.stderr,
+              flush = False)
         print(*objects, sep=sep, end=end, file=sys.stderr, flush=True)
+
+    if level <= logLevel:
+        logErr.open()
+        print(timePrefix + "[", type, "]: ", sep = "", end = "", file = logErr.file, flush = False)
+        print(*objects, sep = sep, end = end, file = logErr.file, flush = True)
+        logErr.close()
+
 
 def message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     """Writes a message if `verbosity` is at least 1.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects
@@ -99,7 +136,7 @@ def message(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
 
 def info(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     """Writes a message if `verbosity` is at least 2.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects
@@ -117,7 +154,7 @@ def info(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
 
 def trace(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
     """Writes a message if `verbosity` is at least 3.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects
@@ -135,9 +172,9 @@ def trace(*objects, sep=" ", end="\n", file=sys.stdout, flush=False):
 
 def error(*objects, sep=" ", end="\n"):
     """Writes an error message.
-    
+
     The message is written to `sys.stderr`.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects
@@ -151,11 +188,11 @@ def error(*objects, sep=" ", end="\n"):
 
 def warn(*objects, sep=" ", end="\n"):
     """Writes a warning message.
-    
+
     The message is written to `sys.stderr`.
-    
+
     `verbosity` must be at least 1 to show any output.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects
@@ -169,11 +206,11 @@ def warn(*objects, sep=" ", end="\n"):
 
 def debug(*objects, sep=" ", end="\n"):
     """Writes a debug message.
-    
+
     The message is written to `sys.stderr`.
-    
+
     `verbosity` must be at least 3 to show any output.
-    
+
     Parameters
     ----------
     objects : positional parameter pack of objects

@@ -29,24 +29,26 @@ Where scriptname imports "scriptname.py".
 Once the module is imported it can then be used like any other.
 '''
 
-from . import debug
 from . import basicCommands
 from . import userCommands
+from . import seenCommands
+from . import channelCommands
+from . import RPCommands
 
 def channelScripts(ircMsg):
     '''Executes scripts that should trigger from channel content.'''
     cmds = []
     cmds += basicCommands.channelTriggers(ircMsg)
-
+    cmds += seenCommands.chanTriggers(ircMsg)
+    cmds += channelCommands.channelTriggers(ircMsg)
     return cmds
-
 
 def messageScripts(ircMsg):
     '''Executes scripts that should trigger from private message content.'''
     cmds = []
     cmds += basicCommands.msgTriggers(ircMsg)
     cmds += userCommands.msgTriggers(ircMsg)
-
+    cmds += channelCommands.msgTriggers(ircMsg)
     return cmds
 
 def privActionScripts(ircMsg):
@@ -59,9 +61,7 @@ def privActionScripts(ircMsg):
 def privNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a private notice message.'''
     cmds = []
-
     cmds += basicCommands.noticeTriggers(ircMsg)
-
     return cmds
 
 
@@ -82,21 +82,37 @@ def chanNoticeScripts(ircMsg):
 def ctcpScripts(ircMsg):
     '''Executes scripts that should be triggered by a CTCP message.'''
     cmds = []
-
     cmds += basicCommands.ctcpTriggers(ircMsg)
-
     return cmds
 
+
+def joinScripts(ircMsg):
+    '''Processes script triggers based on channel joins.'''
+    cmds = []
+    cmds += basicCommands.joinTrigger(ircMsg)
+    cmds += RPCommands.joinTriggers(ircMsg)
+    return cmds
+
+
+def partScripts(ircMsg):
+    '''Processes script triggers based on channel parts.'''
+    cmds = []
+
+    return cmds
 
 def rawMessages(net, message):
     '''Executes scripts that process raw messages from the server.'''
     cmds = []
-
+    seenCommands.rawTriggers(net, message)
     return cmds
 
 
 def timers(net, time):
     '''Passes the current time onto a series of timers.'''
     cmds = []
+
+    # 5 Minute Timer
+    if (round(time) % 300) == 0:
+        cmds += channelCommands.resetTopics(net)
 
     return cmds

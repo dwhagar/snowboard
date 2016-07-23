@@ -30,9 +30,9 @@ class Config:
     def __init__(self, configFile = "snowboard.ini"):
         # Set Defaults.
         self.versionNumber = 0
-        self.revisionNUmber = 0
-        self.buildNumber = 2
-        self.releaseStage = "pre-Alpha"
+        self.revisionNUmber = 1
+        self.buildNumber = 1
+        self.releaseStage = "alpha"
         self.version = str(self.versionNumber) + "." + str(self.revisionNUmber) + "." + str(self.buildNumber) + "-" + self.releaseStage
         self.botnick = "Snowboard"
         self.realname = "Project Snowboard"
@@ -49,6 +49,7 @@ class Config:
         self.checkInterval = 300
         self.maxLag = 90
         self.nickPass = None
+        self.logLevel = 0
 
         # Read configuration.
         self.file = configFile
@@ -80,10 +81,7 @@ class Config:
         # Parse Channels into a List
         channels = config['Network']['channels']
         channels = channels.replace(' ','')
-        channelList = channels.split(',')
-        for chan in channelList:
-            newChannel = channel.Channel(chan, self.network)
-            self.channels.append(newChannel)
+        self.channels = channels.split(',')
 
         # These sections all have reasonable defaults, so it checks to see if
         # the keys are there, if they are not defaults are used.

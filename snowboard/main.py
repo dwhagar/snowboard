@@ -35,6 +35,7 @@ from . import debug
 from . import scripts
 from . import ircMessage
 from . import ctcpGlobals
+from .logFile import LogFile
 
 def __parse_args(argv, cfg):
     """Parse command-line arguments."""
@@ -51,19 +52,22 @@ def __parse_args(argv, cfg):
 
     # Default to snowboard.ini.
     argparser.add_argument("--config", "-c",
-                           default="snowboard.ini",
-                           help="specify the configuration file to use.")
+                           default="snowboard.ini", help = "specify the configuration file to use")
 
     # The init command is used to define the system administrator, or, first
     # user when the bot is run for the first time, and should only be enabled
     # once, to initialize the user database.
     argparser.add_argument("--init", "-i",
-                           default=0, action="count",
-                           help="tell the bot to accept the init command.")
+                           default=0, action="count", help = "tell the bot to accept the init command")
+
+    # Enabled / increase the level of logging done by the bot.
+    argparser.add_argument("--log", "-l", default = 0, action = "count", help = "enable logging")
 
     # Load all the options from the configuration.
     cfg.options = argparser.parse_args(argv)
     debug.verbosity = cfg.options.verbose
+    debug.logLevel = cfg.options.log
+    cfg.logLevel = cfg.options.log
     cfg.init = cfg.options.init
     cfg.file = cfg.options.config
 
@@ -75,12 +79,24 @@ def __process_responses(net, raw):
     response = raw.split()
     cmds = []
 
+    # Process a proper authentication.
+    if response[1] == "001":
+        net.processAuth(response)
+    # Process a bad nick response.
+    elif response[1] == "433":
+        net.processBadNick()
+    # Only send commands after MOTD has been received.
+    elif response[1] == "376":
+        net.motdDone = True
     # Process WHO responses to get hostnames.
-    if response[1] == "352":
+    elif response[1] == "352":
         net.processWho(response)
     # Process NAMES responses to get all names for channels joined.
     elif response[1] == "353":
         net.processNames(response)
+    # Process a channel topic message when joining.
+    elif response[1] == "332" or response[1] == "TOPIC":
+        net.processTopic(response)
     # Process the server closing the link (per RFC 2812)
     elif " ".join(response[1:3]).strip(':').lower() == "closing link":
         net.disconnect()
@@ -180,6 +196,10 @@ def __get_commands(raw, net):
             commands += scripts.channelScripts(ircMsg)
         elif cmd == "ACTION":
             commands += scripts.chanActionScripts(ircMsg)
+        elif cmd == "JOIN":
+            commands += scripts.joinScripts(ircMsg)
+        elif cmd == "PART":
+            commands += scripts.partScripts(ircMsg)
     else:
         if cmd == "NOTICE":
             commands += scripts.privNoticeScripts(ircMsg)
@@ -200,6 +220,8 @@ def main(argv):
         return 1
 
     cfg.read()
+    debug.logStd = LogFile(cfg.network, "debug")
+    debug.logErr = LogFile(cfg.network, "error")
 
     if cfg.init > 0:
         debug.warn("The 'init' command has been enabled.  See docs for more information.")
@@ -211,19 +233,16 @@ def main(argv):
     while net.reconnect:
         # Establish a connection.
         if net.connect():
-            net.auth()
-            if net.ready():
-                net.joinAll()
-            else:
-                debug.error("Failed to authenticate.")
-                return 1
+            debug.message("Attempting to authenticate.")
+            net.sendCommands(["NICK " + net.botnick])
+            sentUser = False
         else:
             debug.error("Failed to connect.")
             return 1
 
         lastTimer = time.time()
 
-        while net.online() and net.ready():
+        while net.online():
             # Send any commands.
             net.send()
             # Is there data?
@@ -235,20 +254,40 @@ def main(argv):
                 if len(cmds) > 0:
                     net.sendCommands(cmds)
 
-            # Basis for the loop to execute timers, we only want to execute a
-            # timer if there at least one second between this loop and when
-            # timers were last run.
-            cmds = []
+            if net.ready():
+                # Once the connection is ready, if we haven't joined any channels
+                # do so now.
+                if len(net.channels) == 0:
+                    net.joinAll()
+                # Basis for the loop to execute timers, we only want to execute a
+                # timer if there at least one second between this loop and when
+                # timers were last run.
+                cmds = []
 
-            if not net.quitting:
-                currentTime = time.time()
-                if (lastTimer + 1) < currentTime:
-                    cmds += net.pingTimer(currentTime)
-                    cmds += net.cleanTimer(currentTime)
-                    cmds += scripts.timers(net, currentTime)
-                    lastTimer = currentTime
-                    if len(cmds) > 0:
-                        net.sendCommands(cmds)
+                if not net.quitting:
+                    currentTime = time.time()
+
+                    # Cycle the log files to the new day.
+                    tStruct = time.localtime(currentTime)
+                    if (not net.logs.cycled) and (tStruct[3] == 0 and tStruct[4] == 0 and tStruct[5] == 0):
+                        net.logs.cycle()
+                        debug.logStd = LogFile(cfg.network, "debug")
+                        debug.logErr = LogFile(cfg.network, "error")
+                    elif net.logs.cycled and (tStruct[3] == 0 and tStruct[4] == 0) and (
+                            tStruct[5] == 1 or tStruct[5] == 2):
+                        net.logs.cycled = False
+
+                    # Begun processing timers.
+                    if (lastTimer + 1) < currentTime:
+                        cmds += net.pingTimer(currentTime)
+                        cmds += net.cleanTimer(currentTime)
+                        cmds += scripts.timers(net, currentTime)
+                        lastTimer = currentTime
+                        if len(cmds) > 0:
+                            net.sendCommands(cmds)
+            elif not sentUser:
+                net.sendCommands(["USER " + net.botnick.lower() + " 0 * :" + net.config.realname])
+                sentUser = True
 
             # Make sure we don't amp up the CPU to max.
             global idleTime
