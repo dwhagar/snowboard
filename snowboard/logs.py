@@ -83,7 +83,10 @@ class Logs:
         ms = format(t - int(t), '1.3f')[1:]
         timePrefix = "[" + time.strftime("%y/%m/%d %H:%M:%S", s) + ms + "] "
 
-        log.writeLog(timePrefix + logData)
+        if name == "motd":
+            log.writeLog(logData)
+        else:
+            log.writeLog(timePrefix + logData)
 
     def writeRecv(self, message):
         global messages
@@ -131,8 +134,10 @@ class Logs:
                 elif (msgList[1] in ctcpGlobals.queries) or (msgList[1] in ctcpGlobals.replies):
                     logData = "[CTCP " + msgList[1] + " from " + source + "] " + messageData
             elif msgList[1] in nonMessages:
+                if msgList[2][0] == ":":
+                    msgList[2] = msgList[2][1:]
                 if msgList[1] == "NICK":
-                    logData = source + " changed their nick to " + msgList[3]
+                    logData = source + " changed their nick to " + msgList[2]
                 elif msgList[1] == "MODE":
                     modeData = " ".join(msgList[3:])
                     logData = source + " changed modes " + modeData
@@ -142,19 +147,27 @@ class Logs:
                     logData = source + " has left " + msgList[2]
                     if msgListLen > 3:
                         partMsg = " ".join(msgList[3:])
+                        if partMsg[0] == ":":
+                            partMsg = partMsg[1:]
                         logData += " with message '" + partMsg + "'"
                 elif msgList[1] == "QUIT":
-                    logData = source + " has quit IRC " + msgList[2]
-                    if msgListLen > 3:
-                        quitMsg = " ".join(msgList[3:])
-                        logData += " with message '" + quitMsg + "'"
+                    quitMsg = " ".join(msgList[2:])
+                    logData = source + " has quit IRC  with message '" + quitMsg + "'"
             else:
-                if msgList[1] == "375" or msgList[1] == "372" or msgList[1] == "376":
-                    name = "motd"
                 if message[0] == ":":
                     message = message[1:]
 
-                logData = message
+                if msgList[1] == "375" or msgList[1] == "372" or msgList[1] == "376":
+                    name = "motd"
+
+                    motdStart = message.find(':')
+
+                    if motdStart >= 0:
+                        logData = message[motdStart + 1:]
+                    else:
+                        logData = message
+                else:
+                    logData = message
 
         elif msgListLen == 2:
             logData = message

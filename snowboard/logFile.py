@@ -18,8 +18,8 @@ Object to handle logging output to a single log file.
 '''
 
 import time
-from os import makedirs
-from os.path import isdir, abspath
+from os import makedirs, remove
+from os.path import isfile, isdir, abspath
 
 class LogFile:
     def __init__(self, network, name, channel = False, pm = False):
@@ -44,6 +44,11 @@ class LogFile:
         self.path = abspath(self.path)
         self.fileName = self.path + "/" + self.name + ".log"
 
+        # Only keep one MOTD file.
+        if self.name == "motd":
+            if isfile(self.fileName):
+                remove(self.fileName)
+
     def writeLog(self, message):
         message += "\r\n"
         self.open()
@@ -54,7 +59,4 @@ class LogFile:
         self.file.close()
 
     def open(self):
-        if self.name == "motd":
-            self.file = open(self.fileName, "w")
-        else:
-            self.file = open(self.fileName, "a")
+        self.file = open(self.fileName, "a")
