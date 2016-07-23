@@ -164,7 +164,7 @@ def __identifySelf(ircMsg):
         botnick = ircMsg.net.botnick
 
     commands.append(
-        "PRIVMSG " + dest + " :I am " + botnick + ", a Snowboard bot (" + ircMsg.net.config.version + ").  Project Snowboard can be found at https://github.com/dwhagar/snowboard.")
+        "PRIVMSG " + dest + " :I am " + botnick + ", a Snowboard bot running software version " + ircMsg.net.config.version + ".  Project Snowboard can be found at https://github.com/dwhagar/snowboard.")
 
     return commands
 

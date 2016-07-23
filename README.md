@@ -24,6 +24,8 @@ All we have right now is to-do, as we're just starting, so this is going to be p
  * kick
  * invite
 * learn module
+* handle being kicked or banned out of a channel
+* handle being invited to a channel
 
 ## Version History
 v0.1.0 - Early Alpha
