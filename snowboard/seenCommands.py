@@ -20,6 +20,7 @@ Processes triggers for the seen module.
 import re
 import datetime
 import time
+from . import grammarTools
 from .seen import Seen
 
 def chanTriggers(ircMsg):
@@ -131,25 +132,13 @@ def __seenQuery(ircMsg):
                 else:
                     ago = str(delta)
 
-                for nick in nicks:
-                    isHere = ircMsg.net.findNick(nick)
-                    if not (isHere is None):
-                        break
-
-                if isHere is None:
-                    if lastNick.lower() == ircMsg.dataList[1].lower():
-                        commands.append(
-                            "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
-                    else:
-                        commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                            1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+                if lastNick.lower() == ircMsg.dataList[1].lower():
+                    commands.append(
+                        "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
                 else:
-                    if lastNick.lower() == isHere.name.lower():
-                        commands.append(
-                            "PRIVMSG " + ircMsg.dest + " :I last saw " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here.")
-                    else:
-                        commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
-                            1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ", they are still here as " + isHere.name + ".")
+                    commands.append("PRIVMSG " + ircMsg.dest + " :I last saw " + ircMsg.dataList[
+                        1] + " as " + lastNick + " " + lastAct + " " + ago + " ago from host " + lastHost + ".")
+
             elif ircMsg.dataList[1].lower() == ircMsg.net.botnick.lower():
                 commands.append("PRIVMSG " + ircMsg.dest + " :I am right here.")
             elif ircMsg.src.lower() == ircMsg.dataList[1].lower():

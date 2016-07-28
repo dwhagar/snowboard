@@ -210,7 +210,7 @@ class Logs:
                 elif msgList[0].upper() == "ACTION":
                     logData = prefix + "* " + self.nick + " " + data
                 elif msgList[0].upper() == "NOTICE":
-                    logData = prefix + "[NOTICE to" + dest + "] " + data
+                    logData = prefix + "[NOTICE to " + dest + "] " + data
                 elif msgList[0].upper() in ctcpGlobals.queries or msgList[0].upper() in ctcpGlobals.replies:
                     logData = prefix + "[" + msgList[0].upper() + " to " + dest + "] " + data
             else:

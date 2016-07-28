@@ -273,8 +273,7 @@ def main(argv):
                         net.logs.cycle()
                         debug.logStd = LogFile(cfg.network, "debug")
                         debug.logErr = LogFile(cfg.network, "error")
-                    elif net.logs.cycled and (tStruct[3] == 0 and tStruct[4] == 0) and (
-                            tStruct[5] == 1 or tStruct[5] == 2):
+                    elif net.logs.cycled and (tStruct[3] == 0 and tStruct[4] == 0) and (tStruct[5] == 1):
                         net.logs.cycled = False
 
                     # Begun processing timers.

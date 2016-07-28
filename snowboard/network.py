@@ -241,14 +241,7 @@ class Network:
         self.nicks = []
         self.orphans = []
         self.queue = []
-
-        # There are no nicks in any channels while disconnected.
-        for chan in self.channels:
-            chan.botnick = None
-            chan.joined = False
-            chan.members = []
-            chan.opped = False
-            chan.voiced = False
+        self.channels = []
 
         # Reset timers.
         self.missedPings = 0
@@ -285,6 +278,26 @@ class Network:
                 break
 
         return result
+
+    def nickMembership(self, nick):
+        '''
+        Checks the channel list to return a list of channel objects a nick
+        belongs to.
+        '''
+        chanList = []
+
+        if type(nick) == str:
+            nck = self.findNick(nick)
+        else:
+            nck = nick
+
+        if not nck is None:
+            for channel in self.channels:
+                result = channel.findNick(nck)
+                if not result is None:
+                    chanList.append(result)
+
+        return chanList
 
     def online(self):
         '''Let the outside see if the bot is online.'''
