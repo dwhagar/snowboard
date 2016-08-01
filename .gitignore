@@ -4,3 +4,4 @@ test.*.py
 *.db
 .idea/
 logs/
+*.ini

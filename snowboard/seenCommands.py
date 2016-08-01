@@ -22,6 +22,7 @@ import datetime
 import time
 from . import grammarTools
 from .seen import Seen
+from . import debug
 
 def chanTriggers(ircMsg):
     '''Processes channel queries for the seen module.'''
@@ -67,12 +68,13 @@ def rawTriggers(net, message):
 
         nick = data[1]
         host = data[2]
+        cmd = data[3]
         msg = data[4]
 
-        if msg == "QUIT":
+        if cmd == "QUIT":
             act = "leaving IRC with message '" + msg + "'"
             seen.save(nick, host, act)
-        elif msg == "NICK":
+        elif cmd == "NICK":
             act = "changing nick to '" + msg + "'"
             seen.save(nick, host, act)
             act = "changing nick from '" + nick + "'"

@@ -139,8 +139,8 @@ def __addCmd(ircMsg):
                                     block = True
                                 if nick.user.checkDenied(flag):
                                     block = True
-                        if channelObject.level < newUChannel.level:
-                            block = True
+                            if channelObject.level < newUChannel.level:
+                                block = True
 
                     if not block:
                         ircMsg.net.users.addUser(newUser)
@@ -408,7 +408,7 @@ def __formatUser(dest, userObject):
 
     if not (userObject.flags.approved == []):
         message += "; Approved Flags: " + ",".join(userObject.flags.approved)
-    if not (userObject.flags.approved == []):
+    if not (userObject.flags.denied == []):
         message += "; Denied Flags: " + ",".join(userObject.flags.denied)
 
     commands.append(message)

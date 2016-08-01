@@ -172,16 +172,15 @@ class Seen:
 
     def saveAction(self, nick, host, act):
         '''Saves the action and time for a user.'''
-        self.__openDB()
 
         data = [act, time.time()]
 
         nickQuery = "UPDATE hosts SET act = ?, time = ? WHERE nick IS '" + nick.lower() + "'"
         hostQuery = "UPDATE nicks SET act = ?, time = ? WHERE host IS '" + host.lower() + "'"
 
+        self.__openDB()
         self.db.execute(nickQuery, data)
         self.db.execute(hostQuery, data)
-
         self.__closeDB()
 
     def saveHost(self, nick, host):
