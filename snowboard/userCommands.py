@@ -250,9 +250,9 @@ def __changeFlags(ircMsg, modUser, nick, thisCmd, nickChannel = None, modChannel
         ircMsg.net.users.updateUser(modUser)
         ircMsg.net.resetPrivs(modUser.uid)
         debug.message(
-            "User " + ircMsg.src + " used the 'moduser' command to " + action + " flags on account " + modUser.name + ".")
+            "User " + ircMsg.src + " used the 'moduser' command to " + action + " flags on account " + modUser.user + ".")
         commands.append(
-            "PRIVMSG " + ircMsg.src + " :Successfully " + action + " flags " + flags + " on account " + modUser.name + ".")
+            "PRIVMSG " + ircMsg.src + " :Successfully " + action + " flags " + flags + " on account " + modUser.user + ".")
     else:
         commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
 
@@ -281,13 +281,13 @@ def __changeHosts(ircMsg, modUser, nick, thisCmd):
             ircMsg.net.users.updateUser(modUser)
             ircMsg.net.resetPrivs(modUser.uid)
             debug.message(
-                "User " + ircMsg.src + " used the 'moduser' command to hostmasks of " + modUser.name + " to " + ",".join(
+                "User " + ircMsg.src + " used the 'moduser' command to hostmasks of " + modUser.user + " to " + ",".join(
                     modUser.hostmasks) + ".")
             commands.append(
-                "PRIVMSG " + ircMsg.src + " :Successfully changed hostmasks " + modUser.name + " to " + ",".join(
+                "PRIVMSG " + ircMsg.src + " :Successfully changed hostmasks " + modUser.user + " to " + ",".join(
                     modUser.hostmasks) + ".")
         else:
-            debug.info("User " + ircMsg.src + " tried to remove all hostmasks from user " + modUser.name + ".")
+            debug.info("User " + ircMsg.src + " tried to remove all hostmasks from user " + modUser.user + ".")
             commands.append("PRIVMSG " + ircMsg.src + " :You cannot remove all hostmasks from a user.")
     else:
         commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
@@ -581,13 +581,13 @@ def __modCmd(ircMsg):
                     # ModUser Commands
                     if ircMsg.dataList[2].lower() == "level":
                         # Adjusts the level of a user.
-                        commands += __setLevel(ircMsg, nick, modUser, thisCmd)
+                        commands += __setLevel(ircMsg, modUser, nick, thisCmd)
                     elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags" or \
                                     ircMsg.dataList[2].lower() == "setflags":
-                        commands += __changeFlags(ircMsg, nick, modUser, thisCmd)
+                        commands += __changeFlags(ircMsg, modUser, nick, thisCmd)
                     elif ircMsg.dataList[2].lower() == "addhosts" or ircMsg.dataList[2].lower() == "delhosts" or \
                                     ircMsg.dataList[2].lower() == "sethosts":
-                        commands += __changeHosts(ircMsg, nick, modUser, thisCmd)
+                        commands += __changeHosts(ircMsg, modUser, nick, thisCmd)
                     elif ircMsg.dataList[2].lower() == "password":
                         # Allows someone to reset another users password.
                         if nick.user.level > modUser.level:
