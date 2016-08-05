@@ -153,7 +153,9 @@ def __get_commands(raw, net):
 
     # Separate out the message from the rest.
     message = " ".join(response[3:])
-    message = message.strip(':')
+    if not (message == ""):
+        if message[0] == ":":
+            message = message[1:]
 
     # Store all the data in an way that is easy to pass along.
     ircMsg = ircMessage.ircMessage(net, srcNick, srcHost, dest, cmd, message)
