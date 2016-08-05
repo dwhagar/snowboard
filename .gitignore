@@ -1,7 +1,8 @@
 __pycache__/
 *.py[cod]
-test.*.py
 *.db
 .idea/
 logs/
 *.ini
+*.err
+*.log

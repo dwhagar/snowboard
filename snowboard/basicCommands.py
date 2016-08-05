@@ -84,7 +84,7 @@ def msgTriggers(ircMsg):
 
     if ircMsg.dataList[0].lower() == "quit":
         commands = __quitCommand(ircMsg)
-    if ircMsg.dataList[0].lower() == "hop":
+    elif ircMsg.dataList[0].lower() == "hop":
         commands = __hopServers(ircMsg)
     elif ircMsg.data.lower() == "who are you?":
         commands = __identifySelf(ircMsg)
