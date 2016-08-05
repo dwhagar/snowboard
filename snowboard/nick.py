@@ -44,12 +44,12 @@ class Nick:
 
         # See if we can get the privs on a user, just in case they were added
         # after we last tried.
-        if self.user.uid == None:
+        if self.user.uid is None:
             uid = self.getUID()
 
         # Now if we still don't have the privs or the UID on file then, there
         # is an issue.
-        if self.user.uid == None:
+        if self.user.uid is None:
             debug.message("No user information for " + self.name + " could be found.")
             commands.append("PRIVMSG " + self.name + " :You were not found in my database.")
             authorized = False
@@ -86,7 +86,7 @@ class Nick:
     def getPrivs(self):
         '''Gets access rights from the database for a user.'''
 
-        if self.user.uid == None:
+        if self.user.uid is None:
             thisUser = None
         else:
             thisUser = self.users.userInformation(self.user.uid)

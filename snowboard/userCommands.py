@@ -456,9 +456,17 @@ def __identCmd(ircMsg):
     '''Identify command to authenticate a user.'''
     thisCmd = "ident"
 
-    if len(ircMsg.dataList) >= 2:
+    if len(ircMsg.dataList) == 2:
         nick = ircMsg.net.findNick(ircMsg.src)
         commands = nick.auth(ircMsg.dataList[1])
+
+        if nick.authed:
+            for chan in ircMsg.net.channels:
+                if chan.opped:
+                    if nick.user.checkApproved("autoops", chan.name):
+                        commands += ["MODE " + chan.name + " +o " + nick.name]
+                    elif nick.user.checkApproved("autovoice", chan.name):
+                        commands += ["MODE " + chan.name + " +v " + nick.name]
     else:
         commands = basicMessages.paramFail(ircMsg.src, thisCmd)
 
