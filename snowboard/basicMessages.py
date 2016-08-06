@@ -22,6 +22,21 @@ from os.path import isfile
 from . import debug
 
 
+def cmdDisabled(src, cmd, dest = None):
+    '''Provides a basic /command is disabled/ message.'''
+    commands = []
+
+    if not dest is None:
+        msgPrefix = "NOTICE " + src + " :"
+        suffix = " in " + dest + "."
+    else:
+        msgPrefix = "PRIVMSG " + src + " :"
+        suffix = "."
+
+    commands.append(msgPrefix + "The " + cmd + " command has been disabled by an administrator" + suffix)
+
+    return commands
+
 def cmdHelp(src, cmd, dest = None):
     '''Returns help text for a particular command.'''
     commands = []
@@ -53,7 +68,6 @@ def cmdHelp(src, cmd, dest = None):
 
     return commands
 
-
 def denyMessage(src, cmd, dest = None):
     '''Stock deny messages for debug and to send back to the server.'''
     commands = []
@@ -69,7 +83,6 @@ def denyMessage(src, cmd, dest = None):
 
     return commands
 
-
 def noAuth(src, cmd, dest = None):
     '''Stock not authenticated messages for debug and the server.'''
     commands = []
@@ -83,7 +96,6 @@ def noAuth(src, cmd, dest = None):
     commands.append(msgPrefix + "You are not identified.")
 
     return commands
-
 
 def noChannel(src, cmd, chan, dest = None):
     '''Stock message for unable to find a channel.'''
@@ -99,7 +111,6 @@ def noChannel(src, cmd, chan, dest = None):
 
     return commands
 
-
 def noOps(src, cmd, chan, dest = None):
     '''Strock message for if the bot does not have ops.'''
     commands = []
@@ -114,7 +125,6 @@ def noOps(src, cmd, chan, dest = None):
 
     return commands
 
-
 def noUser(src, cmd, user, dest = None):
     '''Stock message for a user that does not exist.'''
     commands = []
@@ -128,7 +138,6 @@ def noUser(src, cmd, user, dest = None):
     commands.append(msgPrefix + "I'm sorry but I could not find " + user + " in the database.")
 
     return commands
-
 
 def paramFail(src, cmd, dest = None):
     '''Stock message for not enough parameters.'''
@@ -145,7 +154,6 @@ def paramFail(src, cmd, dest = None):
     commands += cmdHelp(src, cmd, dest)
 
     return commands
-
 
 def valError(src, cmd, field, val, required, dest = None):
     '''Standard message for a value related error.'''

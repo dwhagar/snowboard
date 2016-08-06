@@ -1,0 +1,12 @@
+Channel based commands for me are...
+^button ::I::Target::I:: - Push a virtual button at a ::I::Target::I::, it might do something to them, to you, or both.
+^chans - Displays a list of channels associated with the bot.
+^desc - Displays the description of a channel, particularly useful in channels that are ::I::In Character::I:: and have particular settings.
+^help - Displays this output.
+^opme - Instructs the bot to give you privileges in a managed channel, assuming you have ::B::proper bot access::B:: and the bot has ops.
+^reset - ::B::Channel Managers Only::B:: resets a channel topic back to default in a room where the topic is bot-managed.
+^rules - Displays channel rules.
+^seen ::I::Nick::I:: - Find out when the bot last saw a person online or saying something, ::I::Nick::I:: is the nick of a person who the bot has seen.
+^trace nick ::I::Nick::I:: -  Discover alternate nicks and hostnames of a particular ::I::Nick::I:: that the bot has previously seen.  Large amounts of information will be sent privately.
+^w ::I::Place::I:: - Weather, use ::I::Place::I:: as the name, zip code, postal code, station ID, or other identifier of a place on Earth, uses the Yahoo! Weather API.
+You may also ask the bot to ping you and it'll display your current lag time.

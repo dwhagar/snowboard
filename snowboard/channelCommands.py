@@ -21,6 +21,8 @@ keeptopic
 noweather
 norules
 nochans
+nohelp
+nobutton
 '''
 
 import urllib.parse
@@ -43,13 +45,15 @@ def channelTriggers(ircMsg):
     elif ircMsg.dataList[0] == "^desc":
         commands = __showDesc(ircMsg)
     elif ircMsg.dataList[0] == "^rules":
-        __showRules(ircMsg)
+        commands = __showRules(ircMsg)
     elif ircMsg.dataList[0] == "^chans":
-        __showChans(ircMsg)
+        commands = __showChans(ircMsg)
     elif ircMsg.dataList[0] == "^w":
         commands = __showWeather(ircMsg)
     elif ircMsg.dataList[0] == "^button":
         commands = __buttonPress(ircMsg)
+    elif ircMsg.dataList[0] == "^help":
+        commands = __chanHelp(ircMsg)
 
     return commands
 
@@ -129,6 +133,21 @@ def __buttonPress(ircMsg):
                 commands.append("PRIVMSG " + ircMsg.dest + " :Don't ask me to do that, it's just not right.")
     else:
         commands.append("PRIVMSG " + ircMsg.dest + " :You should really tell me whose button you want me to push.")
+    return commands
+
+
+def __chanHelp(ircMsg):
+    '''Sends channel commands to a person.'''
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+
+    commands = []
+    cmd = "^help"
+
+    if not chan.checkFlag("nohelp"):
+        ircMsg.net.sendFile("help/channel-help.txt", "NOTICE", ircMsg.src)
+    else:
+        commands += basicMessages.cmdDisabled(ircMsg.src, cmd, ircMsg.dest)
+
     return commands
 
 def __modChannel(ircMsg):
@@ -258,8 +277,15 @@ def __showChans(ircMsg):
     '''Shows rules from the rules.txt help file.'''
     chan = ircMsg.net.findChannel(ircMsg.dest)
 
+    commands = []
+    cmd = "^chans"
+
     if not chan.checkFlag("nochans"):
         ircMsg.net.sendFile("help/chans.txt", "NOTICE", ircMsg.src)
+    else:
+        commands += basicMessages.cmdDisabled(ircMsg.src, cmd, ircMsg.dest)
+
+    return commands
 
 def __showDesc(ircMsg):
     '''Sends a channel description to a user.'''
@@ -280,12 +306,20 @@ def __showRules(ircMsg):
     '''Shows rules from the rules.txt help file.'''
     chan = ircMsg.net.findChannel(ircMsg.dest)
 
+    commands = []
+    cmd = "^rules"
+
     if not chan.checkFlag("norules"):
         ircMsg.net.sendFile("help/rules.txt", "NOTICE", ircMsg.src)
+    else:
+        commands += basicMessages.cmdDisabled(ircMsg.src, cmd, ircMsg.dest)
+
+    return commands
 
 def __showWeather(ircMsg):
     '''Shows the current weather by city.'''
     commands = []
+    cmd = "^w"
     chan = ircMsg.net.findChannel(ircMsg.dest)
 
     if not chan.checkFlag("noweather") and len(ircMsg.dataList) > 0:
@@ -324,6 +358,8 @@ def __showWeather(ircMsg):
             errorCode = str(response.code)
             commands.append(
                 "PRIVMSG " + ircMsg.dest + " :There was an problem getting information on that location, error code is '" + errorCode + "'.")
+    else:
+        commands += basicMessages.cmdDisabled(ircMsg.src, cmd, ircMsg.dest)
 
     return commands
 
