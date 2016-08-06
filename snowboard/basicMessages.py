@@ -29,9 +29,11 @@ def cmdDisabled(src, cmd, dest = None):
     if not dest is None:
         msgPrefix = "NOTICE " + src + " :"
         suffix = " in " + dest + "."
+        debug.info("Nick " + src + " tried to use the '" + cmd + "but it was disabled.")
     else:
         msgPrefix = "PRIVMSG " + src + " :"
         suffix = "."
+        debug.info("Nick " + src + " tried to use the '" + cmd + " in '" + dest + "' but it was disabled.")
 
     commands.append(msgPrefix + "The " + cmd + " command has been disabled by an administrator" + suffix)
 
