@@ -295,7 +295,7 @@ class Network:
             for channel in self.channels:
                 result = channel.findNick(nck)
                 if not result is None:
-                    chanList.append(result)
+                    chanList.append(channel.name)
 
         return chanList
 
@@ -401,7 +401,6 @@ class Network:
 
     def processMode(self, response):
         '''Process a mode change.'''
-        nickName, userHost = self.__splitHostmask(response[0])
         dest = response[2]
         modeChange = response[3]
 

@@ -461,12 +461,19 @@ def __identCmd(ircMsg):
         commands = nick.auth(ircMsg.dataList[1])
 
         if nick.authed:
-            for chan in ircMsg.net.channels:
-                if chan.opped:
-                    if nick.user.checkApproved("autoops", chan.name):
-                        commands += ["MODE " + chan.name + " +o " + nick.name]
-                    elif nick.user.checkApproved("autovoice", chan.name):
-                        commands += ["MODE " + chan.name + " +v " + nick.name]
+            chans = ircMsg.net.nickMembership(ircMsg.src)
+            for chan in chans:
+                chanObj = ircMsg.net.findChannel(chan)
+                if chanObj.opped:
+                    chanPriv = chanObj.findNick(nick)[0]
+                    if nick.user.checkApproved("autoops", chan):
+                        if not chanPriv.op:
+                            commands.append("MODE " + chan + " +o " + ircMsg.src)
+                            debug.trace("Giving automatic Ops to " + ircMsg.src + " on " + chan + ".")
+                    elif nick.user.checkApproved("autovoice", chan):
+                        if not chanPriv.voice:
+                            commands.append("MODE " + chan + " +v " + ircMsg.src)
+                            debug.trace("Giving automatic Voice to " + ircMsg.src + " on " + chan + ".")
     else:
         commands = basicMessages.paramFail(ircMsg.src, thisCmd)
 
