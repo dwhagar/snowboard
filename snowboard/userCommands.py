@@ -465,7 +465,7 @@ def __identCmd(ircMsg):
             for chan in chans:
                 chanObj = ircMsg.net.findChannel(chan)
                 if chanObj.opped:
-                    chanPriv = chanObj.findNick(nick)[0]
+                    chanPriv = chanObj.findNick(nick)[1]
                     if nick.user.checkApproved("autoops", chan):
                         if not chanPriv.op:
                             commands.append("MODE " + chan + " +o " + ircMsg.src)
