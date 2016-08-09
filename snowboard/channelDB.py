@@ -17,7 +17,6 @@ import sqlite3
 
 '''Connection to the channels database.'''
 
-
 class ChannelDB:
     def __init__(self, network, channel):
         self.channel = channel.lower()
@@ -49,7 +48,7 @@ class ChannelDB:
         '''Determines if the channel already exists in the database.'''
         self.__openDB()
 
-        query = "SELECT flags, topic, desc, modes FROM channels WHERE channel IS '" + self.channel + "'"
+        query = "SELECT flags, topic, desc, modes, announce FROM channels WHERE channel IS '" + self.channel + "'"
         self.db.execute(query)
         data = self.db.fetchone()
 
@@ -58,17 +57,30 @@ class ChannelDB:
             topic = ""
             desc = ""
             modes = ""
+            announce = ""
         else:
             flags = data[0].split(',')
             topic = data[1]
             desc = data[2]
             modes = data[3]
+            announce = data[4]
+
+        if flags is None:
+            flags = ""
+        if topic is None:
+            topic = ""
+        if desc is None:
+            desc = ""
+        if modes is None:
+            modes = ""
+        if announce is None:
+            announce = ""
 
         self.__closeDB()
 
-        return flags, topic, desc, modes
+        return flags, topic, desc, modes, announce
 
-    def saveData(self, flags, topic, desc, modes):
+    def saveData(self, flags, topic, desc, modes, announce):
         '''Saves a list of flags to the database.'''
         if len(flags) > 0:
             flagsText = ",".join(flags)
@@ -76,11 +88,11 @@ class ChannelDB:
             flagsText = ""
 
         if self.channelExists():
-            data = [flagsText.lower(), topic, desc, modes]
-            query = "UPDATE channels SET flags = ?, topic = ?, desc = ?, modes = ? WHERE channel IS '" + self.channel + "'"
+            data = [flagsText.lower(), topic, desc, modes, announce]
+            query = "UPDATE channels SET flags = ?, topic = ?, desc = ?, modes = ?, announce = ? WHERE channel IS '" + self.channel + "'"
         else:
-            data = [self.channel, flagsText.lower(), topic, desc, modes]
-            query = "INSERT INTO channels VALUES (?, ?, ?, ?, ?)"
+            data = [self.channel, flagsText.lower(), topic, desc, modes, announce]
+            query = "INSERT INTO channels VALUES (?, ?, ?, ?, ?, ?)"
 
         self.__openDB()
         self.db.execute(query, data)
@@ -96,7 +108,7 @@ class ChannelDB:
         '''Intended to initialize a database that doesn't yet exist.'''
         self.__openDB()
 
-        initCmd = "CREATE TABLE IF NOT EXISTS channels (channel TEXT PRIMARY KEY, flags TEXT, topic TEXT, desc TEXT, modes TEXT)"
+        initCmd = "CREATE TABLE IF NOT EXISTS channels (channel TEXT PRIMARY KEY, flags TEXT, topic TEXT, desc TEXT, modes TEXT, announce TEXT)"
 
         self.db.execute(initCmd)
 

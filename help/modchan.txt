@@ -1,3 +1,3 @@
 Usage:  modchan #channel type [data]
-Type is one of the following:  addflags, delflags, desc*, flags*, setdesc, setflags, settopic, topic*.
+Type is one of the following:  addflags, announce*, delflags, desc*, flags*, setannounce, setdesc, setflags, settopic, topic*.
 Types marked with a * simply display display the current setting.

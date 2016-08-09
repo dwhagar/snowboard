@@ -57,6 +57,14 @@ def channelTriggers(ircMsg):
 
     return commands
 
+
+def joinTriggers(ircMsg):
+    commands = []
+
+    commands += __announce(ircMsg)
+
+    return commands
+
 def msgTriggers(ircMsg):
     '''Processes message triggers for channel functions.'''
     commands = []
@@ -74,6 +82,18 @@ def resetTopics(net):
         if (not chan.defaultTopic == "") and chan.opped:
             if (not chan.topic == chan.defaultTopic) and chan.checkFlag("keeptopic"):
                 commands.append("TOPIC " + chan.name + " :" + chan.defaultTopic)
+
+    return commands
+
+
+def __announce(ircMsg):
+    commands = []
+
+    chan = ircMsg.net.findChannel(ircMsg.dest)
+
+    if not chan is None:
+        if (not (chan.botnick.lower() == ircMsg.src.lower())) and (not (chan.announce == "")):
+            commands.append("NOTICE " + ircMsg.src + " :" + chan.announce)
 
     return commands
 
@@ -135,7 +155,6 @@ def __buttonPress(ircMsg):
         commands.append("PRIVMSG " + ircMsg.dest + " :You should really tell me whose button you want me to push.")
     return commands
 
-
 def __chanHelp(ircMsg):
     '''Sends channel commands to a person.'''
     chan = ircMsg.net.findChannel(ircMsg.dest)
@@ -178,6 +197,13 @@ def __modChannel(ircMsg):
                         commands.append("PRIVMSG " + ircMsg.src + " :Flags added to " + chan.name + ".")
                     else:
                         commands += basicMessages.paramFail(ircMsg.src, cmd)
+                elif cmd == "announce":
+                    debug.info("Channel announcement requested by " + ircMsg.src + ".")
+                    if chan.announce == "":
+                        commands.append("PRIVMSG " + ircMsg.src + " :Announcement for " + chan.name + " is not set.")
+                    else:
+                        commands.append(
+                            "PRIVMSG " + ircMsg.src + " :Announcement for " + chan.name + " is '" + chan.announce + "'.")
                 elif cmd == "delflags":
                     data.replace(" ", "")
                     list = data.split(",")
@@ -190,8 +216,11 @@ def __modChannel(ircMsg):
                         commands += basicMessages.paramFail(ircMsg.src, cmd)
                 elif cmd == "desc":
                     debug.info("Channel description requested by " + ircMsg.src + ".")
-                    commands.append(
-                        "PRIVMSG " + ircMsg.src + " :Description for " + chan.name + " is '" + chan.desc + "'.")
+                    if chan.desc == "":
+                        commands.append("PRIVMSG " + ircMsg.src + " :Description for " + chan.name + " is not set.")
+                    else:
+                        commands.append(
+                            "PRIVMSG " + ircMsg.src + " :Description for " + chan.name + " is '" + chan.desc + "'.")
                 elif cmd == "flags":
                     debug.info("Channel flags requested by " + ircMsg.src + ".")
                     if chan.flags == []:
@@ -199,6 +228,11 @@ def __modChannel(ircMsg):
                     else:
                         commands.append("PRIVMSG " + ircMsg.src + " :Channel " + chan.name + " has flags " + ",".join(
                             chan.flags) + ".")
+                elif cmd == "setannounce":
+                    chan.announce = data
+                    chan.saveData()
+                    commands.append("PRIVMSG " + ircMsg.src + " :Announcement for " + chan.name + " has been set.")
+                    debug.message("Announcement for " + chan.name + " was set by " + ircMsg.src + ".")
                 elif cmd == "settopic":
                     chan.defaultTopic = data
                     chan.saveData()
@@ -218,8 +252,11 @@ def __modChannel(ircMsg):
                     debug.message("Channel flags for " + chan.name + " were set by " + ircMsg.src + ".")
                 elif cmd == "topic":
                     debug.info("Default topic requested by " + ircMsg.src + ".")
-                    commands.append(
-                        "PRIVMSG " + ircMsg.src + " :Default topic for " + chan.name + " is '" + chan.defaultTopic + "'.")
+                    if chan.defaultTopic == "":
+                        commands.append("PRIVMSG " + ircMsg.src + " :Default topic for " + chan.name + " is not set.")
+                    else:
+                        commands.append(
+                            "PRIVMSG " + ircMsg.src + " :Default topic for " + chan.name + " is '" + chan.defaultTopic + "'.")
             else:
                 commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
         else:

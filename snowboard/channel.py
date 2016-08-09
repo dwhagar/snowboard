@@ -26,6 +26,7 @@ from .channelDB import ChannelDB
 class Channel:
     '''A class to store all information the bot knows about a channel.'''
     def __init__(self, name, network, members = []):
+        self.announce = ""
         self.botnick = None
         self.db = ChannelDB(network, name)
         self.defaultModes = ""
@@ -94,7 +95,7 @@ class Channel:
 
     def loadData(self):
         '''Loads data into the object from the database.'''
-        self.flags, self.defaultTopic, self.desc, self.defaultModes = self.db.loadData()
+        self.flags, self.defaultTopic, self.desc, self.defaultModes, self.announce = self.db.loadData()
 
     def part(self):
         '''Leaves a channel.'''
@@ -107,7 +108,7 @@ class Channel:
         if flag.lower() in map(str.lower, self.flags):
             self.flags.remove(flag.lower())
 
-        self.db.saveFlags(self.flags)
+        self.saveData()
 
     def removeNick(self, nick):
         '''Remove a nick from the list.'''
@@ -117,7 +118,7 @@ class Channel:
 
     def saveData(self):
         '''Saves channel data to the database.'''
-        self.db.saveData(self.flags, self.defaultTopic, self.desc, self.defaultModes)
+        self.db.saveData(self.flags, self.defaultTopic, self.desc, self.defaultModes, self.announce)
 
     def updateSelf(self):
         '''Update the bots knowledge of its own privileges.'''

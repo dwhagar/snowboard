@@ -57,13 +57,11 @@ def privActionScripts(ircMsg):
 
     return cmds
 
-
 def privNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a private notice message.'''
     cmds = []
     cmds += basicCommands.noticeTriggers(ircMsg)
     return cmds
-
 
 def chanActionScripts(ircMsg):
     '''Executes scripts that should be triggered by public action.'''
@@ -71,13 +69,11 @@ def chanActionScripts(ircMsg):
 
     return cmds
 
-
 def chanNoticeScripts(ircMsg):
     '''Executes scripts that should be triggered by a public notice message.'''
     cmds = []
 
     return cmds
-
 
 def ctcpScripts(ircMsg):
     '''Executes scripts that should be triggered by a CTCP message.'''
@@ -85,14 +81,13 @@ def ctcpScripts(ircMsg):
     cmds += basicCommands.ctcpTriggers(ircMsg)
     return cmds
 
-
 def joinScripts(ircMsg):
     '''Processes script triggers based on channel joins.'''
     cmds = []
     cmds += basicCommands.joinTrigger(ircMsg)
     cmds += RPCommands.joinTriggers(ircMsg)
+    cmds += channelCommands.joinTriggers(ircMsg)
     return cmds
-
 
 def partScripts(ircMsg):
     '''Processes script triggers based on channel parts.'''
@@ -105,7 +100,6 @@ def rawMessages(net, message):
     cmds = []
     seenCommands.rawTriggers(net, message)
     return cmds
-
 
 def timers(net, time):
     '''Passes the current time onto a series of timers.'''
