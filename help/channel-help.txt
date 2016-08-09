@@ -1,4 +1,5 @@
 Channel based commands for me are...
+^announcement - Replays the channel announcement (if one exists).
 ^button ::I::Target::I:: - Push a virtual button at a ::I::Target::I::, it might do something to them, to you, or both.
 ^chans - Displays a list of channels associated with the bot.
 ^desc - Displays the description of a channel, particularly useful in channels that are ::I::In Character::I:: and have particular settings.

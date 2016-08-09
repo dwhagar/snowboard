@@ -54,9 +54,10 @@ def channelTriggers(ircMsg):
         commands = __buttonPress(ircMsg)
     elif ircMsg.dataList[0] == "^help":
         commands = __chanHelp(ircMsg)
+    elif ircMsg.dataList[0] == "^announcement":
+        commands = __announce(ircMsg)
 
     return commands
-
 
 def joinTriggers(ircMsg):
     commands = []
@@ -84,7 +85,6 @@ def resetTopics(net):
                 commands.append("TOPIC " + chan.name + " :" + chan.defaultTopic)
 
     return commands
-
 
 def __announce(ircMsg):
     commands = []
