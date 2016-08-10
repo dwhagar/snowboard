@@ -1,2 +1,2 @@
-Channel flags are; keeptopic, nobutton, nochans, nohelp, notules, and noweather.
+Channel flags are; keeptopic, nobutton, nochans, nohelp, norules, and noweather.
 User flags are; admin, usermanager, channelmanager, autoops, ops, autovoice, and voice.

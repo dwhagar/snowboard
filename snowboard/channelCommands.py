@@ -14,15 +14,7 @@
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-Commands relating to channel management.  Channel flags of use here
-are:
-
-keeptopic
-noweather
-norules
-nochans
-nohelp
-nobutton
+Commands relating to channel management.
 '''
 
 import urllib.parse
