@@ -329,7 +329,8 @@ def __pingMe(ircMsg):
     :param ircMsg:
         ircMessage object, a message from the IRC Server.
     :return:
-        commands, a list of IRC commands to be sent to the server.    '''
+        commands, a list of IRC commands to be sent to the server.
+    '''
     commands = []
 
     # Retreive the nick of the person requesting and set values.

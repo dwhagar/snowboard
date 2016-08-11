@@ -14,22 +14,38 @@
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-Useful functions for standardized messages both in debug and for feedback to
-the user.
+Basic messages to be used by any particular script, includes the sending of
+command help for a misused command and messages to the debug system.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 from os.path import isfile
 from . import debug
 
-
 def cmdDisabled(src, cmd, dest = None):
-    '''Provides a basic /command is disabled/ message.'''
+    '''
+    An message telling that a command has been disabled.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
 
+    # dest will be None if it goes back to somewhere other than the source
+    # such as for a channel based command
     if not dest is None:
         msgPrefix = "NOTICE " + src + " :"
         suffix = " in " + dest + "."
         debug.info("Nick " + src + " tried to use the '" + cmd + "but it was disabled.")
+    # Sends command back to the source of there is no destination specified
     else:
         msgPrefix = "PRIVMSG " + src + " :"
         suffix = "."
@@ -40,8 +56,22 @@ def cmdDisabled(src, cmd, dest = None):
     return commands
 
 def cmdHelp(src, cmd, dest = None):
-    '''Returns help text for a particular command.'''
+    '''
+    Sends help text for a particular command.  The help file will simply be
+    the command name with a .txt ext in the /help directory.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
+
     helpFile = "help/" + cmd + ".txt"
 
     if not dest is None:
@@ -49,6 +79,7 @@ def cmdHelp(src, cmd, dest = None):
     else:
         msgPrefix = "PRIVMSG " + src + " :"
 
+    # TODO: Need to replace the file sending function here with the one already provided by the Network object.
     if isfile(helpFile):
         file = open(helpFile.lower())
         data = file.readlines()
@@ -61,17 +92,32 @@ def cmdHelp(src, cmd, dest = None):
                 commands.append(msgPrefix + message)
 
         file.close()
+    # If the file was not found, report the error.
     else:
         debug.error("Help file for command '" + cmd + "' (" + helpFile + ")not found!")
         commands.append(msgPrefix + "I could not find help associated with the '" + cmd + "' command.")
 
+    # Final line saying where further documentation can be found.
     commands.append(
         msgPrefix + "See official documentation at https://github.com/dwhagar/snowboard/wiki for more information.")
 
     return commands
 
 def denyMessage(src, cmd, dest = None):
-    '''Stock deny messages for debug and to send back to the server.'''
+    '''
+    Access denied message for general use.  Logs to the debug log and provides
+    an error message to send back to the user.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
 
     if not dest is None:
@@ -86,7 +132,19 @@ def denyMessage(src, cmd, dest = None):
     return commands
 
 def noAuth(src, cmd, dest = None):
-    '''Stock not authenticated messages for debug and the server.'''
+    '''
+    Stock not authenticated messages for debug and the server.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
 
     if not dest is None:
@@ -100,7 +158,19 @@ def noAuth(src, cmd, dest = None):
     return commands
 
 def noChannel(src, cmd, chan, dest = None):
-    '''Stock message for unable to find a channel.'''
+    '''
+    Stock message for unable to find a channel in the database.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
 
     if not dest is None:
@@ -114,7 +184,19 @@ def noChannel(src, cmd, chan, dest = None):
     return commands
 
 def noOps(src, cmd, chan, dest = None):
-    '''Strock message for if the bot does not have ops.'''
+    '''
+    Stock message for if the bot does not have ops.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
 
     if not dest is None:
@@ -128,7 +210,19 @@ def noOps(src, cmd, chan, dest = None):
     return commands
 
 def noUser(src, cmd, user, dest = None):
-    '''Stock message for a user that does not exist.'''
+    '''
+    Stock message for a user that does not exist.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
 
     if not dest is None:
@@ -142,7 +236,19 @@ def noUser(src, cmd, user, dest = None):
     return commands
 
 def paramFail(src, cmd, dest = None):
-    '''Stock message for not enough parameters.'''
+    '''
+    Stock message for an incorrect number of parameters.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command was being used.
+    :param dest:
+        A string object, defaults to None, defines if a command should be sent
+        to a destination other than back to its source.
+    :return:
+        A list object of commands to be sent to the server.
+    '''
     commands = []
 
     if not dest is None:
@@ -158,7 +264,26 @@ def paramFail(src, cmd, dest = None):
     return commands
 
 def valError(src, cmd, field, val, required, dest = None):
-    '''Standard message for a value related error.'''
+    '''
+    Reports a value error to the user and logs it in the debug log.
+
+    :param src:
+        A string object, where a command originated from.
+    :param cmd:
+        A string object, what command generated the error.
+    :param field:
+        A string object, what field in the command generated the error.
+    :param val:
+        A string object, what value was given for the field that generated
+        the error.
+    :param required:
+        A string object, what the required type of value is.
+    :param dest:
+        A string object, where to send the message.  Default is None,
+        if left at None it will send the message back to the source.
+    :return:
+        A list object of commands to send to the IRC server.
+    '''
 
     if not dest is None:
         msgPrefix = "PRIVMSG " + dest + " :"
