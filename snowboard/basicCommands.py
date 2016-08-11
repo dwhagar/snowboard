@@ -16,6 +16,10 @@
 '''
 Processes basic IRC commands.
 
+These commands are designed to be some of the minimal functions that the bot
+should be able to do, but that are not directly related to the bot being
+online and managing its connection.
+
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 import time
@@ -292,7 +296,15 @@ def __identifySelf(ircMsg):
     return commands
 
 def __pingBack(ircMsg):
-    '''Processes a return ping, relays the lag back.'''
+    '''
+    When the system receives a ping reply from someone it has sent a ping to
+    it will then respond to source where it was requested.
+
+    :param ircMsg:
+        ircMessage object, a message from the IRC Server.
+    :return:
+        commands, a list of IRC commands to be sent to the server.
+    '''
     commands = []
 
     nick = ircMsg.net.findNick(ircMsg.src)
@@ -303,25 +315,46 @@ def __pingBack(ircMsg):
         commands.append(
             "PRIVMSG " + nick.pingDest + " :Your current ping is " + str(lagTime) + " seconds " + ircMsg.src + ".")
 
-        # We got out ping, don't keep looking.
+        # We got our ping, don't keep looking.
         nick.pingOut = 0
         nick.pingDest = None
 
     return commands
 
 def __pingMe(ircMsg):
-    '''Pings a user and sends them back the results.'''
+    '''
+    Sends a ping to someone and sets variables to keep track of the ping time
+    in the requesting nick.
+
+    :param ircMsg:
+        ircMessage object, a message from the IRC Server.
+    :return:
+        commands, a list of IRC commands to be sent to the server.    '''
     commands = []
 
+    # Retreive the nick of the person requesting and set values.
     nick = ircMsg.net.findNick(ircMsg.src)
     nick.pingOut = time.time()
     nick.pingDest = ircMsg.dest
+
+    # Queue the ping command for sending.  If the queue is full the
+    # full ping time will reflect the length of time the bot took to
+    # send the ping to the server as well.
     commands.append("PING " + ircMsg.src + " :" + str(time.time()))
 
     return commands
 
 def __quitCommand(ircMsg):
-    '''Quits from IRC.'''
+    '''
+    Sends a quit message to the server in order to properly close the server
+    link, this will not close the connection itself, but will instruct the
+    server to close the link.
+
+    :param ircMsg:
+        ircMessage object, a message from the IRC Server.
+    :return:
+        commands, a list of IRC commands to be sent to the server.
+    '''
     commands = []
 
     nick = ircMsg.net.findNick(ircMsg.src)
