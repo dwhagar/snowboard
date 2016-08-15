@@ -34,6 +34,6 @@ def joinTriggers(ircMsg):
         if not chan is None:
             if chan.checkFlag("ic"):
                 commands.append(
-                    "NOTICE " + ircMsg.src + " :The channel " + ircMsg.dest + " is currently In Character (IC).  To talk Out of Character (OOC) please use #BlazingUmbra-OOC.  Further information can be found in the channel topic.  Type ^desc for a description of the setting, !help for bot commands, ^rules for rules.")
+                    "NOTICE " + ircMsg.src + " :The channel " + ircMsg.dest + " is currently In Character (IC).  To talk Out of Character (OOC) please use #BlazingUmbra-OOC.  Further information can be found in the channel topic.  Type ^desc for a description of the setting, ^help for bot commands, ^rules for rules.")
 
     return commands
