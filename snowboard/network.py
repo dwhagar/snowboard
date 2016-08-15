@@ -107,8 +107,15 @@ class Network:
         data = self.__connection.read()
         if not (data is None):
             self.__pingpong(data)
+
+            # Some servers that support NPC functions for RP games can cause
+            # the sender to be malformed and this will fix the issue.
+            data = data.replace('\x1f', '')
+
+            # Handle CTCP messages, translate into bot-readable commands.
             if '\x01' in data:
                 data = self.__processCTCP(data)
+
             self.lastActivity = time.time()
 
             if self.config.logLevel > 0:
