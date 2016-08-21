@@ -24,6 +24,8 @@ dice
 '''
 
 
+# TODO: Make the IC announcement pull from a file in the help subdirectory.
+
 def joinTriggers(ircMsg):
     '''Triggers based on join messages for a channel.'''
     commands = []

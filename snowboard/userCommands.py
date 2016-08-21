@@ -198,14 +198,36 @@ def __addHost(ircMsg):
 
 
 def __changeFlags(ircMsg, modUser, nick, thisCmd, nickChannel = None, modChannel = None):
-    '''Add or remove flags from a user profile.'''
+    '''
+    Adds, removes, or otherwise changes the flags of a users account.
+
+    :param ircMsg:
+        An ircMessage object storing all the information about a particular
+        message from the server.
+    :param modUser:
+        A User object for the user information to be modified.
+    :param nick:
+        A Nick object for the user which called the command.
+    :param thisCmd:
+        A string object storing the name of the command being used.
+    :param nickChannel:
+        A UserChannel object for the privileges of a particular calling user
+        on a channel.  Defaults to None when no channel is specified.
+    :param modChannel:
+        A UserChannel object for the privileges of a particular user on a
+        channel, this stores privileges of the user being modified on the
+        channel requested.  Defaults to None when no channel is specified.
+    :return:
+        A list of string objects representing commands to send back to the
+        server.
+    '''
     commands = []
 
     flags = ircMsg.dataList[3].lower()
     newFlags = UserFlags()
     newFlags.toData(flags)
 
-    if ircMsg.dataList[2].lower() == "addflags":
+    if ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "addflag":
         # Add the new flags to the user object.
         if modChannel is None:
             modUser.flags.approved += newFlags.approved
@@ -214,7 +236,7 @@ def __changeFlags(ircMsg, modUser, nick, thisCmd, nickChannel = None, modChannel
             modChannel.flags.approved += newFlags.approved
             modChannel.flags.denied += newFlags.approved
         action = "added"
-    elif ircMsg.dataList[2].lower() == "delflags":
+    elif ircMsg.dataList[2].lower() == "delflags" or ircMsg.dataList[2].lower() == "delflag":
         # Remove the new flags from the user object.
         if modChannel is None:
             for flag in newFlags.approved:
@@ -260,14 +282,37 @@ def __changeFlags(ircMsg, modUser, nick, thisCmd, nickChannel = None, modChannel
 
 
 def __changeHosts(ircMsg, modUser, nick, thisCmd):
-    '''Changes the hosts associated with a user profile.'''
+    '''
+    Ads, removes, or otherwise changes the hostmasks that the bot will
+    recognize for a users account.
+
+    :param ircMsg:
+        An ircMessage object storing all the information about a particular
+        message from the server.
+    :param modUser:
+        A User object for the user information to be modified.
+    :param nick:
+        A Nick object for the user which called the command.
+    :param thisCmd:
+        A string object storing the name of the command being used.
+    :param nickChannel:
+        A UserChannel object for the privileges of a particular calling user
+        on a channel.  Defaults to None when no channel is specified.
+    :param modChannel:
+        A UserChannel object for the privileges of a particular user on a
+        channel, this stores privileges of the user being modified on the
+        channel requested.  Defaults to None when no channel is specified.
+    :return:
+        A list of string objects representing commands to send back to the
+        server.
+    '''
     commands = []
 
     hostmasks = ircMsg.dataList[3].lower().split(',')
-    if ircMsg.dataList[2].lower() == "addhost":
+    if ircMsg.dataList[2].lower() == "addhost" or ircMsg.dataList[2].lower() == "addhosts":
         modUser.hostmasks += hostmasks
         modUser.hostmasks = list(set(modUser.hostmasks))
-    elif ircMsg.dataList[2].lower() == "delhost":
+    elif ircMsg.dataList[2].lower() == "delhost" or ircMsg.dataList[2].lower() == "delhosts":
         for host in hostmasks:
             if host in modUser.hostmasks:
                 modUser.hostmasks.remove(host)
@@ -597,11 +642,13 @@ def __modCmd(ircMsg):
                     if ircMsg.dataList[2].lower() == "level":
                         # Adjusts the level of a user.
                         commands += __setLevel(ircMsg, modUser, nick, thisCmd)
-                    elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "delflags" or \
-                                    ircMsg.dataList[2].lower() == "setflags":
+                    elif ircMsg.dataList[2].lower() == "addflags" or ircMsg.dataList[2].lower() == "addflag" or \
+                                    ircMsg.dataList[2].lower() == "delflags" or ircMsg.dataList[
+                        2].lower() == "delflag" or ircMsg.dataList[2].lower() == "setflags":
                         commands += __changeFlags(ircMsg, modUser, nick, thisCmd)
-                    elif ircMsg.dataList[2].lower() == "addhosts" or ircMsg.dataList[2].lower() == "delhosts" or \
-                                    ircMsg.dataList[2].lower() == "sethosts":
+                    elif ircMsg.dataList[2].lower() == "addhosts" or ircMsg.dataList[2].lower() == "addhost" or \
+                                    ircMsg.dataList[2].lower() == "delhosts" or ircMsg.dataList[
+                        2].lower() == "delhost" or ircMsg.dataList[2].lower() == "sethosts":
                         commands += __changeHosts(ircMsg, modUser, nick, thisCmd)
                     elif ircMsg.dataList[2].lower() == "password":
                         # Allows someone to reset another users password.

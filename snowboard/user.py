@@ -66,7 +66,15 @@ class User:
         return globalDenied or channelDenied
 
     def findChannel(self, channel):
-        '''Finds a channel, if one exists, in the list of privleges.'''
+        '''
+        Finds the specific channel privileges (if any) for a particular user.
+
+        :param channel:
+            A string object for the name of a channel.
+        :return:
+            A UserChannel object (if one exists) with the privileges of a
+            user, if none is found then None is returned.
+        '''
         result = None
 
         if len(self.channels) > 0:
