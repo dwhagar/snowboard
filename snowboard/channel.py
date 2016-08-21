@@ -14,8 +14,7 @@
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-These two classes server to store information on a person in a channel and
-what that person's privileges are within the channel.
+Channel class, stores information about a channel and its members.
 
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''

@@ -319,10 +319,10 @@ def __changeHosts(ircMsg, modUser, nick, thisCmd):
             ircMsg.net.users.updateUser(modUser)
             ircMsg.net.resetPrivs(modUser.uid)
             debug.message(
-                "User " + ircMsg.src + " used the 'moduser' command to hostmasks of " + modUser.user + " to " + ",".join(
+                "User " + ircMsg.src + " used the 'moduser' command to change hostmasks of " + modUser.user + " to " + ",".join(
                     modUser.hostmasks) + ".")
             commands.append(
-                "PRIVMSG " + ircMsg.src + " :Successfully changed hostmasks " + modUser.user + " to " + ",".join(
+                "PRIVMSG " + ircMsg.src + " :Successfully changed user " + modUser.user + " hostmasks to " + ",".join(
                     modUser.hostmasks) + ".")
         else:
             debug.info("User " + ircMsg.src + " tried to remove all hostmasks from user " + modUser.user + ".")
@@ -616,7 +616,15 @@ def __listUsersCmd(ircMsg):
     return commands
 
 def __modCmd(ircMsg):
-    '''Modifies a user already in the database.'''
+    '''
+    Modifies a user already in the database.
+
+    :param ircMsg:
+        An ircMessage object storing all the information for a message from
+        the server.
+    :return:
+        A list of string objects representing commands to send to the server.
+    '''
     commands = []
     thisCmd = "moduser"
 

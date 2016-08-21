@@ -13,12 +13,41 @@
 # You should have received a copy of the GNU General Public License
 # along with snowboard.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+ChannelDB class, provides a connection to a database for channel settings.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
+'''
+
 import sqlite3
 
-'''Connection to the channels database.'''
-
 class ChannelDB:
+    '''
+    Allows a Channel object to use the database to store information.
+
+    Public Data Members:
+        channel:
+            A string object for the name of a channel for which the database
+            has information.
+        network:
+            A string object representing the network name, which is used to
+            also derive the filename of the database.
+        conn:
+            An sqlite3 object, connection to the actual sqlite database file.
+        db:
+            Direct access to the database itself.
+    '''
     def __init__(self, network, channel):
+        '''
+        Initializes the ChannelDB object.
+
+        :param network:
+            A string object with the name of the network, intended to be all
+            lowercase (will be converted anyway).
+        :param channel:
+            A string object with the name of the channel, intended to be all
+            lowercase (will be converted anyway).
+        '''
         self.channel = channel.lower()
         self.network = network
         self.database = network.lower() + ".db"
@@ -28,7 +57,13 @@ class ChannelDB:
         self.__initDB()  # Make sure there is a database and it has the table.
 
     def channelExists(self):
-        '''Determines if the channel already exists in the database.'''
+        '''
+        Determines if the channel already exists in the database.
+
+        :return:
+            Boolean object, true or false on the existence of a channel in the
+            database.
+        '''
         self.__openDB()
 
         query = "SELECT flags FROM channels WHERE channel IS '" + self.channel + "'"
@@ -45,7 +80,23 @@ class ChannelDB:
         return result
 
     def loadData(self):
-        '''Determines if the channel already exists in the database.'''
+        '''
+        Loads data from the database.  If a channel does not exist in the
+        datbase, it will return blank strings/lists for all attributes.
+
+        :return:
+            A tuple containing the following:
+                flags:
+                    A list of string objects containing flags for a channel.
+                topic:
+                    A string object containing the default topic of a channel.
+                desc:
+                    A string ojbect containing the description for a channel.
+                modes:
+                    A string object of default channel mods.
+                announce:
+                    A string ojbect of the channels announcement.
+        '''
         self.__openDB()
 
         query = "SELECT flags, topic, desc, modes, announce FROM channels WHERE channel IS '" + self.channel + "'"
@@ -81,7 +132,20 @@ class ChannelDB:
         return flags, topic, desc, modes, announce
 
     def saveData(self, flags, topic, desc, modes, announce):
-        '''Saves a list of flags to the database.'''
+        '''
+        Saves channel data to the database.
+
+        :param flags:
+            A list of string objects, containing a channel's flags.
+        :param topic:
+            A string object containing a channel's default topic.
+        :param desc:
+            A string object containing the default description for a channel.
+        :param modes:
+            A string object containing the default modes of a channel.
+        :param announce:
+            A string object containing the channel's announcement.
+        '''
         if len(flags) > 0:
             flagsText = ",".join(flags)
         else:
@@ -99,13 +163,13 @@ class ChannelDB:
         self.__closeDB()
 
     def __closeDB(self):
-        '''Closes the user database.'''
+        '''Closes the database out, saving all changes made.'''
         self.conn.commit()
         self.conn.close()
         self.conn = None
 
     def __initDB(self):
-        '''Intended to initialize a database that doesn't yet exist.'''
+        '''Initializes the database if one does not exist.'''
         self.__openDB()
 
         initCmd = "CREATE TABLE IF NOT EXISTS channels (channel TEXT PRIMARY KEY, flags TEXT, topic TEXT, desc TEXT, modes TEXT, announce TEXT)"
@@ -115,6 +179,6 @@ class ChannelDB:
         self.__closeDB()
 
     def __openDB(self):
-        '''Opens the user database up for use.'''
+        '''Opens the channel database up for use.'''
         self.conn = sqlite3.connect(self.database)
         self.db = self.conn.cursor()
