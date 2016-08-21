@@ -295,13 +295,6 @@ def __changeHosts(ircMsg, modUser, nick, thisCmd):
         A Nick object for the user which called the command.
     :param thisCmd:
         A string object storing the name of the command being used.
-    :param nickChannel:
-        A UserChannel object for the privileges of a particular calling user
-        on a channel.  Defaults to None when no channel is specified.
-    :param modChannel:
-        A UserChannel object for the privileges of a particular user on a
-        channel, this stores privileges of the user being modified on the
-        channel requested.  Defaults to None when no channel is specified.
     :return:
         A list of string objects representing commands to send back to the
         server.
