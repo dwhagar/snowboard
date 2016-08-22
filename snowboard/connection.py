@@ -23,25 +23,51 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 import time
 import socket
 import ssl
-import sys
 
 from . import debug
-from . import server
 
 class Connection:
+    '''
+    Connection class, stores information on a particular connection to a
+    server.  It is responsible for sending and receiving information from
+    the server as well as connecting and disconnecting.
+
+    Public Data Members:
+        host:
+            A string object for the host name of a server to connect to.
+        port:
+            An integer object for the port number to connect to.
+        ssl:
+            A boolean object for if SSL should be used on this connection.
+        sslVerify:
+            A boolean object for if SSL certificates should be verified upon
+            opening a connection.
+        retries:
+            An integer object for how many times this connection should be
+            retried.
+        delay:
+            An integer object for How many seconds between connection
+            attempts.
+    '''
     def __init__(self, srv):
         self.host = srv.host
         self.port = srv.port
         self.__socket = None
         self.__ssl = None
         self.__connected = False
+        self.__context = None
         self.ssl = srv.ssl
         self.sslVerify = True
         self.retries = 3           # Numbers of times to retry a connection
         self.delay = 1             # Delay between connection attempts
 
     def connected(self):
-        '''Returns the state of the connection.'''
+        '''
+        See the state of the current connection.
+
+        :return:
+            Boolean object for if the connection is active or not.
+        '''
         return self.__connected
 
     def connect(self):
@@ -62,6 +88,8 @@ class Connection:
                     self.__context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
                     self.__context.options |= ssl.OP_NO_SSLv2
                     self.__context.options |= ssl.OP_NO_SSLv3
+
+                    # TODO: Snowboard does not verify certs on Ubuntu but does not Mac, find out why.
                     if self.sslVerify:
                         self.__context.verify_mode = ssl.CERT_REQUIRED
                     else:
@@ -106,7 +134,18 @@ class Connection:
         self.__connected = False
 
     def read(self):
-        '''Read a line of data from the server, if any.'''
+        '''
+        Read a line of data from the server, if any.  If there is any data
+        it will be read up to the end of line (measured by the CR character)
+        and the remaining LF character (if there is one) will be removed.
+
+        This will also automatically take the connection to a disconnected
+        state if an error occurs.
+
+        :return:
+            A string object containing a line of text from the server.
+            If no data is available None is returned.
+        '''
         # Only do something if we're connected.
         if self.__connected:
             done = False
@@ -156,10 +195,19 @@ class Connection:
         return received
 
     def write(self, data):
-        '''Sends data to the server.'''
+        '''
+        Sends data to the server.  Data is sent in chunks to the server.  If
+        an error occurs, it considers the connection to be broken and returns
+        the object to a disconnected state, saying that the data was not sent
+        (ie. returns False).
+
+        :return:
+            Boolean object for whether or not the send was successful.
+        '''
         # Encode the data for the server.
         data += '\n'
         data = data.encode('utf-8')
+        sent = False
 
         # Prepare to keep track of what is being sent.
         dataSent = 0
@@ -186,11 +234,9 @@ class Connection:
 
                 # Keep track of the data.
                 dataSent += sentNow
-        else:
-            sent = False
 
-        # If sending completed, set the flag to true.
-        if dataSent == bufferSize:
-            sent = True
+            # If sending completed, set the flag to true.
+            if dataSent == bufferSize:
+                sent = True
 
         return sent

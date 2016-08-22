@@ -15,7 +15,11 @@
 
 '''
 Defines some constants for dealing with CTCP messages and replies.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
+
+# TODO: Rewrite code so that a PING CTCP command is not confused with a PING server command.
 
 char = '\x01'
 queries = ["ACTION", "VERSION", "SOURCE", "PING", "TIME", "USERINFO", "CLIENTINFO"]

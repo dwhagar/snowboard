@@ -22,7 +22,6 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 
 import configparser
 
-from . import channel
 from . import server
 
 # Global verbosity.

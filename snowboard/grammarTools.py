@@ -17,7 +17,18 @@
 
 
 def list2text(lst, word = "and"):
-    '''Takes a list object and returns a sentence ready string.'''
+    '''
+    Takes a list of words and converts that list to a grammatically correct
+    comma separated string.
+
+    :param lst:
+        List of string objects, each containing one list item.
+    :param word:
+        String object containing the connecting word to use (ie. and/or).
+    :return:
+        A string object containing a grammatically correct string ready for
+        use in a sentence.
+    '''
     listLen = len(lst)
     if listLen > 0:
         if listLen == 1:
@@ -26,5 +37,7 @@ def list2text(lst, word = "and"):
             text = " " + word + " ".join(lst)
         else:
             text = ", " + word + " ".join([", ".join(lst[:-1])] + lst[-1:])
+    else:
+        text = ""
 
     return text
