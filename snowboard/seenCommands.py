@@ -124,10 +124,6 @@ def __seenQuery(ircMsg):
             seen = Seen(ircMsg.net.name)
 
             nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
-            if len(nicks) > 30:
-                nicks = nicks[-30:]
-            if len(hosts) > 20:
-                hosts = hosts[-20:]
 
             if (not (nicks is None)) and (not (hosts is None)):
                 lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
@@ -174,6 +170,10 @@ def __traceNick(ircMsg):
         seen = Seen(ircMsg.net.name)
 
         nicks, hosts = seen.nickSearch(ircMsg.dataList[2])
+        if len(nicks) > 30:
+            nicks = nicks[-30:]
+        if len(hosts) > 10:
+            hosts = hosts[-10:]
 
         if (not (nicks is None)) and (not (hosts is None)):
             nicks = __removeItem(nicks, ircMsg.dataList[2])
