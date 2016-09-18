@@ -290,6 +290,75 @@ class Seen:
 
         return result
 
+    def cleanDB(self):
+        '''Cleans the database of possible errors.'''
+        nickQuery = "SELECT host, nicks FROM nicks"
+        hostQuery = "SELECT nick, hosts FROM hosts"
+        saveDB = False
+
+        self.__openDB()
+        self.db.execute(nickQuery)
+        nickData = self.db.fetchall()
+        self.db.execute(hostQuery)
+        hostData = self.db.fetchall()
+        self.__closeDB()
+
+        for row in nickData:
+            host = row[0]
+            if (not ('@' in host)) or (' ' in host):
+                query = "DELETE FROM nicks WHERE host IS '" + host + "'"
+                self.__openDB()
+                self.db.execute(query)
+                self.__closeDB()
+            else:
+                nickList = row[1].split(',')
+                delIndex = []
+                for x in range(len(nickList)):
+                    if nickList[x][0] == ':':
+                        nickList[x] = nickList[x][1:]
+                        saveDB = True
+                    if (nickList[x] == '') or (' ' in nickList[x]):
+                        delIndex.append(x)
+                        saveDB = True
+
+                if saveDB:
+                    if not (delIndex == []):
+                        for idx in delIndex:
+                            del nickList[idx]
+                    data = [host, ",".join(nickList)]
+                    query = "UPDATE nicks SET host = ?, nicks = ? WHERE host IS '" + host.lower() + "'"
+                    self.__openDB()
+                    self.db.execute(query, data)
+                    self.__closeDB()
+
+        for row in hostData:
+            nick = row[0]
+            if (nick[0] == ":") or (' ' in nick):
+                query = "DELETE FROM hosts WHERE nick IS '" + nick + "'"
+                self.__openDB()
+                self.db.execute(query)
+                self.__closeDB()
+            else:
+                hostList = row[1].split(',')
+                delIndex = []
+                for x in range(len(hostList)):
+                    if hostList[x][0] == ':':
+                        hostList[x] = hostList[x][1:]
+                        saveDB = True
+                    if (not ('@' in hostList[x])) or (hostList[x] == '') or (' ' in hostList[x]):
+                        delIndex.append(x)
+                        saveDB = True
+
+                if saveDB:
+                    if not (delIndex == []):
+                        for idx in delIndex:
+                            del hostList[idx]
+                    data = [nick, ",".join(hostList)]
+                    query = "UPDATE hosts SET nick = ?, hosts = ? WHERE nick IS '" + nick.lower() + "'"
+                    self.__openDB()
+                    self.db.execute(query, data)
+                    self.__closeDB()
+
     def __closeDB(self):
         '''Closes the user database.'''
         self.conn.commit()
