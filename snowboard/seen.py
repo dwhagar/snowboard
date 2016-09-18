@@ -22,6 +22,7 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 import contextlib
 import sqlite3
 import time
+from . import debug
 
 _SQL_CREATE_HOSTS_TABLE = """
     CREATE TABLE IF NOT EXISTS hosts (
@@ -166,7 +167,18 @@ class Seen:
 
                 if (prevNicks == nicks) and (prevHosts == hosts):
                     done = True
-                    result = (nicks, hosts)
+
+                    sortedNicks, sortedHosts = self.recentSort(nicks, hosts)
+                    resultNicks = []
+                    resultHosts = []
+
+                    for item in sortedNicks:
+                        resultNicks.append(item[0])
+                    for item in sortedHosts:
+                        resultHosts.append(item[0])
+
+                    result = resultNicks, resultHosts
+
                 else:
                     prevNicks = nicks[:]
                     prevHosts = hosts[:]
@@ -184,11 +196,19 @@ class Seen:
 
     def loadHosts(self, nick):
         '''Loads a list of hosts from the nick given.'''
+        result = None
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
                 for row in cursor.execute(__SQL_SELECT_HOSTS_FROM_HOSTS_BY_NICK, { "nick" : nick.lower() }):
-                    return row[0].split(",")
-        return None
+                    result = row[0]
+        if result:
+            if " " in result:
+                debug.error("Spaces detected in the hosts database for '" + nick + "'.")
+            result = result.split(",")
+            for item in result:
+                if "@" not in item:
+                    debug.error("There is a hostname in the database for '" + nick + "' that is not formatted correctly.")
+        return result
 
     def loadNickAction(self, nick):
         '''Load action from a given nick.'''
@@ -201,11 +221,16 @@ class Seen:
 
     def loadNicks(self, host):
         '''Loads a list of nicks from the nick given.'''
+        result = None
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
                 for row in cursor.execute(__SQL_SELECT_NICKS_FROM_NICKS_BY_HOST, { "host" : host.lower() }):
                     return row[0].split(",")
-        return None
+        if result is not None:
+            if ' ' in result:
+                debug.error("Spaces detected in the nicks database for '" + host + "'.")
+            result = result.split(",")
+        return result
 
     def save(self, nick, host, act):
         '''Save a nick, host, and action to the DB'''
@@ -252,7 +277,7 @@ class Seen:
                 sql = __SQL_INSERT_INTO_HOSTS
             else:
                 if not (host.lower() in map(str.lower, hosts)):
-                    hosts = hosts[-19:] + [host.lower()]
+                    hosts = hosts[-99:] + [host.lower()]
                 data = {
                     "nick"  : nick.lower(),
                     "hosts" : ",".join(hosts)
@@ -282,7 +307,7 @@ class Seen:
                 sql = __SQL_INSERT_INTO_NICKS
             else:
                 if not (nick.lower() in map(str.lower, nicks)):
-                    nicks = nicks[-29:] + [nick]
+                    nicks = nicks[-99:] + [nick]
                 data = {
                     "host"  : host.lower(),
                     "nicks" : ",".join(nicks)
@@ -307,8 +332,84 @@ class Seen:
 
         return result
 
+    def recentSort(self, nicks, hosts):
+        '''
+        Sorts the nicks and hosts lists given by how recently activity was
+        last seen on each item.
+        '''
+
+        sortedNicks = []
+        sortedHosts = []
+
+        for nick in nicks:
+            act, t = self.loadNickAction(nick)
+            sortedNicks.append((nick, t, act))
+
+        for host in hosts:
+            act, t = self.loadHostAction(host)
+            sortedHosts.append((host, t, act))
+
+        sortedNicks.sort(key = lambda data: data[1])
+        sortedHosts.sort(key = lambda data: data[1])
+
+        return sortedNicks, sortedHosts
+
+    def removeNick(self, nck):
+        '''Completely removes a nick from the database.'''
+        nicks, hosts = self.nickSearch(nck)
+        found = False
+        needWrite = False
+
+        if not (hosts is None):
+            for host in hosts:
+                query = "SELECT host, nicks FROM nicks WHERE host IS '" + host.lower() + "'"
+                self.__openDB()
+                self.db.execute(query)
+                data = self.db.fetchone()
+                nickData = data[1].split(',')
+                newData = []
+                for nick in nickData:
+                    if not (nick.lower() == nck.lower()):
+                        newData.append(nick)
+                    else:
+                        found = True
+                        needWrite = True
+
+                if needWrite:
+                    if nickData == []:
+                        query = "DELETE FROM nicks WHERE host IS '" + host.lower() + "'"
+                        self.db.execute(query)
+                    else:
+                        writeData = [data[0], ",".join(newData)]
+                        query = "UPDATE nicks SET host = ?, nicks = ? WHERE host IS '" + host.lower() + "'"
+                        self.db.execute(query, writeData)
+                    needWrite = False
+
+                self.__closeDB()
+
+        if not found:
+            query = "SELECT nick, hosts FROM hosts WHERE nick IS '" + nck.lower() + "'"
+            self.__openDB()
+            self.db.execute(query)
+            nickSearch = self.db.fetchone()
+            self.__closeDB()
+
+            if not (nickSearch is None):
+                found = True
+
+        if found:
+            query = "DELETE FROM hosts WHERE nick IS '" + nck.lower() + "'"
+            self.__openDB()
+            self.db.execute(query)
+            self.__closeDB()
+
+        return found
+
     def timeSearch(self, nicks, hosts):
         '''Searching through nicks and hosts, find the most recent thing.'''
+
+        # TODO: Use the new recentSort function to simplify this.
+
         # Store the resulting variables.
         lastAct = ""
         maxTime = 0
@@ -342,3 +443,76 @@ class Seen:
                 result.append(item)
 
         return result
+
+    def cleanDB(self):
+        '''Cleans the database of possible errors.'''
+        self.cleanHosts()
+        self.cleanNicks()
+
+    def cleanHosts(self):
+        '''Cleans the hosts table of possible errors.'''
+        with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
+            bad_nicks = []
+            updates = []
+            with connection as cursor:
+                for row in cursor.execute("SELECT nick, hosts FROM hosts"):
+                    nick, hosts = row
+                    if nick.startswith(":") or " " in nick:
+                        bad_nicks.append({ "nick" : nick })
+                    else:
+                        hosts = ",".split(hosts)
+                        update = false
+                        # Trim to last 100.
+                        update = update or len(hosts) > 100
+                        hosts = hosts[-100:]
+                        # Remove hosts with spaces.
+                        update = update or any(map(lambda s: " " in s, hosts))
+                        hosts = [ n for n in hosts if " " not in n ]
+                        # Remove preceding ":".
+                        update = update or any(map(lambda s: s.startswith(":"), hosts))
+                        hosts = list(map(lambda s: s[1:] if s.startswith(":") else s, hosts))
+                        # Remove hosts without "@".
+                        update = update or any(map(lambda s: "@" not in s, hosts))
+                        hosts = [ n for n in hosts if "@" in n ]
+                        if update:
+                            updates.append({"nick" : nick; "hosts" : ",".join(hosts) })
+            # Now, delete any bad hosts and commit that transaction before
+            # doing anything else.
+            with connection as cursor:
+                cursor.executemany("DELETE FROM hosts WHERE nick = :nick", bad_nicks)
+            # Finally, do any updates to nicks that need doing.
+            with connection as cursor:
+                cursor.executemany("UPDATE hosts SET hosts = :nicks WHERE nick = :nick", updates)
+
+    def cleanNicks(self):
+        '''Cleans the nicks table of possible errors.'''
+        with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
+            bad_hosts = []
+            updates = []
+            with connection as cursor:
+                for row in cursor.execute("SELECT host, nicks FROM nicks"):
+                    host, nicks = row
+                    if "@" not in host or " " in host:
+                        bad_hosts.append({ "host" : host })
+                    else:
+                        nicks = nicks.split(",")
+                        update = False
+                        # Trim to last 100.
+                        update = update or len(nicks) > 100
+                        nicks = nicks[-100:]
+                        # Remove nicks with spaces.
+                        update = update or any(map(lambda s: " " in s, nicks))
+                        nicks = [ n for n in nicks if " " not in n ]
+                        # Remove preceding ":".
+                        update = update or any(map(lambda s: s.startswith(":"), nicks))
+                        nicks = list(map(lambda s: s[1:] if s.startswith(":") else s, nicks))
+                        # Check if an update is necessary.
+                        if update:
+                            updates.append({"host" : host; "nicks" : ",".join(nicks) })
+            # Now, delete any bad hosts and commit that transaction before
+            # doing anything else.
+            with connection as cursor:
+                cursor.executemany("DELETE FROM nicks WHERE host = :host", bad_hosts)
+            # Finally, do any updates to nicks that need doing.
+            with connection as cursor:
+                cursor.executemany("UPDATE nicks SET nicks = :nicks WHERE host = :host", updates)

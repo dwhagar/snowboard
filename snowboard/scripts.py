@@ -49,6 +49,7 @@ def messageScripts(ircMsg):
     cmds += basicCommands.msgTriggers(ircMsg)
     cmds += userCommands.msgTriggers(ircMsg)
     cmds += channelCommands.msgTriggers(ircMsg)
+    cmds += seenCommands.msgTriggers(ircMsg)
     return cmds
 
 def privActionScripts(ircMsg):

@@ -32,6 +32,7 @@ from .nick import Nick
 from .users import Users
 from .channelPriv import ChannelPriv
 from .logs import Logs
+from .seen import Seen
 
 class Network:
     def __init__(self, cfg):
@@ -63,6 +64,8 @@ class Network:
         self.__lastServer = 0  # The index of the last server connected
 
         self.logs = Logs(self.name, self.botnick)
+        seen = Seen(self.name)
+        seen.cleanDB()
 
     def addChannel(self, chan):
         '''Add a channel to the network.'''

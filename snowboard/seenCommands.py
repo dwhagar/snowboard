@@ -17,12 +17,13 @@
 Processes triggers for the seen module.
 '''
 
-import re
 import datetime
 import time
-from . import grammarTools
 from .seen import Seen
-from . import debug
+from . import basicMessages
+
+
+# TODO: Add Message triggers and ability to clear a nick or host out of the database.
 
 def chanTriggers(ircMsg):
     '''Processes channel queries for the seen module.'''
@@ -32,6 +33,16 @@ def chanTriggers(ircMsg):
         commands = __seenQuery(ircMsg)
     if ircMsg.dataList[0].lower() == "^trace" and ircMsg.dataList[1].lower() == "nick":
         commands = __traceNick(ircMsg)
+
+    return commands
+
+
+def msgTriggers(ircMsg):
+    '''Processes message queries for the seen module.'''
+    commands = []
+
+    if ircMsg.dataList[0].lower() == "seenremove" and ircMsg.dataList[1].lower() == "nick":
+        commands += __removeNick(ircMsg)
 
     return commands
 
@@ -83,10 +94,11 @@ def rawTriggers(net, raw):
                 seen.save(nick, host, act)
         else:
             if rawList[1] == "NICK":
-                act = "changed nick to " + rawList[2]
+                newNick = rawList[2][1:]
+                act = "changed nick to " + newNick
                 seen.save(nick, host, act)
                 act = "checked nick from " + nick
-                seen.save(rawList[2], host, act)
+                seen.save(newNick, host, act)
             elif rawList[1] == "QUIT":
                 act = "quit"
                 if len(rawList) > 2:
@@ -124,10 +136,6 @@ def __seenQuery(ircMsg):
             seen = Seen(ircMsg.net.name)
 
             nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
-            if len(nicks) > 30:
-                nicks = nicks[-30:]
-            if len(hosts) > 20:
-                hosts = hosts[-20:]
 
             if (not (nicks is None)) and (not (hosts is None)):
                 lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)
@@ -162,6 +170,43 @@ def __seenQuery(ircMsg):
 
     return commands
 
+
+def __removeNick(ircMsg):
+    '''
+    Instructs the bot to remove a nick from the database, must be at least an
+    admin to perform this command.
+
+    :param ircMsg:
+    :return:
+    '''
+
+    commands = []
+    thisCmd = "seenremove"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+
+    seen = Seen(ircMsg.net.name)
+
+    if len(ircMsg.dataList) > 2:
+        if nick.authed:
+            if nick.user.checkApproved("admin"):
+                result = seen.removeNick(ircMsg.dataList[2])
+                if result:
+                    commands.append("PRIVMSG " + ircMsg.src + " :All instances of '" + ircMsg.dataList[
+                        2] + "' have been removed from the database.")
+                else:
+                    commands.append("PRIVMSG " + ircMsg.src + " :I could not find any instances of '" + ircMsg.dataList[
+                        2] + "' in the database.")
+            else:
+                commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+        else:
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+    else:
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
+
+
 def __traceNick(ircMsg):
     '''
     Query the seen database, for all nicks and hosts used common to one nick,
@@ -177,6 +222,14 @@ def __traceNick(ircMsg):
 
         if (not (nicks is None)) and (not (hosts is None)):
             nicks = __removeItem(nicks, ircMsg.dataList[2])
+
+            nicks.reverse()
+            hosts.reverse()
+
+            if len(nicks) > 30:
+                nicks = nicks[:30]
+            if len(hosts) > 10:
+                hosts = hosts[:10]
 
             if len(hosts) > 1:
                 noun = "hosts"
