@@ -286,11 +286,6 @@ def __traceNick(ircMsg):
 
             for msg in msgList:
                 commands.append("PRIVMSG " + ircMsg.dest + " :" + msg)
-
-    elif ircMsg.dataList[2].lower() == ircMsg.net.botnick.lower():
-        commands.append("PRIVMSG " + ircMsg.dest + " :I usually have the same nick.")
-    elif ircMsg.src.lower() == ircMsg.dataList[2].lower():
-        commands.append("PRIVMSG " + ircMsg.dest + " :Don't you know who you are?")
     else:
         commands.append("PRIVMSG " + ircMsg.dest + " :I'm not sure what you're asking me to do.")
 

@@ -41,35 +41,35 @@ _SQL_CREATE_NICKS_TABLE = """
         act   TEXT)
 """
 
-__SQL_INSERT_INTO_HOSTS = """
+_SQL_INSERT_INTO_HOSTS = """
     INSERT INTO hosts
         (nick, hosts, time, act)
         VALUES
         (:nick, :hosts, :time, :act)
 """
 
-__SQL_INSERT_INTO_NICKS = """
+_SQL_INSERT_INTO_NICKS = """
     INSERT INTO nicks
         (host, nicks, time, act)
         VALUES
         (:host, :nicks, :time, :act)
 """
 
-__SQL_SELECT_ACT_FROM_HOSTS_BY_NICK = """
+_SQL_SELECT_ACT_FROM_HOSTS_BY_NICK = """
     SELECT act, time FROM hosts WHERE nick = :nick
 """ # LIMIT 1?
 
-__SQL_SELECT_ACT_FROM_NICKS_BY_HOST = """
+_SQL_SELECT_ACT_FROM_NICKS_BY_HOST = """
     SELECT act, time FROM nicks WHERE host = :host
 """ # LIMIT 1?
 
-__SQL_SELECT_HOSTS_FROM_HOSTS_BY_NICK = """
+_SQL_SELECT_HOSTS_FROM_HOSTS_BY_NICK = """
     SELECT hosts FROM hosts WHERE nick = :nick
 """ # LIMIT 1?
 
-__SQL_SELECT_NICKS_FROM_NICKS = "SELECT nicks FROM nicks"
+_SQL_SELECT_NICKS_FROM_NICKS = "SELECT nicks FROM nicks"
 
-__SQL_SELECT_NICKS_FROM_NICKS_BY_HOST = """
+_SQL_SELECT_NICKS_FROM_NICKS_BY_HOST = """
     SELECT nicks FROM nicks WHERE host = :host
 """ # LIMIT 1?
 
@@ -85,13 +85,13 @@ _SQL_UPDATE_ACT_IN_NICKS = """
         WHERE host = :host
 """
 
-__SQL_UPDATE_HOSTS_IN_HOSTS = """
+_SQL_UPDATE_HOSTS_IN_HOSTS = """
     UPDATE hosts
         SET hosts = :hosts
         WHERE nick = :nick
 """
 
-__SQL_UPDATE_NICKS_IN_NICKS = """
+_SQL_UPDATE_NICKS_IN_NICKS = """
     UPDATE nicks
         SET nicks = :nicks
         WHERE host = :host
@@ -189,7 +189,7 @@ class Seen:
         '''Load action from a given nick.'''
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
-                for row in cursor.execute(__SQL_SELECT_ACT_FROM_NICKS_BY_HOST, { "host" : host.lower() }):
+                for row in cursor.execute(_SQL_SELECT_ACT_FROM_NICKS_BY_HOST, {"host": host.lower()}):
                     act, time = row
                     return row
         return None
@@ -199,7 +199,7 @@ class Seen:
         result = None
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
-                for row in cursor.execute(__SQL_SELECT_HOSTS_FROM_HOSTS_BY_NICK, { "nick" : nick.lower() }):
+                for row in cursor.execute(_SQL_SELECT_HOSTS_FROM_HOSTS_BY_NICK, {"nick": nick.lower()}):
                     result = row[0]
         if result:
             if " " in result:
@@ -214,7 +214,7 @@ class Seen:
         '''Load action from a given nick.'''
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
-                for row in cursor.execute(__SQL_SELECT_ACT_FROM_HOSTS_BY_NICK, { "nick" : nick.lower() }):
+                for row in cursor.execute(_SQL_SELECT_ACT_FROM_HOSTS_BY_NICK, {"nick": nick.lower()}):
                     act, time = row
                     return row
         return None
@@ -224,7 +224,7 @@ class Seen:
         result = None
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
-                for row in cursor.execute(__SQL_SELECT_NICKS_FROM_NICKS_BY_HOST, { "host" : host.lower() }):
+                for row in cursor.execute(_SQL_SELECT_NICKS_FROM_NICKS_BY_HOST, {"host": host.lower()}):
                     return row[0].split(",")
         if result is not None:
             if ' ' in result:
@@ -264,7 +264,7 @@ class Seen:
             # First load hosts.
             hosts = None
             with connection as cursor:
-                for row in cursor.execute(__SQL_SELECT_HOSTS_FROM_HOSTS_BY_NICK, { "nick" : nick.lower() }):
+                for row in cursor.execute(_SQL_SELECT_HOSTS_FROM_HOSTS_BY_NICK, {"nick": nick.lower()}):
                     hosts = row[0].split(",")
 
             if not hosts:
@@ -274,7 +274,7 @@ class Seen:
                     "time"  : 0,
                     "act"   : ""
                 }
-                sql = __SQL_INSERT_INTO_HOSTS
+                sql = _SQL_INSERT_INTO_HOSTS
             else:
                 if not (host.lower() in map(str.lower, hosts)):
                     hosts = hosts[-99:] + [host.lower()]
@@ -282,7 +282,7 @@ class Seen:
                     "nick"  : nick.lower(),
                     "hosts" : ",".join(hosts)
                 }
-                sql = __SQL_UPDATE_HOSTS_IN_HOSTS
+                sql = _SQL_UPDATE_HOSTS_IN_HOSTS
 
             with connection as cursor:
                 cursor.execute(sql, data)
@@ -293,7 +293,7 @@ class Seen:
             # First load nicks.
             nicks = None
             with connection as cursor:
-                for row in cursor.execute(__SQL_SELECT_NICKS_FROM_NICKS):
+                for row in cursor.execute(_SQL_SELECT_NICKS_FROM_NICKS):
                     nicks = row[0].split(",")
 
             if not nicks:
@@ -302,9 +302,8 @@ class Seen:
                     "nicks" : nick,
                     "time"  : 0,
                     "act"   : ""
-                    "
                 }
-                sql = __SQL_INSERT_INTO_NICKS
+                sql = _SQL_INSERT_INTO_NICKS
             else:
                 if not (nick.lower() in map(str.lower, nicks)):
                     nicks = nicks[-99:] + [nick]
@@ -312,7 +311,7 @@ class Seen:
                     "host"  : host.lower(),
                     "nicks" : ",".join(nicks)
                 }
-                sql = __SQL_UPDATE_NICKS_IN_NICKS
+                sql = _SQL_UPDATE_NICKS_IN_NICKS
 
             with connection as cursor:
                 cursor.execute(sql, data)
@@ -322,7 +321,7 @@ class Seen:
         result = []
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
-                for row in cursor.execute(__SQL_SELECT_NICKS_FROM_NICKS):
+                for row in cursor.execute(_SQL_SELECT_NICKS_FROM_NICKS):
                     nickList = row[0].split(',')
                     for item in nickList:
                         if item.lower().find(nick.lower()) > -1:
@@ -435,7 +434,7 @@ class Seen:
         return result
 
     def __removeDupes(self, lst):
-        '''Takes a list and removes the duplicates, case insenetive.'''
+        '''Takes a list and removes the duplicates, case insensitive.'''
         result = []
 
         for item in lst:
@@ -460,8 +459,8 @@ class Seen:
                     if nick.startswith(":") or " " in nick:
                         bad_nicks.append({ "nick" : nick })
                     else:
-                        hosts = ",".split(hosts)
-                        update = false
+                        hosts = hosts.split(",")
+                        update = False
                         # Trim to last 100.
                         update = update or len(hosts) > 100
                         hosts = hosts[-100:]
@@ -475,14 +474,14 @@ class Seen:
                         update = update or any(map(lambda s: "@" not in s, hosts))
                         hosts = [ n for n in hosts if "@" in n ]
                         if update:
-                            updates.append({"nick" : nick; "hosts" : ",".join(hosts) })
+                            updates.append({"nick": nick, "hosts": ",".join(hosts)})
             # Now, delete any bad hosts and commit that transaction before
             # doing anything else.
             with connection as cursor:
                 cursor.executemany("DELETE FROM hosts WHERE nick = :nick", bad_nicks)
             # Finally, do any updates to nicks that need doing.
             with connection as cursor:
-                cursor.executemany("UPDATE hosts SET hosts = :nicks WHERE nick = :nick", updates)
+                cursor.executemany("UPDATE hosts SET hosts = :hosts WHERE nick = :nick", updates)
 
     def cleanNicks(self):
         '''Cleans the nicks table of possible errors.'''
@@ -508,7 +507,7 @@ class Seen:
                         nicks = list(map(lambda s: s[1:] if s.startswith(":") else s, nicks))
                         # Check if an update is necessary.
                         if update:
-                            updates.append({"host" : host; "nicks" : ",".join(nicks) })
+                            updates.append({"host": host, "nicks": ",".join(nicks)})
             # Now, delete any bad hosts and commit that transaction before
             # doing anything else.
             with connection as cursor:
