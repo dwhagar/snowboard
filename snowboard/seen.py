@@ -214,8 +214,8 @@ class Seen:
         else:
             if not (host.lower() in map(str.lower, hosts)):
                 hosts.append(host.lower())
-                if len(hosts) > 20:
-                    hosts = hosts[-20:]
+                if len(hosts) > 100:
+                    hosts = hosts[-100:]
             data = [nick.lower(), ",".join(hosts)]
             query = "UPDATE hosts SET nick = ?, hosts = ? WHERE nick IS '" + nick.lower() + "'"
 
@@ -236,8 +236,8 @@ class Seen:
         else:
             if not (nick.lower() in map(str.lower, nicks)):
                 nicks.append(nick)
-                if len(nicks) > 30:
-                    nicks = nicks[-30:]
+                if len(nicks) > 100:
+                    nicks = nicks[-100:]
             data = [host.lower(), ",".join(nicks)]
             query = "UPDATE nicks SET host = ?, nicks = ? WHERE host IS '" + host.lower() + "'"
 
@@ -350,8 +350,8 @@ class Seen:
                 nickList = row[1].split(',')
                 delIndex = []
 
-                if len(nickList) > 30:
-                    nickList = nickList[-30:]
+                if len(nickList) > 100:
+                    nickList = nickList[-100:]
                     saveDB = True
 
                 for x in range(len(nickList)):
@@ -383,8 +383,8 @@ class Seen:
                 hostList = row[1].split(',')
                 delIndex = []
 
-                if len(hostList) > 20:
-                    hostList = hostList[-20:]
+                if len(hostList) > 100:
+                    hostList = hostList[-100:]
                     saveDB = True
 
                 for x in range(len(hostList)):
