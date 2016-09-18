@@ -21,6 +21,7 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 
 import sqlite3
 import time
+from . import debug
 
 class Seen:
     '''Connection to the database where seen data will be stored.'''
@@ -124,7 +125,13 @@ class Seen:
         data = self.db.fetchone()
 
         if not data is None:
+            if ' ' in data[0]:
+                debug.error("Spaces detected in the hosts database for '" + nick + "'.")
             result = data[0].split(",")
+            for item in result:
+                if not ('@' in item):
+                    debug.error(
+                        "There is a hostname in the database for '" + nick + "' that is not formatted correctly.")
 
         self.__closeDB()
 
@@ -158,6 +165,8 @@ class Seen:
         data = self.db.fetchone()
 
         if not data is None:
+            if ' ' in data[0]:
+                debug.error("Spaces detected in the nicks database for '" + host + "'.")
             result = data[0].split(",")
 
         self.__closeDB()
