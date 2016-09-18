@@ -83,10 +83,11 @@ def rawTriggers(net, raw):
                 seen.save(nick, host, act)
         else:
             if rawList[1] == "NICK":
-                act = "changed nick to " + rawList[2]
+                newNick = rawList[2][1:]
+                act = "changed nick to " + newNick
                 seen.save(nick, host, act)
                 act = "checked nick from " + nick
-                seen.save(rawList[2], host, act)
+                seen.save(newNick, host, act)
             elif rawList[1] == "QUIT":
                 act = "quit"
                 if len(rawList) > 2:
