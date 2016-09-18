@@ -287,6 +287,57 @@ class Seen:
 
         return sortedNicks, sortedHosts
 
+    def removeNick(self, nck):
+        '''Completely removes a nick from the database.'''
+        nicks, hosts = self.nickSearch(nck)
+        found = False
+        needWrite = False
+
+        if not (hosts is None):
+            for host in hosts:
+                query = "SELECT host, nicks FROM nicks WHERE host IS '" + host.lower() + "'"
+                self.__openDB()
+                self.db.execute(query)
+                data = self.db.fetchone()
+                nickData = data[1].split(',')
+                newData = []
+                for nick in nickData:
+                    if not (nick.lower() == nck.lower()):
+                        newData.append(nick)
+                    else:
+                        found = True
+                        needWrite = True
+
+                if needWrite:
+                    if nickData == []:
+                        query = "DELETE FROM nicks WHERE host IS '" + host.lower() + "'"
+                        self.db.execute(query)
+                    else:
+                        writeData = [data[0], ",".join(newData)]
+                        query = "UPDATE nicks SET host = ?, nicks = ? WHERE host IS '" + host.lower() + "'"
+                        self.db.execute(query, writeData)
+                    needWrite = False
+
+                self.__closeDB()
+
+        if not found:
+            query = "SELECT nick, hosts FROM hosts WHERE nick IS '" + nck.lower() + "'"
+            self.__openDB()
+            self.db.execute(query)
+            nickSearch = self.db.fetchone()
+            self.__closeDB()
+
+            if not (nickSearch is None):
+                found = True
+
+        if found:
+            query = "DELETE FROM hosts WHERE nick IS '" + nck.lower() + "'"
+            self.__openDB()
+            self.db.execute(query)
+            self.__closeDB()
+
+        return found
+
     def timeSearch(self, nicks, hosts):
         '''Searching through nicks and hosts, find the most recent thing.'''
 

@@ -17,12 +17,13 @@
 Processes triggers for the seen module.
 '''
 
-import re
 import datetime
 import time
-from . import grammarTools
 from .seen import Seen
-from . import debug
+from . import basicMessages
+
+
+# TODO: Add Message triggers and ability to clear a nick or host out of the database.
 
 def chanTriggers(ircMsg):
     '''Processes channel queries for the seen module.'''
@@ -32,6 +33,16 @@ def chanTriggers(ircMsg):
         commands = __seenQuery(ircMsg)
     if ircMsg.dataList[0].lower() == "^trace" and ircMsg.dataList[1].lower() == "nick":
         commands = __traceNick(ircMsg)
+
+    return commands
+
+
+def msgTriggers(ircMsg):
+    '''Processes message queries for the seen module.'''
+    commands = []
+
+    if ircMsg.dataList[0].lower() == "seenremove" and ircMsg.dataList[1].lower() == "nick":
+        commands += __removeNick(ircMsg)
 
     return commands
 
@@ -158,6 +169,43 @@ def __seenQuery(ircMsg):
             "PRIVMSG " + ircMsg.dest + " :Where you looking for someone?  You need to tell me who you are looking for, and I'll check.  Only give me one name a time.")
 
     return commands
+
+
+def __removeNick(ircMsg):
+    '''
+    Instructs the bot to remove a nick from the database, must be at least an
+    admin to perform this command.
+
+    :param ircMsg:
+    :return:
+    '''
+
+    commands = []
+    thisCmd = "seenremove"
+
+    nick = ircMsg.net.findNick(ircMsg.src)
+
+    seen = Seen(ircMsg.net.name)
+
+    if len(ircMsg.dataList) > 2:
+        if nick.authed:
+            if nick.user.checkApproved("admin"):
+                result = seen.removeNick(ircMsg.dataList[2])
+                if result:
+                    commands.append("PRIVMSG " + ircMsg.src + " :All instances of '" + ircMsg.dataList[
+                        2] + "' have been removed from the database.")
+                else:
+                    commands.append("PRIVMSG " + ircMsg.src + " :I could not find any instances of '" + ircMsg.dataList[
+                        2] + "' in the database.")
+            else:
+                commands += basicMessages.denyMessage(ircMsg.src, thisCmd)
+        else:
+            commands += basicMessages.noAuth(ircMsg.src, thisCmd)
+    else:
+        commands += basicMessages.paramFail(ircMsg.src, thisCmd)
+
+    return commands
+
 
 def __traceNick(ircMsg):
     '''
