@@ -90,7 +90,18 @@ class Seen:
 
                 if (prevNicks == nicks) and (prevHosts == hosts):
                     done = True
-                    result = (nicks, hosts)
+
+                    sortedNicks, sortedHosts = self.recentSort(nicks, hosts)
+                    resultNicks = []
+                    resultHosts = []
+
+                    for item in sortedNicks:
+                        resultNicks.append(item[0])
+                    for item in sortedHosts:
+                        resultHosts.append(item[0])
+
+                    result = resultNicks, resultHosts
+
                 else:
                     prevNicks = nicks[:]
                     prevHosts = hosts[:]
@@ -254,8 +265,33 @@ class Seen:
 
         return result
 
+    def recentSort(self, nicks, hosts):
+        '''
+        Sorts the nicks and hosts lists given by how recently activity was
+        last seen on each item.
+        '''
+
+        sortedNicks = []
+        sortedHosts = []
+
+        for nick in nicks:
+            act, t = self.loadNickAction(nick)
+            sortedNicks.append((nick, t, act))
+
+        for host in hosts:
+            act, t = self.loadHostAction(host)
+            sortedHosts.append((host, t, act))
+
+        sortedNicks.sort(key = lambda data: data[1])
+        sortedHosts.sort(key = lambda data: data[1])
+
+        return sortedNicks, sortedHosts
+
     def timeSearch(self, nicks, hosts):
         '''Searching through nicks and hosts, find the most recent thing.'''
+
+        # TODO: Use the new recentSort function to simplify this.
+
         # Store the resulting variables.
         lastAct = ""
         maxTime = 0

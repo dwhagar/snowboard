@@ -175,6 +175,14 @@ def __traceNick(ircMsg):
         if (not (nicks is None)) and (not (hosts is None)):
             nicks = __removeItem(nicks, ircMsg.dataList[2])
 
+            nicks.reverse()
+            hosts.reverse()
+
+            if len(nicks) > 30:
+                nicks = nicks[:30]
+            if len(hosts) > 10:
+                hosts = hosts[:10]
+
             if len(hosts) > 1:
                 noun = "hosts"
             else:
