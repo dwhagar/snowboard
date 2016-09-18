@@ -111,7 +111,7 @@ class Config:
         '''
         self.versionNumber = 0
         self.revisionNUmber = 1
-        self.buildNumber = 4
+        self.buildNumber = 5
         self.releaseStage = "alpha"
         self.version = str(self.versionNumber) + "." + str(self.revisionNUmber) + "." + str(self.buildNumber) + "-" + self.releaseStage
         self.botnick = "Snowboard"

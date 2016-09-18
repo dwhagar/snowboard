@@ -187,8 +187,6 @@ class Seen:
         '''Saves the nick and host to the database.'''
         hosts = self.loadHosts(nick)
 
-        self.__openDB()
-
         if hosts is None:
             hosts = [host.lower()]
             data = [nick.lower(), ",".join(hosts), 0, ""]
@@ -196,11 +194,13 @@ class Seen:
         else:
             if not (host.lower() in map(str.lower, hosts)):
                 hosts.append(host.lower())
+                if len(hosts) > 20:
+                    hosts = hosts[-20:]
             data = [nick.lower(), ",".join(hosts)]
             query = "UPDATE hosts SET nick = ?, hosts = ? WHERE nick IS '" + nick.lower() + "'"
 
+        self.__openDB()
         self.db.execute(query, data)
-
         self.__closeDB()
 
     def saveNick(self, nick, host):
@@ -216,6 +216,8 @@ class Seen:
         else:
             if not (nick.lower() in map(str.lower, nicks)):
                 nicks.append(nick)
+                if len(nicks) > 30:
+                    nicks = nicks[-30:]
             data = [host.lower(), ",".join(nicks)]
             query = "UPDATE nicks SET host = ?, nicks = ? WHERE host IS '" + host.lower() + "'"
 

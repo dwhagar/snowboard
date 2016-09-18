@@ -362,7 +362,7 @@ class Network:
 
     def processJoinPart(self, response):
         '''Process a join or part message from the server.'''
-        nck, host = self.__splitHostmask(response[0])
+        nck, host = self.splitHostmask(response[0])
         if response[2][0] == ':':
             cJoined = response[2][1:]
         else:
@@ -531,7 +531,7 @@ class Network:
         # in the list.
 
         # If the bot's nick is the one that has changed, keep track.
-        nickName, userHost = self.__splitHostmask(response[0])
+        nickName, userHost = self.splitHostmask(response[0])
         if response[2][0] == ':':
             response[2] = response[2][1:]
         if nickName.lower() == self.botnick.lower():
@@ -572,7 +572,7 @@ class Network:
         the master nick list and all other lists.
         '''
         # Unpack the nick from the host, the host part isn't required
-        nickName, host = self.__splitHostmask(response[0])
+        nickName, host = self.splitHostmask(response[0])
 
         # Find the nick in the master list.
         nickObject = self.findNick(nickName)
@@ -796,9 +796,8 @@ class Network:
 
         return data
 
-    def __splitHostmask(self, hostmask):
+    def splitHostmask(self, hostmask):
         '''Split the hostname into host and nick.'''
-        # Handle the leading ':' on messages, then split at the '!'
         hostmask = hostmask.split('!')
         if len(hostmask) < 2:
             hostmask.append("")

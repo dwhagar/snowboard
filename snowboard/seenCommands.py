@@ -35,71 +35,73 @@ def chanTriggers(ircMsg):
 
     return commands
 
-def rawTriggers(net, message):
-    '''Processes raw message triggers.'''
-    dbTriggerA = r"^(.*)!(.*@.*) (PRIVMSG|PART) (#.*) :(.*)$"
-    dbTriggerB = r"^(.*)!(.*@.*) (QUIT|NICK) :(.*)$"
-    dbTriggerC = r"^(.*)!(.*@.*) (JOIN|PART) (#.*)$"
 
-    searchA = re.compile(dbTriggerA, re.IGNORECASE)
-    searchB = re.compile(dbTriggerB, re.IGNORECASE)
-    searchC = re.compile(dbTriggerC, re.IGNORECASE)
+def rawTriggers(net, raw):
+    '''Processes raw message triggers.'''
+    # Strip the leading colon, if there is one off of the raw message.
+    if raw[0] == ':':
+        raw = raw[1:]
+
+    rawList = raw.split()
 
     seen = Seen(net.name)
 
-    if searchA.match(message):
-        # Process joins and parts that have messages.
-        data = searchA.split(message)
+    if len(rawList) > 1:
+        if (rawList[0].find('@') < 0) and (rawList[0].find('!') < 0):
+            nick = ""
+            host = ""
+        else:
+            nick, host = net.splitHostmask(rawList[0])
 
-        nick = data[1]
-        host = data[2]
-        dest = data[4]
-        msg = data[5]
+        chanMessage = False
+        dest = ""
+        message = ""
 
-        if data[3] == "PRIVMSG":
-            act = "on " + dest + " saying '" + msg + "'"
-        elif data[3] == "PART":
-            act = "leaving " + dest + " with message '" + msg + "'"
+        if len(rawList) > 2:
+            if rawList[2][0] == '#':
+                chanMessage = True
+                dest = rawList[2]
+                if len(rawList) > 3:
+                    message = " ".join(rawList[3:])
+                    if message[0] == ":":
+                        message = message[1:]
 
-        seen.save(nick, host, act)
-    elif searchB.match(message):
-        # Process quit and nick messages.
-        data = searchB.split(message)
-
-        nick = data[1]
-        host = data[2]
-        cmd = data[3]
-        msg = data[4]
-
-        if cmd == "QUIT":
-            act = "leaving IRC with message '" + msg + "'"
-            seen.save(nick, host, act)
-        elif cmd == "NICK":
-            act = "changing nick to '" + msg + "'"
-            seen.save(nick, host, act)
-            act = "changing nick from '" + nick + "'"
-            seen.save(msg, host, act)
-
-    elif searchC.match(message):
-        data = searchC.split(message)
-
-        nick = data[1]
-        host = data[2]
-        dest = data[4]
-
-        if data[3] == "JOIN":
-            act = "joining " + dest
-        elif data[3] == "PART":
-            act = "leaving " + dest
-
-        seen.save(nick, host, act)
-    else:
-        messageList = message.split()
-        if messageList[1] == "352":
-            host = messageList[4] + "@" + messageList[5]
-            nick = messageList[7]
-            act = "online"
-            seen.save(nick, host, act)
+        if chanMessage:
+            if rawList[1] == "PRIVMSG":
+                act = "on " + dest + " saying '" + message + "'"
+                seen.save(nick, host, act)
+            elif rawList[1] == "ACTION":
+                act = "on " + dest + " doing '" + message + "'"
+                seen.save(nick, host, act)
+            elif rawList[1] == "PART":
+                act = "leaving " + dest
+                if not (message == ""):
+                    act += " with message '" + message + "'"
+                seen.save(nick, host, act)
+            elif rawList[1] == "JOIN":
+                act = "joining " + dest
+                seen.save(nick, host, act)
+        else:
+            if rawList[1] == "NICK":
+                act = "changed nick to " + rawList[2]
+                seen.save(nick, host, act)
+                act = "checked nick from " + nick
+                seen.save(rawList[2], host, act)
+            elif rawList[1] == "QUIT":
+                act = "quit"
+                if len(rawList) > 2:
+                    message = " ".join(rawList[2:])
+                    if message[0] == ":":
+                        message = message[1:]
+                    if not message == "":
+                        act += " saying '" + message + "'"
+                seen.save(nick, host, act)
+            if nick == "" and host == "":
+                if rawList[1] == "352":
+                    host = rawList[4] + "@" + rawList[5]
+                    nick = rawList[7]
+                    act = "online"
+                    seen.save(nick, host, act)
     return
 
 def __removeItem(list, text):
@@ -122,6 +124,10 @@ def __seenQuery(ircMsg):
             seen = Seen(ircMsg.net.name)
 
             nicks, hosts = seen.nickSearch(ircMsg.dataList[1])
+            if len(nicks) > 30:
+                nicks = nicks[-30:]
+            if len(hosts) > 20:
+                hosts = hosts[-20:]
 
             if (not (nicks is None)) and (not (hosts is None)):
                 lastTime, lastNick, lastHost, lastAct = seen.timeSearch(nicks, hosts)

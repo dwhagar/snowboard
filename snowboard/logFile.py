@@ -15,6 +15,8 @@
 
 '''
 Object to handle logging output to a single log file.
+
+See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
 import time
