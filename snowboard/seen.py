@@ -313,6 +313,11 @@ class Seen:
             else:
                 nickList = row[1].split(',')
                 delIndex = []
+
+                if len(nickList) > 30:
+                    nickList = nickList[-30:]
+                    saveDB = True
+
                 for x in range(len(nickList)):
                     if nickList[x][0] == ':':
                         nickList[x] = nickList[x][1:]
@@ -341,6 +346,11 @@ class Seen:
             else:
                 hostList = row[1].split(',')
                 delIndex = []
+
+                if len(hostList) > 20:
+                    hostList = hostList[-20:]
+                    saveDB = True
+
                 for x in range(len(hostList)):
                     if hostList[x][0] == ':':
                         hostList[x] = hostList[x][1:]
