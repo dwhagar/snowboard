@@ -19,7 +19,40 @@ ChannelDB class, provides a connection to a database for channel settings.
 See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 '''
 
+import contextlib
 import sqlite3
+
+_SQL_CREATE_TABLE = """
+    CREATE TABLE IF NOT EXISTS channels (
+        channel  TEXT PRIMARY KEY,
+        flags    TEXT,
+        topic    TEXT,
+        desc     TEXT,
+        modes    TEXT,
+        announce TEXT
+    )
+"""
+
+_SQL_SELECT = """
+    SELECT flags, topic, desc, modes, announce
+        FROM channels
+        WHERE channel = :channel
+        LIMIT 1
+"""
+
+_SQL_UPDATE = """
+    UPDATE channels
+        SET flags = :flags, topic = :topic, desc = :desc, modes = :modes,
+            announce = :announce
+        WHERE channel = :channel
+"""
+
+_SQL_CONDITIONAL_INSERT = """
+    INSERT INTO channels
+        (channel, flags, topic, desc, modes, announce)
+        SELECT :channel, :flags, :topic, :desc, :modes, :announce
+            WHERE (SELECT changes() = 0)
+"""
 
 class ChannelDB:
     '''
@@ -32,10 +65,6 @@ class ChannelDB:
         network:
             A string object representing the network name, which is used to
             also derive the filename of the database.
-        conn:
-            An sqlite3 object, connection to the actual sqlite database file.
-        db:
-            Direct access to the database itself.
     '''
     def __init__(self, network, channel):
         '''
@@ -50,34 +79,13 @@ class ChannelDB:
         '''
         self.channel = channel.lower()
         self.network = network
-        self.database = network.lower() + ".db"
-        self.conn = None
-        self.db = None
 
-        self.__initDB()  # Make sure there is a database and it has the table.
+        self.__dbfile = network.lower() + ".db"
 
-    def channelExists(self):
-        '''
-        Determines if the channel already exists in the database.
-
-        :return:
-            Boolean object, true or false on the existence of a channel in the
-            database.
-        '''
-        self.__openDB()
-
-        query = "SELECT flags FROM channels WHERE channel IS '" + self.channel + "'"
-        self.db.execute(query)
-        data = self.db.fetchone()
-
-        if data is None:
-            result = False
-        else:
-            result = True
-
-        self.__closeDB()
-
-        return result
+        # Make sure there is a database and it has the table.
+        with contextlib.closing(sqlite3.connect(self.__dbfile)) as connection:
+            with connection as cursor:
+                cursor.execute(_SQL_CREATE_TABLE)
 
     def loadData(self):
         '''
@@ -97,37 +105,18 @@ class ChannelDB:
                 announce:
                     A string ojbect of the channels announcement.
         '''
-        self.__openDB()
-
-        query = "SELECT flags, topic, desc, modes, announce FROM channels WHERE channel IS '" + self.channel + "'"
-        self.db.execute(query)
-        data = self.db.fetchone()
-
-        if data is None:
-            flags = []
-            topic = ""
-            desc = ""
-            modes = ""
-            announce = ""
-        else:
-            flags = data[0].split(',')
-            topic = data[1]
-            desc = data[2]
-            modes = data[3]
-            announce = data[4]
-
-        if flags is None:
-            flags = ""
-        if topic is None:
-            topic = ""
-        if desc is None:
-            desc = ""
-        if modes is None:
-            modes = ""
-        if announce is None:
-            announce = ""
-
-        self.__closeDB()
+        with contextlib.closing(sqlite3.connect(self.__dbfile)) as connection:
+            with connection as cursor:
+                for row in cursor.execute(_SQL_SELECT, {"channel" : self.channel}):
+                    flags, topic, desc, modes, announce = row
+                    flags = flags.split(",") if flags else []
+                    topic = topic if topic else ""
+                    desc  = desc  if desc  else ""
+                    modes = modes if modes else ""
+                    announce = announce if announce else ""
+                    break
+                else:
+                    flags, topic, desc, modes, announce = [], "", "", "", ""
 
         return flags, topic, desc, modes, announce
 
@@ -146,39 +135,16 @@ class ChannelDB:
         :param announce:
             A string object containing the channel's announcement.
         '''
-        if len(flags) > 0:
-            flagsText = ",".join(flags)
-        else:
-            flagsText = ""
+        data = {
+            "channel"  : self.channel,
+            "flags"    : ",".join(flags).lower(),
+            "topic"    : topic,
+            "desc"     : desc,
+            "modes"    : modes,
+            "announce" : announce
+        }
 
-        if self.channelExists():
-            data = [flagsText.lower(), topic, desc, modes, announce]
-            query = "UPDATE channels SET flags = ?, topic = ?, desc = ?, modes = ?, announce = ? WHERE channel IS '" + self.channel + "'"
-        else:
-            data = [self.channel, flagsText.lower(), topic, desc, modes, announce]
-            query = "INSERT INTO channels VALUES (?, ?, ?, ?, ?, ?)"
-
-        self.__openDB()
-        self.db.execute(query, data)
-        self.__closeDB()
-
-    def __closeDB(self):
-        '''Closes the database out, saving all changes made.'''
-        self.conn.commit()
-        self.conn.close()
-        self.conn = None
-
-    def __initDB(self):
-        '''Initializes the database if one does not exist.'''
-        self.__openDB()
-
-        initCmd = "CREATE TABLE IF NOT EXISTS channels (channel TEXT PRIMARY KEY, flags TEXT, topic TEXT, desc TEXT, modes TEXT, announce TEXT)"
-
-        self.db.execute(initCmd)
-
-        self.__closeDB()
-
-    def __openDB(self):
-        '''Opens the channel database up for use.'''
-        self.conn = sqlite3.connect(self.database)
-        self.db = self.conn.cursor()
+        with contextlib.closing(sqlite3.connect(self.__dbfile)) as connection:
+            with connection as cursor:
+                cursor.execute(_SQL_UPDATE, data)
+                cursor.execute(_SQL_CONDITIONAL_INSERT, data)
