@@ -22,7 +22,6 @@ See https://github.com/dwhagar/snowboard/wiki/Class-Docs for documentation.
 
 import contextlib
 import sqlite3
-import os.path
 import hashlib
 import base64
 import re
@@ -94,7 +93,7 @@ class Users:
         '''Adds a user record to the database'''
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
-                cursor.execute(_SQL_INSERT, self.__userToDbRow(user))
+                cursor.execute(_SQL_INSERT, self.__userToDbRow(user, password))
 
     def getUsers(self):
         '''Gets a list of all users.'''
@@ -154,7 +153,7 @@ class Users:
         '''Updates a user record in the database'''
         with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
             with connection as cursor:
-                cursor.execute(_SQL_UPDATE, self.__userToDbRow(user))
+                cursor.execute(_SQL_UPDATE, self.__userToDbRow(user, password))
 
     def userInformation(self, uid):
         '''Retreives user information from the database given a uid.'''
@@ -194,7 +193,7 @@ class Users:
         user.loadChannels(row["channels"])
         return user
 
-    def __userToDbRow(self, user):
+    def __userToDbRow(self, user, password = None):
         '''Create a DB row dictionary from a user object.'''
         # Clamp user level
         user.level = min(255, max(user.level, 0))

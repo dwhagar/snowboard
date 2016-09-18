@@ -355,24 +355,39 @@ def __modChannel(ircMsg):
                 elif cmd == "setannounce":
                     chan.announce = data
                     chan.saveData()
-                    commands.append("PRIVMSG " + ircMsg.src + " :Announcement for " + chan.name + " has been set.")
+                    if chan.announce == "":
+                        commands.append(
+                            "PRIVMSG " + ircMsg.src + " :Announcement for " + chan.name + " has been cleared.")
+                    else:
+                        commands.append("PRIVMSG " + ircMsg.src + " :Announcement for " + chan.name + " has been set.")
                     debug.message("Announcement for " + chan.name + " was set by " + ircMsg.src + ".")
                 elif cmd == "settopic":
                     chan.defaultTopic = data
                     chan.saveData()
-                    commands.append("PRIVMSG " + ircMsg.src + " :Default topic for " + chan.name + " has been set.")
+                    if chan.defaultTopic == "":
+                        commands.append(
+                            "PRIVMSG " + ircMsg.src + " :Default topic for " + chan.name + " has been cleared.")
+                    else:
+                        commands.append("PRIVMSG " + ircMsg.src + " :Default topic for " + chan.name + " has been set.")
                     debug.message("Default topic for " + chan.name + " was set by " + ircMsg.src + ".")
                 elif cmd == "setdesc":
                     chan.desc = data
                     chan.saveData()
-                    commands.append("PRIVMSG " + ircMsg.src + " :Description for " + chan.name + " has been set.")
+                    if chan.desc == "":
+                        commands.append(
+                            "PRIVMSG " + ircMsg.src + " :Description for " + chan.name + " has been cleared.")
+                    else:
+                        commands.append("PRIVMSG " + ircMsg.src + " :Description for " + chan.name + " has been set.")
                     debug.message("Channel description for " + chan.name + " was set by " + ircMsg.src + ".")
                 elif cmd == "setflags":
                     data.replace(" ", "")
                     data = data.lower()
                     chan.flags = data.split(",")
                     chan.saveData()
-                    commands.append("PRIVMSG " + ircMsg.src + " :Flags for " + chan.name + " have been set.")
+                    if len(chan.flags) == 0:
+                        commands.append("PRIVMSG " + ircMsg.src + " :Flags for " + chan.name + " have been cleared.")
+                    else:
+                        commands.append("PRIVMSG " + ircMsg.src + " :Flags for " + chan.name + " have been set.")
                     debug.message("Channel flags for " + chan.name + " were set by " + ircMsg.src + ".")
                 elif cmd == "topic":
                     debug.info("Default topic requested by " + ircMsg.src + ".")
