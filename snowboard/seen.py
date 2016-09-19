@@ -355,53 +355,41 @@ class Seen:
 
     def removeNick(self, nck):
         '''Completely removes a nick from the database.'''
-        nicks, hosts = self.nickSearch(nck)
+        # First the hard part, removing all instances of the nick from the
+        # nicks table.
         found = False
-        needWrite = False
-
-        if not (hosts is None):
-            for host in hosts:
-                query = "SELECT host, nicks FROM nicks WHERE host IS '" + host.lower() + "'"
-                self.__openDB()
-                self.db.execute(query)
-                data = self.db.fetchone()
-                nickData = data[1].split(',')
-                newData = []
-                for nick in nickData:
-                    if not (nick.lower() == nck.lower()):
-                        newData.append(nick)
-                    else:
+        nck = nck.lower()
+        with contextlib.closing(sqlite3.connect(self.__dbname)) as connection:
+            to_delete = []
+            to_update = []
+            with connection as cursor:
+                for row in cursor.execute("SELECT host, nicks FROM nicks"):
+                    host, nicks = row
+                    nicks = nicks.split(",")
+                    # Save the original number of nicks, then remove any
+                    # instance of the target nick.
+                    nicks_old_len = len(nicks)
+                    nicks = list(filter(lambda n: n.lower() != nck, nicks))
+                    # If the number of nicks has changed, we have to do a
+                    # delete or update.
+                    nicks_new_len = len(nicks)
+                    if nicks_new_len != nicks_old_len:
                         found = True
-                        needWrite = True
-
-                if needWrite:
-                    if nickData == []:
-                        query = "DELETE FROM nicks WHERE host IS '" + host.lower() + "'"
-                        self.db.execute(query)
-                    else:
-                        writeData = [data[0], ",".join(newData)]
-                        query = "UPDATE nicks SET host = ?, nicks = ? WHERE host IS '" + host.lower() + "'"
-                        self.db.execute(query, writeData)
-                    needWrite = False
-
-                self.__closeDB()
-
-        if not found:
-            query = "SELECT nick, hosts FROM hosts WHERE nick IS '" + nck.lower() + "'"
-            self.__openDB()
-            self.db.execute(query)
-            nickSearch = self.db.fetchone()
-            self.__closeDB()
-
-            if not (nickSearch is None):
-                found = True
-
-        if found:
-            query = "DELETE FROM hosts WHERE nick IS '" + nck.lower() + "'"
-            self.__openDB()
-            self.db.execute(query)
-            self.__closeDB()
-
+                        if nicks_new_len == 0:
+                            to_delete.append({"host" : host})
+                        else:
+                            to_update.append({"host" : host, "nicks" : ",".join(nicks)})
+                # Now that we have the lists of rows to delete or update,
+                # do the deletes first then commit.
+                cursor.executemany("DELETE FROM nicks WHERE host = :host", to_delete)
+            # Then do the updates as a separate transaction.
+            with connection as cursor:
+                cursor.executemany("UPDATE nicks SET nicks = :nicks WHERE host = :host", to_update)
+            # Now the easy part: the hosts table.
+            with connection as cursor:
+                for row in cursor.execute("SELECT 1 FROM hosts where nick = :nick LIMIT 1", {"nick" : nck}):
+                    found = True
+                    cursor.execute("DELETE FROM hosts WHERE nick = :nick", {"nick" : nck})
         return found
 
     def timeSearch(self, nicks, hosts):
